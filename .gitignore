@@ -1,0 +1,8 @@
+.worktrees/
+.superpowers/
+
+# Application runtime secrets and generated dependencies
+platform/.env
+platform/vendor/
+platform/node_modules/
+platform/public/build/
