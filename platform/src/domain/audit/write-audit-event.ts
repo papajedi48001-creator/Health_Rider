@@ -1,3 +1,5 @@
+import { Prisma, type PrismaClient } from '@prisma/client';
+
 export type AuditEventInput = {
   id: string;
   actorId: string;
@@ -5,14 +7,19 @@ export type AuditEventInput = {
   auditableType: string;
   auditableId: string;
   reason: string | null;
-  oldValues: Record<string, unknown> | null;
-  newValues: Record<string, unknown> | null;
+  oldValues: Prisma.InputJsonValue | null;
+  newValues: Prisma.InputJsonValue | null;
 };
 
-type AuditEventStore = {
-  create(input: { data: AuditEventInput }): Promise<unknown>;
-};
-
-export async function writeAuditEvent(store: AuditEventStore, input: AuditEventInput): Promise<unknown> {
-  return store.create({ data: input });
+export async function writeAuditEvent(
+  store: PrismaClient['auditEvent'],
+  input: AuditEventInput,
+): Promise<unknown> {
+  return store.create({
+    data: {
+      ...input,
+      oldValues: input.oldValues ?? Prisma.JsonNull,
+      newValues: input.newValues ?? Prisma.JsonNull,
+    },
+  });
 }

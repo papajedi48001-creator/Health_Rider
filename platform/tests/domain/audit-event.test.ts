@@ -10,7 +10,7 @@ test('persists the actor, reason, and before-after values of a mutation', async 
     },
   };
 
-  await writeAuditEvent(auditEvents, {
+  await writeAuditEvent(auditEvents as never, {
     id: '01J00000000000000000000000',
     actorId: '01J00000000000000000000001',
     action: 'delivery.request.amended',
