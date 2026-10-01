@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mariadb:11.7
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-health_rider}
+      MARIADB_USER: ${MARIADB_USER:-health_rider}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-health_rider-development-only}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-health-rider-root-development-only}
+    volumes:
+      - health-rider-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u$${MARIADB_USER} -p$${MARIADB_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-mysql://health_rider:health_rider-development-only@db:3306/health_rider}
+      HOS_DATABASE_URL: ${HOS_DATABASE_URL:-}
+      AUTH_SECRET: ${AUTH_SECRET:-development-only-replace-before-production}
+      EVIDENCE_STORAGE_PATH: /app/data/evidence
+    ports:
+      - "3000:3000"
+    volumes:
+      - health-rider-evidence:/app/data/evidence
+
+volumes:
+  health-rider-db:
+  health-rider-evidence:
