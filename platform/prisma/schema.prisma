@@ -140,6 +140,7 @@ model DeliveryAttempt {
   pickedUpAt        DateTime?
   deliveredAt       DateTime?
   failedAt          DateTime?
+  failureReason     String?               @db.VarChar(100)
   returnedAt        DateTime?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
