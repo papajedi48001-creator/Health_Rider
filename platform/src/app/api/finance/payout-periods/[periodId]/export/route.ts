@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole, UnauthorizedError } from '@/auth/require-role';
+import { getSessionFromRequest } from '@/auth/session';
+import { db } from '@/lib/db';
+import { exportPayoutCsv } from '@/domain/payout/export-csv';
+export async function GET(request: NextRequest, { params }: { params: Promise<{ periodId: string }> }) { try { requireRole(getSessionFromRequest(request), 'finance', 'admin', 'auditor'); const { periodId } = await params; const lines = await db.payoutLine.findMany({ where: { payoutPeriodId: periodId }, select: { riderCodeSnapshot: true, riderNameSnapshot: true, deliveryAttemptId: true, zoneNameSnapshot: true, rateSatang: true } }); const csv = await exportPayoutCsv(lines.map((line) => ({ riderCode: line.riderCodeSnapshot, riderName: line.riderNameSnapshot, attemptId: line.deliveryAttemptId, zoneName: line.zoneNameSnapshot, rateSatang: line.rateSatang }))); return new NextResponse(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="rider-payout.csv"' } }); } catch (error) { if (error instanceof UnauthorizedError) return NextResponse.json({ message: error.message }, { status: 403 }); throw error; } }
