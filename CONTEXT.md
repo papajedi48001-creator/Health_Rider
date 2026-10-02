@@ -6,10 +6,7 @@
 : A request to deliver medication to a patient's home, created only after the pharmacy has prepared the medication and approved it for home delivery.
 
 **Delivery Zone**
-: The municipality/subdistrict and village classification used to determine the rider's service rate. A zone has an effective-dated rate.
-
-**Zone Rate**
-: The per-delivery service rate assigned to a Delivery Zone. The rate applicable on dispatch is copied to the Delivery Request and is never changed retrospectively.
+: The municipality/subdistrict and village classification used to identify a delivery area and filter operational work. It has no service-rate or payment meaning in this system.
 
 **Rider**
 : A hospital staff member or contracted external courier authorised to take custody of a prepared medication delivery.
@@ -24,13 +21,7 @@
 : An attempt that did not hand medication to the intended recipient. It is not a successful delivery and must record a standard reason for coordinator follow-up.
 
 **Delivery Attempt**
-: One QR-identified effort to deliver a package. A Failed Delivery followed by Medication Return creates a new Delivery Attempt with a new QR under the same Delivery Request; only a Payable Delivery is eligible for payment.
-
-**Payout Period**
-: A calendar-month collection of successfully delivered requests whose Zone Rates are checked by a coordinator, approved by finance, and then marked paid. A closed period is immutable.
-
-**Payable Delivery**
-: A delivery attempt that was successfully completed with required proof and therefore may enter a Payout Period. A Failed Delivery is not payable unless an authorised exception is recorded.
+: One QR-identified effort to deliver a package. A Failed Delivery followed by Medication Return creates a new Delivery Attempt with a new QR under the same Delivery Request.
 
 **HOS Source**
 : The HOS system, which remains the read-only source for patient, prescription, and eligible medication information.
@@ -60,7 +51,7 @@
 : An expiring, opaque random package identifier printed on a prepared package. It contains no patient or medication information and can be resolved only by the authenticated system.
 
 **Audit Trail**
-: An immutable chronological record of creation, amendments, QR claims, delivery attempts, medication returns, payout approvals, and payments. Users cannot delete these events.
+: An immutable chronological record of creation, amendments, QR claims, delivery attempts, and medication returns. Users cannot delete these events.
 
 **Patient Notification**
 : An automated outbound message to a patient. Patient Notification is out of scope for the first release; staff may record a telephone contact made outside the system.
