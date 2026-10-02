@@ -9,6 +9,6 @@
 | Offline pickup | claim แล้วปิดเครือข่าย บันทึกรับยา | event อยู่ในเครื่องพร้อมเวลาอุปกรณ์ | |
 | Offline delivery | บันทึกส่งยา/ความสัมพันธ์ผู้รับ/หลักฐาน | หลักฐานเก็บเข้ารหัสและยังไม่ถือว่าสำเร็จก่อน sync | |
 | Reconnect | กลับออนไลน์และ sync | server acknowledge ก่อนลบ local event; sync ซ้ำไม่สร้างซ้ำ | |
-| Failed delivery | เลือกเหตุผลมาตรฐาน | งานเป็น `return_required`; ไม่เข้า payout | |
+| Failed delivery | เลือกเหตุผลมาตรฐาน | งานเป็น `return_required` และต้องเข้าสู่ขั้นตอนรับยาคืน | |
 
 การรับรอง: ผ่าน / ไม่ผ่าน  ลายมือชื่อ: ______

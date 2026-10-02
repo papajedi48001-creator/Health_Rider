@@ -8,7 +8,6 @@
 | rider internal | `uat-rider-in` | claim/offline/sync |
 | rider external | `uat-rider-out` | ขอบเขต contractor rider |
 | coordinator | `uat-coordinator` | exception/amendment/conflict |
-| finance | `uat-finance` | payout/export |
 | auditor | `uat-auditor` | read-only audit |
 | admin | `uat-admin` | role/configuration verification |
 

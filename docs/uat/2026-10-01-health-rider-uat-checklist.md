@@ -11,7 +11,7 @@
 - [ ] `AUTH_SECRET` และรหัสผ่าน Compose ไม่ใช่ค่า development
 - [ ] HOS account เป็น read-only และ `HOS_DATABASE_URL` เชื่อมเฉพาะ staging/ข้อมูลทดสอบ
 - [ ] ตั้ง `HOS_ELIGIBLE_ITEM_CODES` ตามรายการยาที่อนุมัติสำหรับ UAT
-- [ ] สร้างบัญชีทดสอบ: pharmacy, rider ภายใน, rider ผู้รับจ้างภายนอก, coordinator, finance, admin, auditor
+- [ ] สร้างบัญชีทดสอบ: pharmacy, rider ภายใน, rider ผู้รับจ้างภายนอก, coordinator, admin, auditor
 - [ ] เตรียมผู้ป่วย/ใบสั่งยาทดสอบที่ไม่มีข้อมูลจริง หรือได้รับอนุญาตตามนโยบายโรงพยาบาล
 - [ ] สำรอง MariaDB และ evidence volume ก่อนเริ่มรอบ UAT
 
@@ -21,8 +21,7 @@
 | --- | --- | --- |
 | HOS candidate | เห็นเฉพาะ candidate ที่เข้าเกณฑ์; ไม่มีข้อมูลยา/CID เกินความจำเป็น | |
 | ยืนยัน candidate | เฉพาะ pharmacy/admin ยืนยันได้ และสร้าง Delivery Request หนึ่งรายการ | |
-| โซน/อัตรา | ระบบเลือก zone/village เดิมและ snapshot อัตรา ณ วันที่ยืนยัน | |
-| เปลี่ยนอัตราภายหลัง | งานเดิมยังใช้อัตรา snapshot เดิม | |
+| โซน/หมู่บ้าน | ระบบเลือก zone/village เดิมเพื่อระบุพื้นที่ส่งยา | |
 | เตรียมพัสดุ | สร้าง Delivery Attempt สถานะ `prepared` พร้อม QR | |
 | QR | payload ไม่มี HN, ชื่อผู้ป่วย หรือข้อมูลยา; QR หมดอายุตามกำหนด | |
 
@@ -49,23 +48,18 @@
 | HN/พัสดุ | ไม่สามารถแก้ HN หรือ identity ของพัสดุ | |
 | Sync conflict | หลักฐานจาก version เก่ายังคงอยู่ใน queue ให้ coordinator ตรวจ; ไม่ถูกลบ | |
 
-## 5. การเงิน รายงาน และสิทธิ์
+## 5. สิทธิ์และ Audit
 
 | รายการทดสอบ | ผลที่คาดหวัง | ผล/หลักฐาน |
 | --- | --- | --- |
-| Payout eligibility | เฉพาะงาน `delivered` ที่หลักฐานครบเท่านั้นเข้ารอบ | |
-| งานล้มเหลว/หลักฐานไม่ครบ | ไม่เข้า payout | |
-| สร้างงวด | finance/admin สร้างงวดรายเดือนจาก rate snapshot | |
-| อนุมัติ/ปิดงวด | finance/admin เท่านั้น; ปิดงวดแล้วแก้รายการไม่ได้ | |
-| CSV | มี rider code/name, attempt, zone, rate และยอด; ไม่มีข้อมูลผู้ป่วย | |
 | Audit | auditor อ่านประวัติได้ แต่ไม่มี route/action สำหรับแก้ไขหรือลบ | |
-| Payment | ยืนยันว่าไม่มีการโอนเงินจริง/บัญชีธนาคารในระบบ | |
+| บทบาท | ไม่มีบัญชีหรือหน้าจอสำหรับการคำนวณและจัดการค่าบริการ | |
 
 ## 6. เกณฑ์รับรอง UAT
 
-- [ ] ไม่มี Critical/High defect ค้างอยู่ใน workflow ส่งยา, สิทธิ์, offline sync หรือ payout
+- [ ] ไม่มี Critical/High defect ค้างอยู่ใน workflow ส่งยา, สิทธิ์ หรือ offline sync
 - [ ] ทุกกรณีในตารางมีผลและหลักฐานแนบ
-- [ ] ผู้แทน pharmacy, rider, coordinator และ finance รับรองผลในส่วนของตน
+- [ ] ผู้แทน pharmacy, rider และ coordinator รับรองผลในส่วนของตน
 - [ ] Backup/restore drill, HOS connectivity และ credential rotation ได้รับการรับรองแยกตามนโยบายโรงพยาบาล
 - [ ] มีแผน rollback และผู้รับผิดชอบวันเปิดใช้งาน
 
@@ -82,5 +76,4 @@
 | Pharmacy | | | |
 | Rider representative | | | |
 | Coordinator | | | |
-| Finance | | | |
 | ผู้อนุมัติ go-live | | | |

@@ -2,10 +2,9 @@
 
 ## หัวข้ออบรม
 
-1. Pharmacy: ยืนยัน candidate, ตรวจโซน/อัตรา, ออก QR, รับยาคืน
+1. Pharmacy: ยืนยัน candidate, ตรวจโซน/หมู่บ้าน, ออก QR, รับยาคืน
 2. Rider: claim ต้องออนไลน์, ห้ามแชร์ QR, offline event จะสำเร็จเมื่อ server acknowledge, หลักฐานต้องหลีกเลี่ยงใบหน้า/ฉลากยา
 3. Coordinator: แก้ได้เฉพาะที่อยู่/โทรศัพท์พร้อมเหตุผล; ห้ามแก้ HN/พัสดุ
-4. Finance: ตรวจ eligibility, approval/close, CSV ไม่ใช่การจ่ายเงินจริง
 
 ## รับมือเหตุการณ์
 
