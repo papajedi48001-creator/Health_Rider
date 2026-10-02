@@ -33,7 +33,7 @@ export function PharmacyCandidateList() {
     });
 
     if (!response.ok) {
-      setMessage('ไม่สามารถสร้างงานส่งยาได้ โปรดตรวจสอบโซนและอัตราค่าบริการ');
+      setMessage('ไม่สามารถสร้างงานส่งยาได้ โปรดตรวจสอบโซนและหมู่บ้าน');
       setConfirming(null);
       return;
     }
