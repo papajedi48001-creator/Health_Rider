@@ -12,14 +12,11 @@ export type ConfirmedDeliveryRequest = {
   telephone: string | null;
   deliveryAddress: string;
   deliveryZoneId: string;
-  rateSatangSnapshot: number;
-  rateEffectiveOn: Date;
   createdById: string;
 };
 
 type ConfirmationStore = {
   findZone(codes: { subdistrictCode: string; villageCode: string }): Promise<{ id: string } | null>;
-  resolveRate(zoneId: string, on: Date): Promise<{ satang: number; effectiveFrom: Date }>;
   createRequest(request: ConfirmedDeliveryRequest): Promise<ConfirmedDeliveryRequest>;
 };
 
@@ -38,7 +35,6 @@ export async function confirmCandidate(
     throw new Error('ไม่พบโซนจัดส่งสำหรับที่อยู่ผู้ป่วย');
   }
 
-  const rate = await store.resolveRate(zone.id, new Date());
   return store.createRequest({
     id: newPublicId(),
     hosVisitNumber: candidate.visitNumber,
@@ -48,8 +44,6 @@ export async function confirmCandidate(
     telephone: candidate.telephone,
     deliveryAddress: candidate.deliveryAddress,
     deliveryZoneId: zone.id,
-    rateSatangSnapshot: rate.satang,
-    rateEffectiveOn: rate.effectiveFrom,
     createdById: actor.id,
   });
 }

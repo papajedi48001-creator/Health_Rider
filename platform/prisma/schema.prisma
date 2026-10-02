@@ -11,7 +11,6 @@ enum UserRole {
   pharmacy
   coordinator
   rider
-  finance
   admin
   auditor
 }
@@ -30,13 +29,6 @@ enum DeliveryAttemptStatus {
   return_required
   returned
   sync_review
-}
-
-enum PayoutPeriodStatus {
-  draft
-  approved
-  closed
-  paid
 }
 
 model User {
@@ -76,25 +68,10 @@ model DeliveryZone {
   active          Boolean           @default(true)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  rates           ZoneRate[]
   requests        DeliveryRequest[]
 
   @@unique([subdistrictCode, villageCode])
   @@map("delivery_zones")
-}
-
-model ZoneRate {
-  id               String       @id @db.Char(26)
-  deliveryZoneId   String       @db.Char(26)
-  satang           Int
-  effectiveFrom    DateTime     @db.Date
-  effectiveUntil   DateTime?    @db.Date
-  createdById      String       @db.Char(26)
-  createdAt        DateTime     @default(now())
-  deliveryZone     DeliveryZone @relation(fields: [deliveryZoneId], references: [id])
-
-  @@index([deliveryZoneId, effectiveFrom])
-  @@map("zone_rates")
 }
 
 model EligibilityRule {
@@ -117,8 +94,6 @@ model DeliveryRequest {
   telephone          String?           @db.VarChar(100)
   deliveryAddress    String            @db.Text
   deliveryZoneId     String            @db.Char(26)
-  rateSatangSnapshot Int
-  rateEffectiveOn    DateTime          @db.Date
   deliveryVersion    Int               @default(1)
   createdById        String            @db.Char(26)
   createdAt          DateTime          @default(now())
@@ -149,8 +124,6 @@ model DeliveryAttempt {
   qrTokens          PackageQrToken[]
   evidence          DeliveryEvidence?
   offlineEvents     OfflineDeliveryEvent[]
-  payoutLines       PayoutLine[]
-
   @@map("delivery_attempts")
 }
 
@@ -206,39 +179,6 @@ model SyncConflict {
   createdAt             DateTime @default(now())
 
   @@map("sync_conflicts")
-}
-
-model PayoutPeriod {
-  id          String             @id @db.Char(26)
-  month       DateTime           @unique @db.Date
-  status      PayoutPeriodStatus @default(draft)
-  createdById String             @db.Char(26)
-  approvedById String?           @db.Char(26)
-  approvedAt  DateTime?
-  closedAt    DateTime?
-  paidAt      DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  lines       PayoutLine[]
-
-  @@map("payout_periods")
-}
-
-model PayoutLine {
-  id                String          @id @db.Char(26)
-  payoutPeriodId    String          @db.Char(26)
-  deliveryAttemptId String          @unique @db.Char(26)
-  riderId           String          @db.Char(26)
-  riderCodeSnapshot String          @db.VarChar(100)
-  riderNameSnapshot String          @db.VarChar(255)
-  zoneNameSnapshot  String          @db.VarChar(255)
-  rateSatang        Int
-  createdAt         DateTime        @default(now())
-  payoutPeriod      PayoutPeriod    @relation(fields: [payoutPeriodId], references: [id])
-  deliveryAttempt   DeliveryAttempt @relation(fields: [deliveryAttemptId], references: [id])
-
-  @@index([payoutPeriodId, riderId])
-  @@map("payout_lines")
 }
 
 model AuditEvent {

@@ -17,7 +17,7 @@ test.skipIf(!databaseUrl)('MariaDB permits only one concurrent QR claim', async 
   await db.deliveryZone.create({ data: { id: ids.zone, subdistrictCode: '99', villageCode: '99', displayName: 'Test zone' } });
   await db.deliveryRequest.create({ data: {
     id: ids.request, hn: 'TEST-HN', patientName: 'Test', patientAge: null, telephone: null, deliveryAddress: 'Test',
-    deliveryZoneId: ids.zone, rateSatangSnapshot: 1, rateEffectiveOn: new Date('2026-10-01'), createdById: ids.user,
+    deliveryZoneId: ids.zone, createdById: ids.user,
   } });
   await db.deliveryAttempt.create({ data: { id: ids.attempt, deliveryRequestId: ids.request, status: 'prepared' } });
   const token = await issuePackageQr(ids.attempt, new Date(Date.now() + 60_000), {

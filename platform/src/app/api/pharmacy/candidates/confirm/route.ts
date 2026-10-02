@@ -4,7 +4,6 @@ import { requireRole, UnauthorizedError } from '@/auth/require-role';
 import { writeAuditEvent } from '@/domain/audit/write-audit-event';
 import { confirmCandidate } from '@/domain/delivery/confirm-candidate';
 import { newPublicId } from '@/domain/delivery/status';
-import { resolveZoneRate } from '@/domain/rates/resolve-zone-rate';
 import type { HosCandidate } from '@/hos/types';
 import { db } from '@/lib/db';
 
@@ -20,9 +19,6 @@ export async function POST(request: NextRequest) {
       findZone: (codes) => db.deliveryZone.findUnique({
         where: { subdistrictCode_villageCode: codes },
         select: { id: true },
-      }),
-      resolveRate: (zoneId, on) => resolveZoneRate(zoneId, on, {
-        listForZone: (deliveryZoneId) => db.zoneRate.findMany({ where: { deliveryZoneId } }),
       }),
       createRequest: (deliveryRequest) => db.deliveryRequest.create({ data: deliveryRequest }),
     });

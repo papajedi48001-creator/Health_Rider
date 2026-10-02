@@ -2,16 +2,14 @@ import { expect, test, vi } from 'vitest';
 import { createSessionToken } from '@/auth/session';
 import { NextRequest } from 'next/server';
 
-const { create, findUnique, findMany } = vi.hoisted(() => ({
+const { create, findUnique } = vi.hoisted(() => ({
   create: vi.fn(),
   findUnique: vi.fn(),
-  findMany: vi.fn(),
 }));
 
 vi.mock('@/lib/db', () => ({
   db: {
     deliveryZone: { findUnique },
-    zoneRate: { findMany },
     deliveryRequest: { create },
     auditEvent: { create: vi.fn() },
   },
@@ -31,11 +29,10 @@ test('rejects a rider confirming a HOS candidate', async () => {
   expect(create).not.toHaveBeenCalled();
 });
 
-test('allows pharmacy to create a rate-snapshotted delivery request', async () => {
+test('allows pharmacy to create a delivery-zone request without monetary data', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
   process.env.AUTH_SECRET = 'test-session-secret';
   findUnique.mockResolvedValue({ id: 'zone-1' });
-  findMany.mockResolvedValue([{ id: 'rate-1', deliveryZoneId: 'zone-1', satang: 2500, effectiveFrom: new Date('2026-01-01'), effectiveUntil: null }]);
   create.mockImplementation(async ({ data }) => data);
   const token = createSessionToken({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' }, 'test-session-secret');
 
@@ -49,5 +46,8 @@ test('allows pharmacy to create a rate-snapshotted delivery request', async () =
   }));
 
   expect(response.status).toBe(201);
-  await expect(response.json()).resolves.toMatchObject({ hn: 'HN-TEST-001', rateSatangSnapshot: 2500, createdById: 'pharmacy-1' });
+  const body = await response.json();
+  expect(body).toEqual(expect.objectContaining({ hn: 'HN-TEST-001', deliveryZoneId: 'zone-1', createdById: 'pharmacy-1' }));
+  expect(body).not.toHaveProperty('rateSatangSnapshot');
+  expect(body).not.toHaveProperty('rateEffectiveOn');
 });
