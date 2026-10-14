@@ -4,12 +4,10 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { userRoles, type UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
+import { roleLabels } from '@/lib/labels';
 
 type User = { id: string; username: string; displayName: string; role: UserRole; active: boolean; riderProfile: { riderCode: string; employmentCategory: string } | null };
 
-export const roleLabels: Record<UserRole, string> = {
-  pharmacy: 'เภสัชกรรม', coordinator: 'ผู้ประสานงาน', rider: 'ไรเดอร์', admin: 'ผู้ดูแลระบบ', auditor: 'ผู้ตรวจสอบ',
-};
 
 export function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);

@@ -15,8 +15,8 @@ async function prepareAndClaim(browser: Browser, patientName: string) {
   const prepared = await (await pharmacy.page.request.post('/api/pharmacy/attempts/prepare', { data: { deliveryRequestId: request.id } })).json();
   const rider = await signedIn(browser, 'rider.internal.uat');
   await rider.page.goto('/rider/scan');
-  await rider.page.getByLabel('QR token').fill(prepared.token);
-  await rider.page.getByRole('button', { name: 'รับงาน' }).click();
+  await rider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
+  await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
   await expect(rider.page).toHaveURL(new RegExp(`/rider/attempts/${prepared.attemptId}$`));
   await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
   return { request, attemptId: prepared.attemptId as string, pharmacy, rider };
@@ -37,8 +37,8 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
 
   const rider = await signedIn(browser, 'rider.internal.uat');
   await rider.page.goto('/rider/scan');
-  await rider.page.getByLabel('QR token').fill(prepared.token);
-  await rider.page.getByRole('button', { name: 'รับงาน' }).click();
+  await rider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
+  await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
   await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
 
   await rider.context.setOffline(true);
@@ -56,6 +56,16 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await expect(rider.page.getByText('สถานะ: ส่งสำเร็จ')).toBeVisible();
   expect(await attemptStatus(prepared.attemptId)).toBe('delivered');
 
+  await rider.page.getByRole('link', { name: 'ประวัติการส่ง' }).click();
+  const delivered = rider.page.getByRole('listitem').filter({ hasText: patientName });
+  await expect(delivered.getByText('ส่งสำเร็จ', { exact: true })).toHaveCSS('color', 'rgb(21, 128, 61)');
+  await delivered.getByRole('button', { name: 'ดูรูปหลักฐาน' }).click();
+  const photo = rider.page.getByRole('dialog').getByRole('img', { name: /รูปหลักฐานการส่ง/ });
+  await expect(photo).toBeVisible();
+  await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await rider.page.getByRole('button', { name: 'ปิดรูป' }).click();
+  await expect(rider.page.getByRole('dialog')).toHaveCount(0);
+
   const coordinator = await signedIn(browser, 'coordinator.uat');
   await coordinator.page.goto('/operations');
   await expect(coordinator.page.getByRole('row').filter({ hasText: patientName })).toContainText('ส่งสำเร็จ');
@@ -68,11 +78,15 @@ test('takes a failed delivery back to pharmacy and allows a new package', async 
   await rider.page.getByLabel('เหตุผล').selectOption('recipient_unavailable');
   await rider.page.getByRole('button', { name: 'บันทึกส่งไม่สำเร็จ' }).click();
   await expect(rider.page.getByText('นำยากลับมาคืนเภสัชกรรมภายในวันนี้')).toBeVisible();
+  await rider.page.goto('/rider/history');
+  const failed = rider.page.getByRole('listitem').filter({ hasText: patientName });
+  await expect(failed.getByText(/^ส่งไม่สำเร็จ: ไม่พบผู้รับ/)).toHaveCSS('color', 'rgb(180, 35, 24)');
 
-  await pharmacy.page.goto('/pharmacy/packages');
+  await pharmacy.page.goto('/pharmacy/returns');
   await pharmacy.page.getByRole('listitem').filter({ hasText: patientName }).getByRole('button', { name: 'ยืนยันรับยาคืน' }).click();
   await expect(pharmacy.page.getByText('รับยาคืนแล้ว เตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง')).toBeVisible();
   expect(await attemptStatus(attemptId)).toBe('returned');
+  await pharmacy.page.goto('/pharmacy/packages');
   const retry = pharmacy.page.getByRole('listitem').filter({ hasText: patientName });
   await expect(retry).toContainText('ส่งใหม่หลังรับยาคืนแล้ว');
   await expect(retry.getByRole('button', { name: 'เตรียมพัสดุและออก QR' })).toBeVisible();

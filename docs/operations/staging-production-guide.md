@@ -8,7 +8,7 @@
 4. บัญชี HOSxP ต้องมี `SELECT` เท่านั้นและจำกัด network source
 5. รัน `docker compose up -d --build`; service `migrate` จะรัน `prisma migrate deploy` ให้เสร็จก่อน `web` เริ่มทำงาน
 6. สร้างบัญชีและโซน UAT ด้วย `docker compose run --rm -e SEED_UAT_PASSWORD -e SEED_ZONES_FILE migrate npm run db:seed` แล้วทำ UAT ตาม checklist
-7. Cookie ของ session ตั้งค่า `Secure` ใน production จึงต้องเข้าผ่าน HTTPS (reverse proxy) ยกเว้นการทดสอบบน `localhost`; ถ้าจำเป็นต้องลองผ่าน HTTP ด้วย IP ในวง LAN ชั่วคราว ตั้ง `SESSION_COOKIE_INSECURE=true` (กล้องสแกน QR และโหมดออฟไลน์ของ rider ยังต้องใช้ HTTPS)
+7. Cookie ของ session ตั้งค่า `Secure` ใน production จึงต้องเข้าผ่าน HTTPS (reverse proxy; สำหรับ staging ใช้ `docker compose --profile https` ตาม [https-staging.md](https-staging.md)) ยกเว้นการทดสอบบน `localhost`; ถ้าจำเป็นต้องลองผ่าน HTTP ด้วย IP ในวง LAN ชั่วคราว ตั้ง `SESSION_COOKIE_INSECURE=true` (กล้องสแกน QR และโหมดออฟไลน์ของ rider ยังต้องใช้ HTTPS)
 8. Reverse proxy ต้องรับ request body ได้อย่างน้อย 5 MB (เช่น nginx `client_max_body_size 5m;`) เพราะการ sync ส่งยาสำเร็จแนบรูปหลักฐานมาด้วย
 
 ## Production gate

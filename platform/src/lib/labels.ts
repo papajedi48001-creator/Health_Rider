@@ -1,3 +1,4 @@
+import type { UserRole } from '@/auth/roles';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import type { FailedDeliveryReason, RecipientRelation } from '@/domain/delivery/offline-event-rules';
 
@@ -42,3 +43,9 @@ export function formatThaiDateTime(value: string | Date | null): string {
   if (!value) return '-';
   return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }).format(new Date(value));
 }
+
+export const roleLabels: Record<UserRole, string> = {
+  pharmacy: 'เภสัชกรรม', coordinator: 'ผู้ประสานงาน', rider: 'ไรเดอร์', admin: 'ผู้ดูแลระบบ', auditor: 'ผู้ตรวจสอบ',
+};
+
+export const employmentLabels: Record<string, string> = { internal: 'ไรเดอร์ภายใน', external: 'ไรเดอร์ภายนอก' };

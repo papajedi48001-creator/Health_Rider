@@ -36,6 +36,7 @@ model User {
   username        String            @unique @db.VarChar(100)
   passwordHash    String            @db.VarChar(255)
   displayName     String            @db.VarChar(255)
+  phone           String?           @db.VarChar(20)
   role            UserRole
   active          Boolean           @default(true)
   createdAt       DateTime          @default(now())

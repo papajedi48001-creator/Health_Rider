@@ -1,8 +1,10 @@
+import { HeroBanner } from '@/brand/hero-banner';
 import { PharmacyCandidateList } from '@/app/(staff)/pharmacy/candidates/pharmacy-candidate-list';
 
 export default function PharmacyCandidatesPage() {
   return (
     <main>
+      <HeroBanner title="สวัสดี ทีมเภสัชกรรม" text="ตรวจสอบรายการจาก HOSxP แล้วยืนยันเพื่อสร้างงานส่งยาถึงบ้าน" />
       <h1>ผู้ป่วยที่รอยืนยันการส่งยาถึงบ้าน</h1>
       <p>รายการนี้อ่านจาก HOSxP แบบอ่านอย่างเดียว เภสัชกรต้องตรวจสอบยาและกดยืนยันก่อนสร้างงานจัดส่ง</p>
       <p>การยืนยันจะบันทึกโซนและหมู่บ้านสำหรับติดตามงานจัดส่ง</p>

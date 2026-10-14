@@ -44,6 +44,7 @@ export function PharmacyCandidateList() {
       return;
     }
     setCandidates((current) => current.filter((item) => item.visitNumber !== candidate.visitNumber));
+    window.dispatchEvent(new Event('health-rider:counts'));
     setMessage('สร้างงานส่งยาแล้ว');
   }
 
@@ -60,6 +61,7 @@ export function PharmacyCandidateList() {
     const done = new Set(result.data.visitNumbers);
     setCandidates((current) => current.filter((item) => !done.has(item.visitNumber)));
     setZoneFilter(ALL_ZONES);
+    window.dispatchEvent(new Event('health-rider:counts'));
     setMessage(`สร้างงานส่งยาแล้ว ${result.data.confirmed} รายในโซน ${zone.displayName}`);
   }
 
@@ -93,38 +95,40 @@ export function PharmacyCandidateList() {
 
   return (
     <section aria-live="polite">
-      <label>
-        วันที่รับบริการ
-        <input type="date" value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
-      </label>
-      <label>
-        ตำบล
-        <select value={subdistrictFilter} onChange={(event) => { setSubdistrictFilter(event.target.value); setZoneFilter(ALL_ZONES); }}>
-          <option value={ALL_SUBDISTRICTS}>ทุกตำบล ({candidates.length} ราย)</option>
-          {[...subdistricts.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([code, { name, count }]) => (
-            <option key={code} value={code}>{name} ({count} ราย)</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        โซนจัดส่ง
-        <select value={zoneFilter} onChange={(event) => setZoneFilter(event.target.value)}>
-          <option value={ALL_ZONES}>ทุกโซน ({inSubdistrict.length} ราย)</option>
-          {[...zones.values()].sort((left, right) => left.zone.displayName.localeCompare(right.zone.displayName, 'th', { numeric: true })).map(({ zone, count }) => (
-            <option key={zone.id} value={zone.id}>{zone.displayName} ({count} ราย)</option>
-          ))}
-          {zoneless > 0 && <option value={NO_ZONE}>ยังไม่มีโซน ({zoneless} ราย)</option>}
-        </select>
-      </label>
+      <div className="filter-bar">
+        <label>
+          วันที่รับบริการ
+          <input type="date" value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
+        </label>
+        <label>
+          ตำบล
+          <select value={subdistrictFilter} onChange={(event) => { setSubdistrictFilter(event.target.value); setZoneFilter(ALL_ZONES); }}>
+            <option value={ALL_SUBDISTRICTS}>ทุกตำบล ({candidates.length} ราย)</option>
+            {[...subdistricts.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([code, { name, count }]) => (
+              <option key={code} value={code}>{name} ({count} ราย)</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          โซนจัดส่ง
+          <select value={zoneFilter} onChange={(event) => setZoneFilter(event.target.value)}>
+            <option value={ALL_ZONES}>ทุกโซน ({inSubdistrict.length} ราย)</option>
+            {[...zones.values()].sort((left, right) => left.zone.displayName.localeCompare(right.zone.displayName, 'th', { numeric: true })).map(({ zone, count }) => (
+              <option key={zone.id} value={zone.id}>{zone.displayName} ({count} ราย)</option>
+            ))}
+            {zoneless > 0 && <option value={NO_ZONE}>ยังไม่มีโซน ({zoneless} ราย)</option>}
+          </select>
+        </label>
+        <label>
+          ค้นหา HN / ชื่อ / ที่อยู่
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
+      </div>
       {selectedZone && (
         <button type="button" disabled={confirming !== null} onClick={() => void confirmZone(selectedZone.zone, selectedZone.count)}>
           {confirming === selectedZone.zone.id ? 'กำลังยืนยันทั้งโซน' : `ยืนยันทั้งโซน ${selectedZone.zone.displayName} (${selectedZone.count} ราย)`}
         </button>
       )}
-      <label>
-        ค้นหา HN / ชื่อ / ที่อยู่
-        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
-      </label>
       {candidates.length > 0 && (
         <p>{shown.length === candidates.length ? `ทั้งหมด ${candidates.length} ราย` : `พบ ${shown.length} จาก ${candidates.length} ราย`}</p>
       )}

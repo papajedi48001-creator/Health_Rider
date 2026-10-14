@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
 import { roleHome, safeNextPath } from '@/auth/role-home';
 import { LoginForm } from '@/app/login/login-form';
+import { Brand } from '@/brand/logo';
+import { Mascot, mascotName } from '@/brand/mascot';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +20,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (session) redirect(next ?? roleHome(session.role));
 
   return (
-    <main>
-      <h1>เข้าสู่ระบบ Health Rider</h1>
-      <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? ''} />
+    <main className="login-page">
+      <div className="login-shell">
+        <div className="login-hero">
+          <Mascot width={260} variant="full" alt={`${mascotName} มาสคอต Health Rider`} />
+          <h2>สวัสดีครับ ผม{mascotName}</h2>
+          <p>พร้อมพายาจากโรงพยาบาลไปถึงบ้านผู้ป่วยอย่างปลอดภัย</p>
+        </div>
+        <div className="login-card">
+          <div className="brand"><Brand size={40} /></div>
+          <h1>เข้าสู่ระบบ</h1>
+          <p className="login-tagline">ระบบส่งยาถึงบ้าน ปลอดภัย ตรวจสอบได้ทุกขั้นตอน</p>
+          <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? ''} />
+        </div>
+      </div>
     </main>
   );
 }
