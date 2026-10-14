@@ -16,8 +16,13 @@ export async function decryptOfflinePayload(encrypted: { iv: string; ciphertext:
   return JSON.parse(new TextDecoder().decode(decrypted)) as Record<string, unknown>;
 }
 
+// Converts in chunks: spreading a whole evidence photo into one fromCharCode call overflows the call stack.
 function toBase64(value: Uint8Array): string {
-  return btoa(String.fromCharCode(...value));
+  let binary = '';
+  for (let offset = 0; offset < value.length; offset += 0x8000) {
+    binary += String.fromCharCode(...value.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
 }
 
 function fromBase64(value: string): Uint8Array {

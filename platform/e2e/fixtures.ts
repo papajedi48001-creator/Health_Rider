@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { ulid } from 'ulidx';
+import { randomBytes } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 
 // Browser tests create Delivery Requests directly because HOS is not available in test environments.
@@ -22,12 +23,12 @@ export async function attemptStatus(attemptId: string) {
   return (await prisma.deliveryAttempt.findUniqueOrThrow({ where: { id: attemptId } })).status;
 }
 
-// A small valid PNG; the rider app re-encodes it to JPEG before storing it.
-export const samplePhoto = { name: 'evidence.png', mimeType: 'image/png', buffer: solidPng(64, 48) };
+// A camera-sized photo of noise, so the re-encoded JPEG is as large as a real one; the rider app
+// re-encodes it before storing it.
+export const samplePhoto = { name: 'evidence.png', mimeType: 'image/png', buffer: noisePng(1600, 1200) };
 
-function solidPng(width: number, height: number): Buffer {
-  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, 0x80)]);
-  const pixels = deflateSync(Buffer.concat(Array.from({ length: height }, () => row)));
+function noisePng(width: number, height: number): Buffer {
+  const pixels = deflateSync(Buffer.concat(Array.from({ length: height }, () => Buffer.concat([Buffer.from([0]), randomBytes(width * 3)]))));
   const header = Buffer.alloc(13);
   header.writeUInt32BE(width, 0);
   header.writeUInt32BE(height, 4);
