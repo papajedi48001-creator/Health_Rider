@@ -12,7 +12,7 @@ test('maps a legacy HOS row into a read-only candidate DTO', async () => {
           patient_age: 64,
           telephone: '0800000000',
           delivery_address: 'บ้านทดสอบ',
-          subdistrict_code: '46',
+          subdistrict_code: '470907',
           village_code: '1',
         },
       ],
@@ -27,7 +27,7 @@ test('maps a legacy HOS row into a read-only candidate DTO', async () => {
       patientAge: 64,
       telephone: '0800000000',
       deliveryAddress: 'บ้านทดสอบ',
-      subdistrictCode: '46',
+      subdistrictCode: '470907',
       villageCode: '01',
     },
   ]);
@@ -40,4 +40,14 @@ test('queries HOS with the Thai visit date', async () => {
   await repository.eligibleFor(new Date('2026-10-13T18:30:00.000Z'));
 
   expect(execute).toHaveBeenCalledWith(expect.any(String), ['100001', '2026-10-14']);
+});
+
+// HOSxP tmbpart repeats across districts, so zones key on the full province+district+subdistrict code.
+test('reads the subdistrict as the full HOSxP address code', async () => {
+  const execute = vi.fn().mockResolvedValue([[]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await repository.eligibleFor(new Date('2026-10-13T18:30:00.000Z'));
+
+  expect(execute.mock.calls[0]?.[0]).toContain('CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code');
 });

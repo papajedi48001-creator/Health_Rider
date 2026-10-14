@@ -18,7 +18,7 @@ function candidateQuery(itemCodeCount: number): string {
     TIMESTAMPDIFF(YEAR, p.birthday, o.vstdate) AS patient_age,
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
     p.informaddr AS delivery_address,
-    p.tmbpart AS subdistrict_code,
+    CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code,
     p.moopart AS village_code
   FROM opitemrece AS o
   INNER JOIN patient AS p ON p.hn = o.hn

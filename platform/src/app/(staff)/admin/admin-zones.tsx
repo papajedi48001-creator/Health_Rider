@@ -42,7 +42,7 @@ export function AdminZones() {
       <p>รหัสตำบลและหมู่บ้านต้องตรงกับ <code>patient.tmbpart</code> และ <code>patient.moopart</code> ใน HOS</p>
       <p aria-live="polite">{message}</p>
       <form onSubmit={(event) => void create(event)} aria-label="เพิ่มโซน">
-        <label>รหัสตำบล <input name="subdistrictCode" required /></label>
+        <label>รหัสตำบล 6 หลัก (จังหวัด+อำเภอ+ตำบล) <input name="subdistrictCode" required inputMode="numeric" pattern="\d{6}" /></label>
         <label>รหัสหมู่บ้าน <input name="villageCode" required /></label>
         <label>ชื่อโซน <input name="displayName" required /></label>
         <button type="submit">เพิ่มโซน</button>

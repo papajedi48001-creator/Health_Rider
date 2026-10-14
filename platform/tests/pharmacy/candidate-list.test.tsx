@@ -11,7 +11,7 @@ test('loads HOS candidates and lets pharmacy confirm one', async () => {
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response(JSON.stringify([{
       visitNumber: 'VN-TEST-001', hn: 'HN-TEST-001', patientName: 'ผู้ป่วยทดสอบ', patientAge: 64,
-      telephone: '0800000000', deliveryAddress: 'บ้านทดสอบ', subdistrictCode: '46', villageCode: '01',
+      telephone: '0800000000', deliveryAddress: 'บ้านทดสอบ', subdistrictCode: '470907', villageCode: '01', zone: { id: 'zone-1', displayName: 'ปลาโหล หมู่ 1' },
     }]), { status: 200 }))
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'request-1' }), { status: 201 }));
   vi.stubGlobal('fetch', fetchMock);
@@ -30,7 +30,7 @@ test('loads HOS candidates and lets pharmacy confirm one', async () => {
 
 test('narrows a long day to the patients matching every search word', async () => {
   const candidate = (visit: string, hn: string, patientName: string, deliveryAddress: string) => ({
-    visitNumber: visit, hn, patientName, patientAge: 60, telephone: null, deliveryAddress, subdistrictCode: '46', villageCode: '01',
+    visitNumber: visit, hn, patientName, patientAge: 60, telephone: null, deliveryAddress, subdistrictCode: '470907', villageCode: '01', zone: null,
   });
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(JSON.stringify([
     candidate('VN-1', 'HN-100', 'สมชาย ใจดี', '1 หมู่ 6 ต.ปลาโหล'),
@@ -49,4 +49,33 @@ test('narrows a long day to the patients matching every search word', async () =
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'HN-200' } });
   expect(screen.getByText('สมหญิง ใจงาม')).toBeInTheDocument();
   expect(screen.getByText('พบ 1 จาก 3 ราย')).toBeInTheDocument();
+});
+
+test('filters by zone and confirms a whole zone in one request', async () => {
+  const zone6 = { id: 'zone-6', displayName: 'ปลาโหล หมู่ 6' };
+  const candidate = (visit: string, patientName: string, zone: typeof zone6 | null) => ({
+    visitNumber: visit, hn: `HN-${visit}`, patientName, patientAge: 60, telephone: null, deliveryAddress: 'ปลาโหล',
+    subdistrictCode: '470907', villageCode: zone ? '06' : '09', zone,
+  });
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify([
+      candidate('VN-1', 'ผู้ป่วยหนึ่ง', zone6), candidate('VN-2', 'ผู้ป่วยสอง', zone6), candidate('VN-3', 'ผู้ป่วยสาม', null),
+    ]), { status: 200 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ confirmed: 2, visitNumbers: ['VN-1', 'VN-2'] }), { status: 201 }));
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('confirm', () => true);
+
+  render(<PharmacyCandidateList />);
+
+  expect(await screen.findByText('ยังไม่มีโซนสำหรับตำบล 470907 หมู่ 09')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('โซนจัดส่ง'), { target: { value: 'zone-6' } });
+  expect(screen.queryByText('ผู้ป่วยสาม')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยันทั้งโซน ปลาโหล หมู่ 6 (2 ราย)' }));
+
+  expect(await screen.findByText('สร้างงานส่งยาแล้ว 2 รายในโซน ปลาโหล หมู่ 6')).toBeInTheDocument();
+  expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/pharmacy/candidates/confirm-zone');
+  expect(JSON.parse(fetchMock.mock.calls[1]?.[1].body)).toEqual({ zoneId: 'zone-6', date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) });
+  expect(screen.queryByText('ผู้ป่วยหนึ่ง')).not.toBeInTheDocument();
+  expect(screen.getByText('ผู้ป่วยสาม')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'ยืนยันสร้างงานส่งยา' })).toBeDisabled();
 });

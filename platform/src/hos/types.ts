@@ -9,6 +9,9 @@ export type HosCandidate = {
   villageCode: string;
 };
 
+// A candidate as pharmacy sees it: the active delivery zone its HOS address maps to, if any.
+export type ZonedCandidate = HosCandidate & { zone: { id: string; displayName: string } | null };
+
 export type HosCandidateRow = {
   visit_number: string | number;
   hn: string | number;

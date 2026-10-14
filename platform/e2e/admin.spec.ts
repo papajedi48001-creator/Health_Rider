@@ -7,7 +7,7 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await page.goto('/admin');
 
   const zoneForm = page.getByRole('form', { name: 'เพิ่มโซน' });
-  await zoneForm.getByLabel('รหัสตำบล').fill('98');
+  await zoneForm.getByLabel('รหัสตำบล').fill('980000');
   await zoneForm.getByLabel('รหัสหมู่บ้าน').fill(suffix.slice(-2));
   await zoneForm.getByLabel('ชื่อโซน').fill(`โซน E2E ${suffix}`);
   await zoneForm.getByRole('button', { name: 'เพิ่มโซน' }).click();

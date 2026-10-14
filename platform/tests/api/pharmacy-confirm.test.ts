@@ -12,7 +12,7 @@ vi.mock('@/lib/db', () => ({ db: { $transaction: (work: (client: typeof tx) => P
 
 const hosCandidate = {
   visitNumber: 'VN-TEST-001', hn: 'HN-TEST-001', patientName: 'ผู้ป่วยทดสอบ', patientAge: 64,
-  telephone: '0800000000', deliveryAddress: 'บ้านทดสอบ', subdistrictCode: '46', villageCode: '01',
+  telephone: '0800000000', deliveryAddress: 'บ้านทดสอบ', subdistrictCode: '470907', villageCode: '01',
 };
 
 function confirm(body: unknown) {
