@@ -1,3 +1,4 @@
+import { DomainError } from '@/domain/errors';
 import type { SessionUser } from '@/auth/require-role';
 import { requireRole } from '@/auth/require-role';
 import { newPublicId } from '@/domain/delivery/status';
@@ -32,7 +33,7 @@ export async function confirmCandidate(
   });
 
   if (!zone) {
-    throw new Error('ไม่พบโซนจัดส่งสำหรับที่อยู่ผู้ป่วย');
+    throw new DomainError('ไม่พบโซนจัดส่งสำหรับที่อยู่ผู้ป่วย');
   }
 
   return store.createRequest({

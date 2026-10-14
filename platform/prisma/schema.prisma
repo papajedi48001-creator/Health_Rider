@@ -101,7 +101,7 @@ model EligibilityRule {
 
 model DeliveryRequest {
   id                 String            @id @db.Char(26)
-  hosVisitNumber     String?           @db.VarChar(100)
+  hosVisitNumber     String?           @unique @db.VarChar(100)
   hn                 String            @db.VarChar(100)
   patientName        String            @db.VarChar(255)
   patientAge         Int?
@@ -138,6 +138,10 @@ model DeliveryAttempt {
   qrTokens          PackageQrToken[]
   evidence          DeliveryEvidence?
   offlineEvents     OfflineDeliveryEvent[]
+  syncConflicts     SyncConflict[]
+
+  @@index([deliveryRequestId, createdAt])
+  @@index([status, createdAt])
   @@map("delivery_attempts")
 }
 
@@ -178,19 +182,28 @@ model OfflineDeliveryEvent {
   serverReceivedAt    DateTime        @default(now())
   createdAt           DateTime        @default(now())
   deliveryAttempt     DeliveryAttempt @relation(fields: [deliveryAttemptId], references: [id])
+  syncConflict        SyncConflict?
 
   @@unique([eventUuid, riderId])
   @@map("offline_delivery_events")
 }
 
 model SyncConflict {
-  id                    String   @id @db.Char(26)
-  offlineDeliveryEventId String  @unique @db.Char(26)
-  status                String   @default("pending") @db.VarChar(50)
-  resolution            String?  @db.Text
-  resolvedById          String?  @db.Char(26)
-  resolvedAt            DateTime?
-  createdAt             DateTime @default(now())
+  id                     String                @id @db.Char(26)
+  offlineDeliveryEventId String                @unique @db.Char(26)
+  deliveryAttemptId      String                @db.Char(26)
+  reason                 String                @db.VarChar(50)
+  previousStatus         DeliveryAttemptStatus
+  status                 String                @default("pending") @db.VarChar(50)
+  outcome                String?               @db.VarChar(50)
+  resolution             String?               @db.Text
+  resolvedById           String?               @db.Char(26)
+  resolvedAt             DateTime?
+  createdAt              DateTime              @default(now())
+  offlineDeliveryEvent   OfflineDeliveryEvent  @relation(fields: [offlineDeliveryEventId], references: [id])
+  deliveryAttempt        DeliveryAttempt       @relation(fields: [deliveryAttemptId], references: [id])
+
+  @@index([status, createdAt])
 
   @@map("sync_conflicts")
 }

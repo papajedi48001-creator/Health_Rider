@@ -1,4 +1,4 @@
-import type { OfflineEvent } from '@/pwa/offline-queue';
+import type { OfflineEvent, OfflineEventStore } from '@/pwa/offline-queue';
 import { createOfflineKey, decryptOfflinePayload, encryptOfflinePayload } from '@/pwa/crypto';
 
 const databaseName = 'health-rider-offline';
@@ -27,16 +27,29 @@ export async function loadOfflineEvents(): Promise<OfflineEvent[]> {
   return Promise.all(records.map(async (record) => ({ ...record, payload: await decryptOfflinePayload(record.payload.encrypted, key) })));
 }
 
+// The key is generated outside the IndexedDB transaction: awaiting WebCrypto inside one lets it
+// auto-commit before the key is written.
 async function getOfflineKey(): Promise<CryptoKey> {
   const database = await openDatabase();
-  return new Promise((resolve, reject) => {
+  const existing = await readKey(database);
+  if (existing) return existing;
+  const key = await createOfflineKey();
+  await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction('keys', 'readwrite');
-    const store = transaction.objectStore('keys');
-    const request = store.get('device');
-    request.onsuccess = async () => {
-      if (request.result) return resolve(request.result as CryptoKey);
-      const key = await createOfflineKey(); store.put(key, 'device'); resolve(key);
+    transaction.objectStore('keys').add(key, 'device');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = (event) => {
+      // Another tab stored a key first; use that one.
+      if (transaction.error?.name === 'ConstraintError') { event.preventDefault(); resolve(); } else reject(transaction.error);
     };
+  });
+  return (await readKey(database)) ?? key;
+}
+
+function readKey(database: IDBDatabase): Promise<CryptoKey | undefined> {
+  return new Promise((resolve, reject) => {
+    const request = database.transaction('keys').objectStore('keys').get('device');
+    request.onsuccess = () => resolve(request.result as CryptoKey | undefined);
     request.onerror = () => reject(request.error);
   });
 }
@@ -59,3 +72,9 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error);
   });
 }
+
+export const indexedDbOfflineEventStore: OfflineEventStore = {
+  load: loadOfflineEvents,
+  save: saveOfflineEvent,
+  remove: deleteOfflineEvent,
+};

@@ -11,11 +11,11 @@ type ReadOnlyConnection = {
 function candidateQuery(itemCodeCount: number): string {
   const itemCodePlaceholders = Array.from({ length: itemCodeCount }, () => '?').join(', ');
   return `
-  SELECT
+  SELECT DISTINCT
     o.vn AS visit_number,
     o.hn AS hn,
     CONCAT_WS(' ', p.fname, p.lname) AS patient_name,
-    NULL AS patient_age,
+    TIMESTAMPDIFF(YEAR, p.birthday, o.vstdate) AS patient_age,
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
     p.informaddr AS delivery_address,
     p.tmbpart AS subdistrict_code,
@@ -26,6 +26,7 @@ function candidateQuery(itemCodeCount: number): string {
 `;
 }
 
+// One row per visit even when several eligible items were dispensed in it.
 export class MysqlHosCandidateRepository implements HosCandidateRepository {
   constructor(
     private readonly connection: ReadOnlyConnection,

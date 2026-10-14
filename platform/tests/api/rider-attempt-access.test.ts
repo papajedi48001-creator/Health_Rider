@@ -20,6 +20,7 @@ const attempt = {
     patientAge: 64,
     telephone: '0800000000',
     deliveryAddress: 'บ้านทดสอบ หมู่ 1',
+    deliveryVersion: 2,
     medicineName: 'must-not-be-exposed',
   },
 };
@@ -44,6 +45,7 @@ test('projects only the permitted patient identity fields', () => {
   expect(toRiderAttemptView(attempt)).toEqual({
     id: '01J00000000000000000000010',
     status: 'claimed',
+    deliveryVersion: 2,
     patient: {
       hn: 'HN-TEST-001',
       name: 'ผู้ป่วยทดสอบ',

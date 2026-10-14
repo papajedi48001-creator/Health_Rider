@@ -17,6 +17,8 @@ test('loads HOS candidates and lets pharmacy confirm one', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'ยืนยันสร้างงานส่งยา' }));
 
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  expect(fetchMock.mock.calls[0]?.[0]).toMatch(/^\/api\/pharmacy\/candidates\?date=\d{4}-\d{2}-\d{2}$/);
   expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/pharmacy/candidates/confirm');
+  expect(JSON.parse(fetchMock.mock.calls[1]?.[1].body)).toEqual({ visitNumber: 'VN-TEST-001', date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) });
   expect(await screen.findByText('สร้างงานส่งยาแล้ว')).toBeInTheDocument();
 });

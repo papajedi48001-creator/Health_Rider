@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 
-export function LoginForm({ next }: { next: string | null }) {
-  const [message, setMessage] = useState('');
+export function LoginForm({ next, initialMessage }: { next: string | null; initialMessage: string }) {
+  const [message, setMessage] = useState(initialMessage);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -31,7 +31,8 @@ export function LoginForm({ next }: { next: string | null }) {
   }
 
   return (
-    <form onSubmit={(event) => void submit(event)}>
+    <form method="post" action="/api/auth/login" onSubmit={(event) => void submit(event)}>
+      {next && <input type="hidden" name="next" value={next} />}
       <p aria-live="polite">{message}</p>
       <label>
         ชื่อผู้ใช้

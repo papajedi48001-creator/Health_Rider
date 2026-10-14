@@ -1,14 +1,13 @@
-export default function OperationsExceptionsPage() {
+import { OperationsExceptions } from '@/app/(staff)/operations/exceptions/operations-exceptions';
+import { getSessionFromCookies } from '@/auth/current-session';
+
+export default async function OperationsExceptionsPage() {
+  const session = await getSessionFromCookies();
   return (
     <main>
       <h1>งานที่ต้องตรวจสอบ</h1>
       <p>ตรวจรับยาคืนในวันเดียวกัน และพิจารณาหลักฐานออฟไลน์ที่ขัดแย้งก่อนดำเนินการต่อ</p>
-      <section aria-label="สถานะรายการ">
-        <h2>รอรับยาคืน</h2>
-        <p>รายการที่ส่งไม่สำเร็จต้องได้รับการยืนยันกลับถึงเภสัชกรรมก่อนสร้าง QR ใหม่</p>
-        <h2>หลักฐานที่รอตรวจสอบ</h2>
-        <p>หลักฐานเดิมถูกเก็บไว้ครบถ้วน แม้ข้อมูลจัดส่งมีการแก้ไขภายหลัง</p>
-      </section>
+      <OperationsExceptions canResolve={session?.role === 'coordinator' || session?.role === 'admin'} />
     </main>
   );
 }

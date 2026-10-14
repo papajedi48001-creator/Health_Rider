@@ -8,6 +8,7 @@ type RiderAttempt = {
     patientAge: number | null;
     telephone: string | null;
     deliveryAddress: string;
+    deliveryVersion: number;
   };
 };
 
@@ -28,6 +29,7 @@ export function toRiderAttemptView(attempt: RiderAttempt) {
   return {
     id: attempt.id,
     status: attempt.status,
+    deliveryVersion: attempt.deliveryRequest.deliveryVersion,
     patient: {
       hn: attempt.deliveryRequest.hn,
       name: attempt.deliveryRequest.patientName,

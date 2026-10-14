@@ -58,3 +58,19 @@ test('answers malformed input with 422 instead of a server error', async () => {
   expect((await POST(login('{not json'))).status).toBe(422);
   expect((await POST(login({ username: 'x' }))).status).toBe(422);
 });
+
+test('a plain form post signs in with a redirect and never needs credentials in a URL', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  findUser.mockResolvedValue({ id: 'rider-1', role: 'rider', active: true, passwordHash: await hashPassword('correct-password') });
+  const form = (password: string) => new NextRequest('http://localhost/api/auth/login', {
+    method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ username: 'rider.c', password, next: '/rider/attempts/a1' }).toString(),
+  });
+
+  const success = await POST(form('correct-password'));
+  expect(success.status).toBe(303);
+  expect(success.headers.get('location')).toBe('/rider/attempts/a1');
+
+  const failure = await POST(form('wrong-password'));
+  expect(failure.headers.get('location')).toBe('/login?error=401&next=%2Frider%2Fattempts%2Fa1');
+});

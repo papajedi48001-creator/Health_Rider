@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { claimPackageQr, hashPackageQrToken } from '@/domain/delivery/claim-package-qr';
+import { claimPackageQr } from '@/domain/delivery/claim-package-qr';
+import { hashPackageQrToken } from '@/domain/delivery/issue-package-qr';
 
 test('returns invalid for an expired package QR', async () => {
   const result = await claimPackageQr('opaque-token', 'rider-1', new Date('2026-10-02T00:00:00.000Z'), {

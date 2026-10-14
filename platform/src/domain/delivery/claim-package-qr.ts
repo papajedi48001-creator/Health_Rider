@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { hashPackageQrToken } from '@/domain/delivery/issue-package-qr';
 
 export type ClaimResult =
   | { kind: 'claimed'; attemptId: string }
@@ -30,8 +30,4 @@ export async function claimPackageQr(token: string, riderId: string, claimedAt: 
     await transaction.invalidateToken(packageToken.attemptId);
     return { kind: 'claimed', attemptId: packageToken.attemptId };
   });
-}
-
-export function hashPackageQrToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
 }

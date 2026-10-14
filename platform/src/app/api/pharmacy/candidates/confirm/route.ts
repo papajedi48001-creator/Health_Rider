@@ -1,60 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
-import { requireRole, UnauthorizedError } from '@/auth/require-role';
-import { writeAuditEvent } from '@/domain/audit/write-audit-event';
+import { requireRole } from '@/auth/require-role';
+import { audit } from '@/domain/audit/write-audit-event';
 import { confirmCandidate } from '@/domain/delivery/confirm-candidate';
-import { newPublicId } from '@/domain/delivery/status';
-import type { HosCandidate } from '@/hos/types';
+import { getHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
+import { handleRoute, invalidInput } from '@/lib/route';
+import { startOfBangkokDay } from '@/lib/time';
 
+// Patient details are re-read from HOS on the server; the browser only names the visit to confirm.
 export async function POST(request: NextRequest) {
-  try {
+  return handleRoute(async () => {
     const pharmacist = requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');
-    const candidate = await readJsonBody(request);
-    if (!isHosCandidate(candidate)) {
-      return NextResponse.json({ message: 'ข้อมูลผู้ป่วยสำหรับยืนยันไม่ถูกต้อง' }, { status: 422 });
-    }
+    const body = await readJsonBody(request) as { visitNumber?: unknown; date?: unknown } | undefined;
+    const on = typeof body?.date === 'string' ? startOfBangkokDay(body.date) : null;
+    if (!body || typeof body.visitNumber !== 'string' || !on) return invalidInput('ข้อมูลผู้ป่วยสำหรับยืนยันไม่ถูกต้อง');
+    const visitNumber = body.visitNumber;
 
-    const confirmed = await confirmCandidate(candidate, pharmacist, {
-      findZone: (codes) => db.deliveryZone.findUnique({
-        where: { subdistrictCode_villageCode: codes },
-        select: { id: true },
-      }),
-      createRequest: (deliveryRequest) => db.deliveryRequest.create({ data: deliveryRequest }),
-    });
+    const candidate = (await getHosCandidateRepository(process.env).eligibleFor(on)).find((item) => item.visitNumber === visitNumber);
+    if (!candidate) return NextResponse.json({ message: 'ไม่พบผู้ป่วยรายนี้ในรายการที่เข้าเกณฑ์จาก HOS' }, { status: 404 });
 
-    await writeAuditEvent(db.auditEvent, {
-      id: newPublicId(),
-      actorId: confirmed.createdById,
-      action: 'delivery_request.created_from_hos_candidate',
-      auditableType: 'DeliveryRequest',
-      auditableId: confirmed.id,
-      reason: null,
-      oldValues: null,
-      newValues: { hosVisitNumber: confirmed.hosVisitNumber, deliveryZoneId: confirmed.deliveryZoneId },
+    const confirmed = await db.$transaction(async (tx) => {
+      const created = await confirmCandidate(candidate, pharmacist, {
+        findZone: (codes) => tx.deliveryZone.findFirst({ where: { ...codes, active: true }, select: { id: true } }),
+        createRequest: (deliveryRequest) => tx.deliveryRequest.create({ data: deliveryRequest }),
+      });
+      await audit(tx, {
+        actorId: created.createdById, action: 'delivery_request.created_from_hos_candidate', auditableType: 'DeliveryRequest', auditableId: created.id,
+        newValues: { hosVisitNumber: created.hosVisitNumber, deliveryZoneId: created.deliveryZoneId },
+      });
+      return created;
     });
 
     return NextResponse.json(confirmed, { status: 201 });
-  } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ message: error.message }, { status: 403 });
-    }
-    throw error;
-  }
-}
-
-function isHosCandidate(value: unknown): value is HosCandidate {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.visitNumber === 'string' &&
-    typeof candidate.hn === 'string' &&
-    typeof candidate.patientName === 'string' &&
-    (typeof candidate.patientAge === 'number' || candidate.patientAge === null) &&
-    (typeof candidate.telephone === 'string' || candidate.telephone === null) &&
-    typeof candidate.deliveryAddress === 'string' &&
-    typeof candidate.subdistrictCode === 'string' &&
-    typeof candidate.villageCode === 'string'
-  );
+  });
 }
