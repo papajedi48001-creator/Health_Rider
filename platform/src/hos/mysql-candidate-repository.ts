@@ -19,9 +19,11 @@ function candidateQuery(itemCodeCount: number): string {
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
     p.informaddr AS delivery_address,
     CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code,
+    t.full_name AS subdistrict_name,
     p.moopart AS village_code
   FROM opitemrece AS o
   INNER JOIN patient AS p ON p.hn = o.hn
+  LEFT JOIN thaiaddress AS t ON t.addressid = CONCAT(p.chwpart, p.amppart, p.tmbpart)
   WHERE o.icode IN (${itemCodePlaceholders}) AND o.vstdate = ?
 `;
 }
@@ -124,6 +126,7 @@ function mapCandidate(row: HosCandidateRow): HosCandidate {
     telephone: blankToNull(decodeLegacyText(row.telephone)),
     deliveryAddress: decodeLegacyText(row.delivery_address),
     subdistrictCode: String(row.subdistrict_code ?? '').trim(),
+    subdistrictName: blankToNull(decodeLegacyText(row.subdistrict_name)),
     villageCode: normaliseVillageCode(row.village_code),
   };
 }

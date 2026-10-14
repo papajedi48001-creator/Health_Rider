@@ -62,14 +62,15 @@ function parsePassword(value: unknown): string {
   return value;
 }
 
-export function parseZone(value: unknown): { subdistrictCode: string; villageCode: string; displayName: string } {
+export function parseZone(value: unknown): { subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string } {
   const body = (value ?? {}) as Record<string, unknown>;
   const subdistrictCode = typeof body.subdistrictCode === 'string' ? body.subdistrictCode.trim() : '';
+  const subdistrictName = typeof body.subdistrictName === 'string' && body.subdistrictName.trim() ? body.subdistrictName.trim() : null;
   const villageCode = typeof body.villageCode === 'string' ? body.villageCode.trim().padStart(2, '0') : '';
   const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
   // HOSxP chwpart+amppart+tmbpart: tmbpart alone repeats across districts.
   if (!/^\d{6}$/.test(subdistrictCode)) throw new DomainError('รหัสตำบลต้องเป็นตัวเลข 6 หลัก (จังหวัด+อำเภอ+ตำบล) ให้ตรงกับ HOS');
   if (!/^[0-9A-Za-z]{1,32}$/.test(villageCode)) throw new DomainError('รหัสหมู่บ้านต้องตรงกับ HOS');
   if (!displayName) throw new DomainError('ต้องระบุชื่อโซน');
-  return { subdistrictCode, villageCode, displayName };
+  return { subdistrictCode, subdistrictName, villageCode, displayName };
 }

@@ -13,6 +13,7 @@ test('maps a legacy HOS row into a read-only candidate DTO', async () => {
           telephone: '0800000000',
           delivery_address: 'บ้านทดสอบ',
           subdistrict_code: '470907',
+          subdistrict_name: 'ต.ปลาโหล',
           village_code: '1',
         },
       ],
@@ -28,6 +29,7 @@ test('maps a legacy HOS row into a read-only candidate DTO', async () => {
       telephone: '0800000000',
       deliveryAddress: 'บ้านทดสอบ',
       subdistrictCode: '470907',
+      subdistrictName: 'ต.ปลาโหล',
       villageCode: '01',
     },
   ]);

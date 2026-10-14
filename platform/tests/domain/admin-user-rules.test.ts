@@ -16,6 +16,6 @@ test('does not let an admin deactivate or demote their own account', () => {
 });
 
 test('normalises HOS zone codes', () => {
-  expect(parseZone({ subdistrictCode: '470907', villageCode: '3', displayName: 'หมู่ 3' })).toEqual({ subdistrictCode: '470907', villageCode: '03', displayName: 'หมู่ 3' });
+  expect(parseZone({ subdistrictCode: '470907', villageCode: '3', displayName: 'หมู่ 3' })).toEqual({ subdistrictCode: '470907', subdistrictName: null, villageCode: '03', displayName: 'หมู่ 3' });
   expect(() => parseZone({ subdistrictCode: '46', villageCode: '3', displayName: 'x' })).toThrow('6 หลัก');
 });

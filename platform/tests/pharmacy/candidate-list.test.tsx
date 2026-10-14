@@ -79,3 +79,24 @@ test('filters by zone and confirms a whole zone in one request', async () => {
   expect(screen.getByText('ผู้ป่วยสาม')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'ยืนยันสร้างงานส่งยา' })).toBeDisabled();
 });
+
+test('picks a subdistrict first, then only offers that subdistrict\'s zones', async () => {
+  const zoneA = { id: 'zone-a', displayName: 'หมู่ 1 ต.ปลาโหล' };
+  const zoneB = { id: 'zone-b', displayName: 'หมู่ 2 ต.ค้อเขียว' };
+  const candidate = (visit: string, subdistrictCode: string, subdistrictName: string, zone: typeof zoneA) => ({
+    visitNumber: visit, hn: `HN-${visit}`, patientName: `ผู้ป่วย ${visit}`, patientAge: 60, telephone: null, deliveryAddress: subdistrictName,
+    subdistrictCode, subdistrictName, villageCode: '01', zone,
+  });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(new Response(JSON.stringify([
+    candidate('VN-1', '470603', 'ต.ปลาโหล อ.วาริชภูมิ', zoneA),
+    candidate('VN-2', '470602', 'ต.ค้อเขียว อ.วาริชภูมิ', zoneB),
+  ]), { status: 200 })));
+
+  render(<PharmacyCandidateList />);
+
+  expect(await screen.findByText('ผู้ป่วย VN-2')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('ตำบล'), { target: { value: '470603' } });
+  expect(screen.queryByText('ผู้ป่วย VN-2')).not.toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'หมู่ 1 ต.ปลาโหล (1 ราย)' })).toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: 'หมู่ 2 ต.ค้อเขียว (1 ราย)' })).not.toBeInTheDocument();
+});

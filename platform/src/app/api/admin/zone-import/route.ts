@@ -32,13 +32,14 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// Creates the chosen zones in one transaction, skipping any that already exist.
+// Creates the chosen zones in one transaction, skipping any that already exist; existing zones only gain a missing subdistrict name.
 export async function POST(request: NextRequest) {
   return handleRoute(async () => {
     const admin = requireRole(await getSessionFromRequest(request), 'admin');
     const body = await readJsonBody(request) as { zones?: unknown } | undefined;
     if (!Array.isArray(body?.zones) || body.zones.length === 0 || body.zones.length > 1000) return invalidInput('ต้องเลือกหมู่บ้านอย่างน้อย 1 แห่ง');
     const zones = body.zones.map(parseZone);
+    const names = new Map(zones.filter((zone) => zone.subdistrictName).map((zone) => [zone.subdistrictCode, zone.subdistrictName as string]));
 
     const created = await db.$transaction(async (tx) => {
       const existing = new Set((await tx.deliveryZone.findMany({ select: { subdistrictCode: true, villageCode: true } }))
@@ -51,6 +52,10 @@ export async function POST(request: NextRequest) {
         const record = await tx.deliveryZone.create({ data: { id: newPublicId(), ...zone } });
         await audit(tx, { actorId: admin.id, action: 'delivery_zone.created', auditableType: 'DeliveryZone', auditableId: record.id, newValues: zone });
         count += 1;
+      }
+      // Zones made before subdistrict names were kept pick the name up here, without overwriting one admin set.
+      for (const [subdistrictCode, subdistrictName] of names) {
+        await tx.deliveryZone.updateMany({ where: { subdistrictCode, subdistrictName: null }, data: { subdistrictName } });
       }
       return count;
     }, { timeout: 30_000 });

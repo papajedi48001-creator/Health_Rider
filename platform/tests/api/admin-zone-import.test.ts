@@ -1,10 +1,10 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { findZones, createZone, createAudit, villagesSince, currentSession } = vi.hoisted(() => ({
-  findZones: vi.fn(), createZone: vi.fn(), createAudit: vi.fn(), villagesSince: vi.fn(), currentSession: vi.fn(),
+const { findZones, createZone, nameZones, createAudit, villagesSince, currentSession } = vi.hoisted(() => ({
+  findZones: vi.fn(), createZone: vi.fn(), nameZones: vi.fn(), createAudit: vi.fn(), villagesSince: vi.fn(), currentSession: vi.fn(),
 }));
-const tx = { deliveryZone: { findMany: findZones, create: createZone }, auditEvent: { create: createAudit } };
+const tx = { deliveryZone: { findMany: findZones, create: createZone, updateMany: nameZones }, auditEvent: { create: createAudit } };
 
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/hos/mysql-candidate-repository', () => ({ getHosCandidateRepository: () => ({ villagesSince }) }));
@@ -64,4 +64,18 @@ test('rejects a pharmacist importing zones', async () => {
 
   expect(response.status).toBe(403);
   expect(createZone).not.toHaveBeenCalled();
+});
+
+test('fills in a missing subdistrict name on zones that already exist', async () => {
+  const { POST } = await import('@/app/api/admin/zone-import/route');
+  currentSession.mockResolvedValue(admin);
+
+  const response = await POST(new NextRequest('http://localhost/api/admin/zone-import', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ zones: [{ subdistrictCode: '470603', subdistrictName: 'ต.ปลาโหล', villageCode: '06', displayName: 'หมู่ 6' }] }),
+  }));
+
+  await expect(response.json()).resolves.toEqual({ created: 0 });
+  expect(createZone).not.toHaveBeenCalled();
+  expect(nameZones).toHaveBeenCalledWith({ where: { subdistrictCode: '470603', subdistrictName: null }, data: { subdistrictName: 'ต.ปลาโหล' } });
 });

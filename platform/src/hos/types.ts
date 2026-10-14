@@ -6,6 +6,7 @@ export type HosCandidate = {
   telephone: string | null;
   deliveryAddress: string;
   subdistrictCode: string;
+  subdistrictName: string | null;
   villageCode: string;
 };
 
@@ -20,6 +21,7 @@ export type HosCandidateRow = {
   telephone: string | Buffer | null;
   delivery_address: string | Buffer | null;
   subdistrict_code: string | number | null;
+  subdistrict_name: string | Buffer | null;
   village_code: string | number | null;
 };
 

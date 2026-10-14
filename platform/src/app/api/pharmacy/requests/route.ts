@@ -17,14 +17,14 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'asc' },
       select: {
         id: true, hn: true, patientName: true, deliveryAddress: true, createdAt: true,
-        deliveryZone: { select: { displayName: true } },
+        deliveryZone: { select: { id: true, displayName: true, subdistrictCode: true, subdistrictName: true } },
         attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { id: true, status: true, failureReason: true, failedAt: true } },
       },
     });
 
     const rows = requests.map((item) => ({
       id: item.id, hn: item.hn, patientName: item.patientName, deliveryAddress: item.deliveryAddress,
-      zone: item.deliveryZone.displayName, createdAt: item.createdAt, latestAttempt: item.attempts[0] ?? null,
+      zone: item.deliveryZone, createdAt: item.createdAt, latestAttempt: item.attempts[0] ?? null,
     }));
     return NextResponse.json({
       toPrepare: rows.filter((row) => !row.latestAttempt || row.latestAttempt.status === 'returned'),

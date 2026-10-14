@@ -5,6 +5,7 @@ import type { ZonedCandidate } from '@/hos/types';
 import { callApi } from '@/lib/api-client';
 import { bangkokDateString } from '@/lib/time';
 
+const ALL_SUBDISTRICTS = '';
 const ALL_ZONES = '';
 const NO_ZONE = 'none';
 
@@ -14,6 +15,7 @@ export function PharmacyCandidateList() {
   const [message, setMessage] = useState('กำลังโหลดรายการจาก HOS');
   const [confirming, setConfirming] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [subdistrictFilter, setSubdistrictFilter] = useState(ALL_SUBDISTRICTS);
   const [zoneFilter, setZoneFilter] = useState(ALL_ZONES);
 
   const loadCandidates = useCallback(async (on: string) => {
@@ -61,19 +63,29 @@ export function PharmacyCandidateList() {
     setMessage(`สร้างงานส่งยาแล้ว ${result.data.confirmed} รายในโซน ${zone.displayName}`);
   }
 
-  const zones = new Map<string, { zone: { id: string; displayName: string }; count: number }>();
+  const subdistricts = new Map<string, { name: string; count: number }>();
   for (const candidate of candidates) {
+    const entry = subdistricts.get(candidate.subdistrictCode) ?? { name: candidate.subdistrictName ?? `ตำบล ${candidate.subdistrictCode}`, count: 0 };
+    entry.count += 1;
+    subdistricts.set(candidate.subdistrictCode, entry);
+  }
+  const inSubdistrict = subdistrictFilter === ALL_SUBDISTRICTS
+    ? candidates
+    : candidates.filter((candidate) => candidate.subdistrictCode === subdistrictFilter);
+
+  const zones = new Map<string, { zone: { id: string; displayName: string }; count: number }>();
+  for (const candidate of inSubdistrict) {
     if (!candidate.zone) continue;
     const entry = zones.get(candidate.zone.id) ?? { zone: candidate.zone, count: 0 };
     entry.count += 1;
     zones.set(candidate.zone.id, entry);
   }
-  const zoneless = candidates.filter((candidate) => !candidate.zone).length;
+  const zoneless = inSubdistrict.filter((candidate) => !candidate.zone).length;
   const selectedZone = zones.get(zoneFilter);
 
   // A day can hold 100–200 visits, so pharmacy narrows the list by zone and by HN, name or address words.
   const terms = query.trim().split(/\s+/).filter(Boolean);
-  const shown = candidates.filter((candidate) => {
+  const shown = inSubdistrict.filter((candidate) => {
     if (zoneFilter === NO_ZONE ? candidate.zone !== null : zoneFilter !== ALL_ZONES && candidate.zone?.id !== zoneFilter) return false;
     const haystack = `${candidate.hn} ${candidate.patientName} ${candidate.deliveryAddress}`;
     return terms.every((term) => haystack.includes(term));
@@ -86,10 +98,19 @@ export function PharmacyCandidateList() {
         <input type="date" value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
       </label>
       <label>
+        ตำบล
+        <select value={subdistrictFilter} onChange={(event) => { setSubdistrictFilter(event.target.value); setZoneFilter(ALL_ZONES); }}>
+          <option value={ALL_SUBDISTRICTS}>ทุกตำบล ({candidates.length} ราย)</option>
+          {[...subdistricts.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([code, { name, count }]) => (
+            <option key={code} value={code}>{name} ({count} ราย)</option>
+          ))}
+        </select>
+      </label>
+      <label>
         โซนจัดส่ง
         <select value={zoneFilter} onChange={(event) => setZoneFilter(event.target.value)}>
-          <option value={ALL_ZONES}>ทุกโซน ({candidates.length} ราย)</option>
-          {[...zones.values()].map(({ zone, count }) => (
+          <option value={ALL_ZONES}>ทุกโซน ({inSubdistrict.length} ราย)</option>
+          {[...zones.values()].sort((left, right) => left.zone.displayName.localeCompare(right.zone.displayName, 'th', { numeric: true })).map(({ zone, count }) => (
             <option key={zone.id} value={zone.id}>{zone.displayName} ({count} ราย)</option>
           ))}
           {zoneless > 0 && <option value={NO_ZONE}>ยังไม่มีโซน ({zoneless} ราย)</option>}

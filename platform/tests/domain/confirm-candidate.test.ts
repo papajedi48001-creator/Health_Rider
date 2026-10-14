@@ -8,7 +8,7 @@ const candidate = {
   patientAge: 64,
   telephone: '0800000000',
   deliveryAddress: 'บ้านทดสอบ หมู่ 1',
-  subdistrictCode: '470907',
+  subdistrictCode: '470907', subdistrictName: null,
   villageCode: '01',
 };
 
