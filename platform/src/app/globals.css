@@ -1,4 +1,4 @@
-/* Tokens from DESIGN.md, coloured after the mascot น้องไรด์: teal helmet, navy uniform, orange trim. */
+/* Tokens from DESIGN.md, coloured after the mascot น้องภูไทไรเดอร์: teal helmet, navy uniform, orange trim. */
 :root {
   --primary: #007f8b;
   --primary-bright: #00a8b4;
@@ -277,7 +277,8 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .hero-banner .mascot img { width: 120px; height: auto; display: block; }
 .hero-text { display: grid; gap: 2px; min-width: 0; }
 .hero-text strong { font-size: 1.2rem; }
-.hero-text span { opacity: 0.88; font-size: 0.95rem; }
+.hero-text > span { opacity: 0.88; font-size: 0.95rem; }
+.nowrap { white-space: nowrap; }
 .hero-text .hero-count { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; width: fit-content; padding: 3px 12px; border-radius: 999px; background: var(--accent); font-weight: 700; opacity: 1; }
 @media (max-width: 520px) {
   .hero-banner { padding: 14px 16px; min-height: 100px; }
