@@ -27,7 +27,7 @@ jobs:
       # CI uses root so one URL can migrate, seed and run the app against the throwaway database.
       DATABASE_URL: mysql://root:ci-only-root-password@127.0.0.1:3306/health_rider
       AUTH_SECRET: ci-only-auth-secret-0123456789abcdefghij
-      EVIDENCE_STORAGE_PATH: ${{ runner.temp }}/evidence
+      EVIDENCE_STORAGE_PATH: /tmp/health-rider-evidence
       SEED_UAT_PASSWORD: ci-only-uat-password
       SEED_ZONES_FILE: prisma/seed-data/delivery-zones.example.csv
       E2E_PASSWORD: ci-only-uat-password
