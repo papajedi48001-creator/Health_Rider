@@ -34,11 +34,11 @@ export default function RiderScanPage() {
     router.push(`/rider/attempts/${result.data.attemptId}`);
   }
 
-  // Uses the browser's built-in QR detector where available (Chrome on Android); otherwise the token can be typed.
+  // Prefers the browser's built-in QR detector (Chrome on Android) and falls back to jsQR elsewhere, such as iPhone Safari.
   async function startCamera() {
-    const Detector = (window as unknown as { BarcodeDetector?: new (options: { formats: string[] }) => BarcodeDetectorLike }).BarcodeDetector;
-    if (!Detector || !navigator.mediaDevices) return setMessage('อุปกรณ์นี้สแกนในเบราว์เซอร์ไม่ได้ โปรดกรอกรหัสใต้ QR');
-    const detector = new Detector({ formats: ['qr_code'] });
+    if (!navigator.mediaDevices?.getUserMedia) return setMessage('อุปกรณ์นี้เปิดกล้องในเบราว์เซอร์ไม่ได้ โปรดกรอกรหัสใต้ QR');
+    const readCode = await qrReader().catch(() => null);
+    if (!readCode) return setMessage('โหลดตัวอ่าน QR ไม่ได้ โปรดกรอกรหัสใต้ QR');
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).catch(() => null);
     if (!stream || !videoRef.current) return setMessage('เปิดกล้องไม่ได้ โปรดอนุญาตการใช้กล้อง');
     videoRef.current.srcObject = stream;
@@ -46,10 +46,11 @@ export default function RiderScanPage() {
     setScanning(true);
     const stop = () => { stream.getTracks().forEach((track) => track.stop()); setScanning(false); };
     const tick = async () => {
-      if (!videoRef.current || videoRef.current.srcObject !== stream) return stop();
-      const [code] = await detector.detect(videoRef.current).catch(() => []);
-      if (code?.rawValue) { stop(); await claim(code.rawValue); return; }
-      requestAnimationFrame(() => void tick());
+      const video = videoRef.current;
+      if (!video || video.srcObject !== stream) return stop();
+      const value = await readCode(video).catch(() => null);
+      if (value) { stop(); await claim(value); return; }
+      setTimeout(() => void tick(), 150);
     };
     void tick();
   }
@@ -82,4 +83,27 @@ export default function RiderScanPage() {
       </section>
     </main>
   );
+}
+
+type QrReader = (video: HTMLVideoElement) => Promise<string | null>;
+
+async function qrReader(): Promise<QrReader> {
+  const Detector = (window as unknown as { BarcodeDetector?: new (options: { formats: string[] }) => BarcodeDetectorLike }).BarcodeDetector;
+  if (Detector) {
+    const detector = new Detector({ formats: ['qr_code'] });
+    return async (video) => (await detector.detect(video))[0]?.rawValue ?? null;
+  }
+  const { default: jsQR } = await import('jsqr');
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  return async (video) => {
+    if (!context || video.videoWidth === 0) return null;
+    // Downscales large camera frames; a package label fills most of the view, so 640px is enough to decode.
+    const scale = Math.min(1, 640 / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+    return jsQR(frame.data, frame.width, frame.height)?.data || null;
+  };
 }
