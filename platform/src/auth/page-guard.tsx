@@ -8,6 +8,7 @@ import { MainNav, type NavGroup } from '@/auth/main-nav';
 import { roleLabels } from '@/lib/labels';
 import { Brand } from '@/brand/logo';
 import { Icon, type IconName } from '@/brand/icons';
+import { Mascot, mascotName } from '@/brand/mascot';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
@@ -48,6 +49,10 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
           <Brand />
         </Link>
         <MainNav groups={groupsFor(session.role)} />
+        <div className="sidebar-mascot" aria-hidden="true">
+          <Mascot width={120} variant="small" />
+          <span>{mascotName} พร้อมส่งยาถึงบ้าน</span>
+        </div>
         <div className="staff-user">
           <Link href={accountHref} className="user-link" aria-label={`ข้อมูลผู้ใช้ ${session.displayName}`}>
             <span className="avatar avatar-small" aria-hidden="true">{session.displayName.trim().charAt(0)}</span>
@@ -60,7 +65,8 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
       </header>
       <div className="staff-content">
         {roles.includes(session.role) ? children : (
-          <main>
+          <main className="no-access">
+            <Mascot width={180} variant="small" />
             <h1>ไม่มีสิทธิ์เข้าหน้านี้</h1>
             <p>บัญชีนี้ไม่มีสิทธิ์ใช้งานหน้านี้ โปรดติดต่อผู้ดูแลระบบหากต้องการสิทธิ์เพิ่ม</p>
           </main>

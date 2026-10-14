@@ -1,17 +1,20 @@
-// The Health Rider mark: a map pin carrying a medical cross, with speed lines for delivery to the door.
+// The Health Rider mark, taken from the mascot's helmet and medicine box: a home with a heart and a capsule.
 export function LogoMark({ size = 36 }: { size?: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 48 48" className="logo-mark">
       <defs>
         <linearGradient id="hr-logo-fill" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#14b8a6" />
-          <stop offset="1" stopColor="#0f766e" />
+          <stop offset="0" stopColor="#00a8b4" />
+          <stop offset="1" stopColor="#007f8b" />
         </linearGradient>
       </defs>
       <rect width="48" height="48" rx="12" fill="url(#hr-logo-fill)" />
-      <path d="M6 19h7M4 25h8M7 31h5" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M28 8.5a11.5 11.5 0 0 1 11.5 11.5c0 8.6-11.5 19.5-11.5 19.5S16.5 28.6 16.5 20A11.5 11.5 0 0 1 28 8.5z" fill="#ffffff" />
-      <path d="M26 14.5h4v4h4v4h-4v4h-4v-4h-4v-4h4z" fill="#0f766e" />
+      <path d="M24 8.5 40 21.2V37a2.5 2.5 0 0 1-2.5 2.5h-27A2.5 2.5 0 0 1 8 37V21.2z" fill="#ffffff" />
+      <path d="M24 36.5c-7-4.6-9.6-7.8-9.6-11.1a4.8 4.8 0 0 1 9.6-1.4 4.8 4.8 0 0 1 9.6 1.4c0 3.3-2.6 6.5-9.6 11.1z" fill="#007f8b" />
+      <g transform="translate(24.6 28.4) rotate(-40)">
+        <path d="M0-2.7h-3.6a2.7 2.7 0 0 0 0 5.4H0z" fill="#f97316" />
+        <path d="M0-2.7h3.6a2.7 2.7 0 0 1 0 5.4H0z" fill="#ffffff" />
+      </g>
     </svg>
   );
 }

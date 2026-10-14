@@ -7,6 +7,7 @@ import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { statusLabels } from '@/lib/labels';
 import { EmptyState } from '@/brand/empty-state';
+import { HeroBanner } from '@/brand/hero-banner';
 import { Icon } from '@/brand/icons';
 import { statusTone } from '@/lib/status-tone';
 
@@ -69,6 +70,11 @@ export default function RiderScanPage() {
 
   return (
     <main className="rider-page">
+      <HeroBanner
+        title="พร้อมออกส่งยาแล้ว"
+        text="สแกน QR ที่พัสดุ แล้วน้องไรด์จะพาไปทีละขั้น"
+        count={attempts && attempts.length > 0 ? `งานค้าง ${attempts.length} งาน` : undefined}
+      />
       <h1>รับงาน</h1>
       <p aria-live="polite" role="status">{message}</p>
 

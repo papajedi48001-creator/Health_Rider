@@ -5,6 +5,7 @@ import { getSessionFromCookies } from '@/auth/current-session';
 import { Icon } from '@/brand/icons';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
 import { LogoMark } from '@/brand/logo';
+import { Mascot } from '@/brand/mascot';
 
 // The rider app frame: a slim top bar, a single mobile column and bottom tabs.
 export async function RiderShell({ children }: { children: ReactNode }) {
@@ -31,7 +32,8 @@ export async function RiderShell({ children }: { children: ReactNode }) {
           <RiderTabBar />
         </>
       ) : (
-        <main>
+        <main className="no-access">
+          <Mascot width={180} variant="small" />
           <h1>ไม่มีสิทธิ์เข้าหน้านี้</h1>
           <p>บัญชีนี้ไม่มีสิทธิ์ใช้งานหน้านี้ โปรดติดต่อผู้ดูแลระบบหากต้องการสิทธิ์เพิ่ม</p>
         </main>

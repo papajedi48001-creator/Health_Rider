@@ -10,6 +10,7 @@ import { toEvidenceJpeg } from '@/pwa/photo';
 import { deleteAttemptView, loadAttemptView, saveAttemptView } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
 import { Icon } from '@/brand/icons';
+import { Mascot, mascotName } from '@/brand/mascot';
 import { statusTone } from '@/lib/status-tone';
 
 type AttemptView = {
@@ -152,6 +153,14 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
               <Icon name="map" /> นำทาง
             </a>
           </div>
+        </section>
+      )}
+      {view?.status === 'delivered' && !outcomePending && (
+        <section className="celebrate" aria-label="ส่งยาสำเร็จ">
+          <Mascot width={160} variant="small" />
+          <strong>ส่งยาถึงมือผู้รับแล้ว</strong>
+          <span className="muted">{mascotName} ขอบคุณที่ช่วยดูแลผู้ป่วยวันนี้</span>
+          <Link href="/rider/scan" className="btn btn-primary"><Icon name="scan" /> รับงานถัดไป</Link>
         </section>
       )}
       {active && (
