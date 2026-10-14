@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'admin');
     const rates = await db.serviceRate.findMany({
-      orderBy: [{ subdistrictCode: 'asc' }, { effectiveFrom: 'desc' }],
+      orderBy: [{ subdistrictCode: 'asc' }, { effectiveFrom: 'desc' }, { createdAt: 'desc' }],
       select: { id: true, subdistrictCode: true, deliveryZoneId: true, rateSatang: true, effectiveFrom: true, createdAt: true },
     });
     return NextResponse.json({ rates });

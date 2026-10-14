@@ -35,7 +35,16 @@ header {
   border-bottom: 1px solid var(--line);
 }
 
-header nav { display: flex; flex-wrap: wrap; gap: 4px 16px; flex: 1; }
+header nav { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+header nav.tabs a {
+  padding: 8px 14px;
+  border-bottom: 3px solid transparent;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+header nav.tabs a:hover { border-bottom-color: var(--line); }
+header nav.tabs a[aria-current='page'] { color: var(--primary); border-bottom-color: var(--primary); }
 header form { margin: 0; padding: 0; border: 0; background: none; }
 
 main { max-width: 1100px; margin: 0 auto; padding: var(--page); }

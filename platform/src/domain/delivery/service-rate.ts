@@ -6,6 +6,7 @@ export type ServiceRateRecord = {
   deliveryZoneId: string | null;
   rateSatang: number;
   effectiveFrom: Date;
+  createdAt?: Date;
 };
 
 export type AppliedRate = { rateSatang: number; rateEffectiveFrom: Date };
@@ -15,7 +16,8 @@ export function calendarDate(dateString: string): Date {
   return new Date(`${dateString}T00:00:00.000Z`);
 }
 
-// The zone's own rate wins over a whole-subdistrict rate; within each, the latest one already in effect applies.
+// The zone's own rate wins over a whole-subdistrict rate; within each, the latest one already in effect applies,
+// and a rate added later for the same start date replaces the earlier one (that is how admin corrects a price).
 export function resolveRate(
   rates: readonly ServiceRateRecord[],
   zone: { id: string; subdistrictCode: string },
@@ -23,10 +25,15 @@ export function resolveRate(
 ): AppliedRate | null {
   const inEffect = rates.filter((rate) => rate.effectiveFrom.getTime() <= on.getTime());
   const latest = (candidates: ServiceRateRecord[]) =>
-    candidates.reduce<ServiceRateRecord | null>((best, rate) => (!best || rate.effectiveFrom > best.effectiveFrom ? rate : best), null);
+    candidates.reduce<ServiceRateRecord | null>((best, rate) => (!best || newer(rate, best) ? rate : best), null);
   const chosen = latest(inEffect.filter((rate) => rate.deliveryZoneId === zone.id))
     ?? latest(inEffect.filter((rate) => rate.deliveryZoneId === null && rate.subdistrictCode === zone.subdistrictCode));
   return chosen && { rateSatang: chosen.rateSatang, rateEffectiveFrom: chosen.effectiveFrom };
+}
+
+function newer(left: ServiceRateRecord, right: ServiceRateRecord): boolean {
+  const byStart = left.effectiveFrom.getTime() - right.effectiveFrom.getTime();
+  return byStart !== 0 ? byStart > 0 : (left.createdAt?.getTime() ?? 0) > (right.createdAt?.getTime() ?? 0);
 }
 
 export function parseServiceRate(value: unknown): { subdistrictCode: string; deliveryZoneId: string | null; rateSatang: number; effectiveFrom: Date } {
@@ -46,7 +53,7 @@ type RateReader = {
   serviceRate: {
     findMany(args: {
       where: { effectiveFrom: { lte: Date }; OR: ({ deliveryZoneId: string } | { deliveryZoneId: null; subdistrictCode: string })[] };
-      select: { subdistrictCode: true; deliveryZoneId: true; rateSatang: true; effectiveFrom: true };
+      select: { subdistrictCode: true; deliveryZoneId: true; rateSatang: true; effectiveFrom: true; createdAt: true };
     }): Promise<ServiceRateRecord[]>;
   };
 };
@@ -56,7 +63,7 @@ export async function findRateInEffect(client: RateReader, zone: { id: string; s
   const today = calendarDate(bangkokDateString(now));
   const rates = await client.serviceRate.findMany({
     where: { effectiveFrom: { lte: today }, OR: [{ deliveryZoneId: zone.id }, { deliveryZoneId: null, subdistrictCode: zone.subdistrictCode }] },
-    select: { subdistrictCode: true, deliveryZoneId: true, rateSatang: true, effectiveFrom: true },
+    select: { subdistrictCode: true, deliveryZoneId: true, rateSatang: true, effectiveFrom: true, createdAt: true },
   });
   return resolveRate(rates, zone, today);
 }

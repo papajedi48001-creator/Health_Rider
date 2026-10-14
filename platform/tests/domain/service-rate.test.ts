@@ -21,3 +21,13 @@ test('reads baht as satang and rejects bad amounts and dates', () => {
   expect(() => parseServiceRate({ subdistrictCode: '470603', baht: '1.234', effectiveFrom: '2026-11-01' })).toThrow('ทศนิยม');
   expect(() => parseServiceRate({ subdistrictCode: '470603', baht: '30', effectiveFrom: '2026-02-30' })).toThrow('วันเริ่มใช้');
 });
+
+test('a rate added later for the same start date replaces the earlier one', () => {
+  const rates = [
+    { ...rate(null, 3000, '2026-10-14'), createdAt: new Date('2026-10-14T05:00:00.000Z') },
+    { ...rate(null, 2000, '2026-10-14'), createdAt: new Date('2026-10-14T06:00:00.000Z') },
+  ];
+
+  expect(resolveRate(rates, zone, calendarDate('2026-10-14'))?.rateSatang).toBe(2000);
+  expect(resolveRate([...rates].reverse(), zone, calendarDate('2026-10-14'))?.rateSatang).toBe(2000);
+});

@@ -4,7 +4,8 @@ import { login } from './login';
 test('admin adds a zone and a rider, and a deactivated rider can no longer sign in', async ({ page, browser }) => {
   const suffix = Date.now().toString().slice(-6);
   await login(page, 'admin.uat');
-  await page.goto('/admin');
+  await page.goto('/admin/zones');
+  await expect(page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'โซนจัดส่ง' })).toHaveAttribute('aria-current', 'page');
 
   const zoneForm = page.getByRole('form', { name: 'เพิ่มโซน' });
   await zoneForm.getByLabel('รหัสตำบล').fill('980000');
@@ -13,6 +14,7 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await zoneForm.getByRole('button', { name: 'เพิ่มโซน' }).click();
   await expect(page.getByRole('row').filter({ hasText: `โซน E2E ${suffix}` })).toBeVisible();
 
+  await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'บัญชีผู้ใช้' }).click();
   const username = `rider.e2e.${suffix}`;
   const userForm = page.getByRole('form', { name: 'สร้างบัญชี' });
   await userForm.getByLabel('ชื่อผู้ใช้').fill(username);
@@ -36,4 +38,29 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await expect(row.getByRole('button', { name: 'เปิดใช้งาน' })).toBeVisible();
   await riderPage.reload();
   await expect(riderPage).toHaveURL(/\/login/);
+});
+
+test('admin corrects a whole-subdistrict price on the same day and the new price applies', async ({ page }) => {
+  await login(page, 'admin.uat');
+  await page.goto('/admin/zones');
+  const suffix = Date.now().toString().slice(-6);
+  const zoneForm = page.getByRole('form', { name: 'เพิ่มโซน' });
+  await zoneForm.getByLabel('รหัสตำบล').fill('970000');
+  await zoneForm.getByLabel('รหัสหมู่บ้าน').fill(suffix.slice(-2));
+  await zoneForm.getByLabel('ชื่อโซน').fill(`โซนราคา ${suffix}`);
+  await zoneForm.getByRole('button', { name: 'เพิ่มโซน' }).click();
+  await expect(page.getByRole('row').filter({ hasText: `โซนราคา ${suffix}` })).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'ค่าบริการ' }).click();
+  const rateForm = page.getByRole('form', { name: 'เพิ่มค่าบริการ' });
+  await rateForm.getByRole('combobox', { name: 'ตำบล', exact: true }).selectOption('970000');
+  await rateForm.getByLabel('ค่าบริการ (บาท)').fill('30');
+  await rateForm.getByRole('button', { name: 'บันทึกค่าบริการ' }).click();
+  await expect(page.getByText('ราคาทั้งตำบลวันนี้: 30.00 บาท')).toBeVisible();
+
+  await page.getByRole('button', { name: 'แก้ไขราคาทั้งตำบล' }).click();
+  await rateForm.getByLabel('ค่าบริการ (บาท)').fill('20');
+  await rateForm.getByRole('button', { name: 'บันทึกค่าบริการ' }).click();
+  await expect(page.getByText('ราคาทั้งตำบลวันนี้: 20.00 บาท')).toBeVisible();
+  await expect(page.getByRole('row').filter({ hasText: `โซนราคา ${suffix}` })).toContainText('20.00');
 });
