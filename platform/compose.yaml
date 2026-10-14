@@ -53,6 +53,22 @@ services:
     volumes:
       - health-rider-evidence:/app/data/evidence
 
+  # Optional: `docker compose --profile https up -d` adds HTTPS on port 443 for rider phones.
+  https:
+    image: caddy:2.8
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      HTTPS_HOST: ${HTTPS_HOST:-localhost}
+    ports:
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - health-rider-caddy:/data
+
 volumes:
   health-rider-db:
   health-rider-evidence:
+  health-rider-caddy:
