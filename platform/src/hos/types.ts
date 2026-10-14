@@ -6,8 +6,12 @@ export type HosCandidate = {
   telephone: string | null;
   deliveryAddress: string;
   subdistrictCode: string;
+  subdistrictName: string | null;
   villageCode: string;
 };
+
+// A candidate as pharmacy sees it: the active delivery zone its HOSxP address maps to, if any.
+export type ZonedCandidate = HosCandidate & { zone: { id: string; displayName: string } | null };
 
 export type HosCandidateRow = {
   visit_number: string | number;
@@ -17,5 +21,21 @@ export type HosCandidateRow = {
   telephone: string | Buffer | null;
   delivery_address: string | Buffer | null;
   subdistrict_code: string | number | null;
+  subdistrict_name: string | Buffer | null;
   village_code: string | number | null;
+};
+
+// A HOSxP village with eligible visits, used to set up delivery zones.
+export type HosVillage = {
+  subdistrictCode: string;
+  villageCode: string;
+  subdistrictName: string | null;
+  visits: number;
+};
+
+export type HosVillageRow = {
+  subdistrict_code: string | number | null;
+  village_code: string | number | null;
+  subdistrict_name: string | Buffer | null;
+  visits: number | string;
 };

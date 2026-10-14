@@ -30,7 +30,7 @@ AUTH_SECRET=... npm run dev
 npm run typecheck
 npm test                         # integration test ของ MariaDB รันเมื่อมี DATABASE_URL
 npm run build
-# browser tests ต้องมี server ที่ seed แล้ว และ DATABASE_URL ของฐานเดียวกัน (test สร้าง Delivery Request ตรงในฐานข้อมูลแทน HOS)
+# browser tests ต้องมี server ที่ seed แล้ว และ DATABASE_URL ของฐานเดียวกัน (test สร้าง Delivery Request ตรงในฐานข้อมูลแทน HOSxP)
 DATABASE_URL=... E2E_PASSWORD=$SEED_UAT_PASSWORD PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e
 ```
 

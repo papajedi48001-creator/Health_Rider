@@ -4,15 +4,15 @@
 
 - [ ] UAT ทุก role ผ่าน และ Critical/High defect ปิดหรือมีการอนุมัติความเสี่ยง
 - [ ] ตรวจ release commit/tag, migration และ backup/restore drill
-- [ ] production secrets/HOS read-only/firewall/HTTPS ได้รับอนุมัติ
+- [ ] production secrets/HOSxP read-only/firewall/HTTPS ได้รับอนุมัติ
 - [ ] แจ้งช่วงเวลาเปลี่ยนระบบ, owner และช่องทาง incident
 - [ ] ยืนยัน rollback artifact และ backup ที่ restore ได้
 
 ## วันเปิดใช้งาน
 
 - [ ] เริ่มบริการ, ตรวจ healthcheck และ migration log
-- [ ] ทดสอบ smoke: login, HOS candidate, QR claim, offline sync และ audit โดยใช้ข้อมูลทดสอบที่อนุญาต
-- [ ] เฝ้าดู error log, DB capacity, evidence volume และ HOS read latency
+- [ ] ทดสอบ smoke: login, HOSxP candidate, QR claim, offline sync และ audit โดยใช้ข้อมูลทดสอบที่อนุญาต
+- [ ] เฝ้าดู error log, DB capacity, evidence volume และ HOSxP read latency
 
 ## Rollback
 

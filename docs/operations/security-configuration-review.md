@@ -1,6 +1,6 @@
 # Security/Configuration Review ก่อนใช้งานจริง
 
-- [ ] HOS account read-only, จำกัด source IP/network และทดสอบว่า write ถูกปฏิเสธ
+- [ ] HOSxP account read-only, จำกัด source IP/network และทดสอบว่า write ถูกปฏิเสธ
 - [ ] `AUTH_SECRET` สุ่มยาว, อยู่ใน secret manager/runtime environment, ไม่อยู่ใน Git/log
 - [ ] MariaDB ไม่มี host port เปิดสู่เครือข่ายสาธารณะ; มีบัญชีแยก least privilege
 - [ ] HTTPS, firewall, access log และ OS patching ได้รับการยืนยันโดยผู้ดูแล

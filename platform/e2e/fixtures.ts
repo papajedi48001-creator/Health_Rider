@@ -3,7 +3,7 @@ import { ulid } from 'ulidx';
 import { randomBytes } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 
-// Browser tests create Delivery Requests directly because HOS is not available in test environments.
+// Browser tests create Delivery Requests directly because HOSxP is not available in test environments.
 const prisma = new PrismaClient();
 
 export async function createDeliveryRequest(patientName: string) {

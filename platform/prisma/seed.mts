@@ -61,7 +61,8 @@ function readZones(file: string) {
     .map((line) => {
       const [subdistrictCode, villageCode, ...name] = line.split(',');
       const displayName = name.join(',').trim();
-      if (!subdistrictCode?.trim() || !villageCode?.trim() || !displayName) throw new Error(`Invalid zone line: ${line}`);
+      // subdistrictCode is HOSxP chwpart+amppart+tmbpart, the same 6 digits the app matches on.
+      if (!/^\d{6}$/.test(subdistrictCode?.trim() ?? '') || !villageCode?.trim() || !displayName) throw new Error(`Invalid zone line: ${line}`);
       return { subdistrictCode: subdistrictCode.trim(), villageCode: villageCode.trim().padStart(2, '0'), displayName };
     });
 }

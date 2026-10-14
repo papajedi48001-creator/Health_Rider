@@ -9,17 +9,17 @@
 
 - [ ] มี URL ของ Health Rider staging และ MariaDB แยกจาก production
 - [ ] `AUTH_SECRET` และรหัสผ่าน Compose ไม่ใช่ค่า development
-- [ ] HOS account เป็น read-only และ `HOS_DATABASE_URL` เชื่อมเฉพาะ staging/ข้อมูลทดสอบ
+- [ ] HOSxP account เป็น read-only และ `HOS_DATABASE_URL` เชื่อมเฉพาะ staging/ข้อมูลทดสอบ
 - [ ] ตั้ง `HOS_ELIGIBLE_ITEM_CODES` ตามรายการยาที่อนุมัติสำหรับ UAT
 - [ ] สร้างบัญชีทดสอบ: pharmacy, rider ภายใน, rider ผู้รับจ้างภายนอก, coordinator, admin, auditor
 - [ ] เตรียมผู้ป่วย/ใบสั่งยาทดสอบที่ไม่มีข้อมูลจริง หรือได้รับอนุญาตตามนโยบายโรงพยาบาล
 - [ ] สำรอง MariaDB และ evidence volume ก่อนเริ่มรอบ UAT
 
-## 2. HOS และเภสัชกรรม
+## 2. HOSxP และเภสัชกรรม
 
 | รายการทดสอบ | ผลที่คาดหวัง | ผล/หลักฐาน |
 | --- | --- | --- |
-| HOS candidate | เห็นเฉพาะ candidate ที่เข้าเกณฑ์; ไม่มีข้อมูลยา/CID เกินความจำเป็น | |
+| HOSxP candidate | เห็นเฉพาะ candidate ที่เข้าเกณฑ์; ไม่มีข้อมูลยา/CID เกินความจำเป็น | |
 | ยืนยัน candidate | เฉพาะ pharmacy/admin ยืนยันได้ และสร้าง Delivery Request หนึ่งรายการ | |
 | โซน/หมู่บ้าน | ระบบเลือก zone/village เดิมเพื่อระบุพื้นที่ส่งยา | |
 | เตรียมพัสดุ | สร้าง Delivery Attempt สถานะ `prepared` พร้อม QR | |
@@ -60,7 +60,7 @@
 - [ ] ไม่มี Critical/High defect ค้างอยู่ใน workflow ส่งยา, สิทธิ์ หรือ offline sync
 - [ ] ทุกกรณีในตารางมีผลและหลักฐานแนบ
 - [ ] ผู้แทน pharmacy, rider และ coordinator รับรองผลในส่วนของตน
-- [ ] Backup/restore drill, HOS connectivity และ credential rotation ได้รับการรับรองแยกตามนโยบายโรงพยาบาล
+- [ ] Backup/restore drill, HOSxP connectivity และ credential rotation ได้รับการรับรองแยกตามนโยบายโรงพยาบาล
 - [ ] มีแผน rollback และผู้รับผิดชอบวันเปิดใช้งาน
 
 ## 7. Defect Log

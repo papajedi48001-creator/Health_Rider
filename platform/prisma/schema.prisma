@@ -32,30 +32,31 @@ enum DeliveryAttemptStatus {
 }
 
 model User {
-  id                String            @id @db.Char(26)
-  username          String            @unique @db.VarChar(100)
-  passwordHash      String            @db.VarChar(255)
-  displayName       String            @db.VarChar(255)
-  role              UserRole
-  active            Boolean           @default(true)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  riderProfile      RiderProfile?
-  claimedAttempts   DeliveryAttempt[] @relation("ClaimedAttempts")
-  createdRequests   DeliveryRequest[] @relation("CreatedRequests")
-  sessions          Session[]
+  id              String            @id @db.Char(26)
+  username        String            @unique @db.VarChar(100)
+  passwordHash    String            @db.VarChar(255)
+  displayName     String            @db.VarChar(255)
+  role            UserRole
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  riderProfile    RiderProfile?
+  claimedAttempts DeliveryAttempt[] @relation("ClaimedAttempts")
+  createdRequests DeliveryRequest[] @relation("CreatedRequests")
+  createdRates    ServiceRate[]     @relation("CreatedServiceRates")
+  sessions        Session[]
 
   @@map("users")
 }
 
 model Session {
-  id         String    @id @db.Char(26)
-  tokenHash  String    @unique @db.Char(64)
-  userId     String    @db.Char(26)
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id])
+  id        String    @id @db.Char(26)
+  tokenHash String    @unique @db.Char(64)
+  userId    String    @db.Char(26)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("sessions")
@@ -77,64 +78,85 @@ model RiderProfile {
 model DeliveryZone {
   id              String            @id @db.Char(26)
   subdistrictCode String            @db.VarChar(32)
+  subdistrictName String?           @db.VarChar(255)
   villageCode     String            @db.VarChar(32)
   displayName     String            @db.VarChar(255)
   active          Boolean           @default(true)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   requests        DeliveryRequest[]
+  serviceRates    ServiceRate[]
 
   @@unique([subdistrictCode, villageCode])
   @@map("delivery_zones")
 }
 
+// Baht per delivery, effective from a date; a zone rate wins over a whole-subdistrict rate. Never edited, only superseded.
+model ServiceRate {
+  id              String        @id @db.Char(26)
+  subdistrictCode String        @db.VarChar(32)
+  deliveryZoneId  String?       @db.Char(26)
+  rateSatang      Int
+  effectiveFrom   DateTime      @db.Date
+  createdById     String        @db.Char(26)
+  createdAt       DateTime      @default(now())
+  deliveryZone    DeliveryZone? @relation(fields: [deliveryZoneId], references: [id], onDelete: Restrict)
+  createdBy       User          @relation("CreatedServiceRates", fields: [createdById], references: [id])
+
+  @@index([subdistrictCode, effectiveFrom])
+  @@index([deliveryZoneId, effectiveFrom])
+  @@map("service_rates")
+}
+
 model EligibilityRule {
-  id          String   @id @db.Char(26)
-  name        String   @unique @db.VarChar(255)
-  enabled     Boolean  @default(true)
-  definition  Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @db.Char(26)
+  name       String   @unique @db.VarChar(255)
+  enabled    Boolean  @default(true)
+  definition Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@map("eligibility_rules")
 }
 
 model DeliveryRequest {
-  id                 String            @id @db.Char(26)
-  hosVisitNumber     String?           @unique @db.VarChar(100)
-  hn                 String            @db.VarChar(100)
-  patientName        String            @db.VarChar(255)
-  patientAge         Int?
-  telephone          String?           @db.VarChar(100)
-  deliveryAddress    String            @db.Text
-  deliveryZoneId     String            @db.Char(26)
-  deliveryVersion    Int               @default(1)
-  createdById        String            @db.Char(26)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  deliveryZone       DeliveryZone      @relation(fields: [deliveryZoneId], references: [id])
-  createdBy          User              @relation("CreatedRequests", fields: [createdById], references: [id])
-  attempts           DeliveryAttempt[]
+  id                String            @id @db.Char(26)
+  hosVisitNumber    String?           @unique @db.VarChar(100)
+  hn                String            @db.VarChar(100)
+  patientName       String            @db.VarChar(255)
+  patientAge        Int?
+  telephone         String?           @db.VarChar(100)
+  deliveryAddress   String            @db.Text
+  deliveryZoneId    String            @db.Char(26)
+  deliveryVersion   Int               @default(1)
+  rateSatang        Int?
+  rateEffectiveFrom DateTime?         @db.Date
+  createdById       String            @db.Char(26)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deliveryZone      DeliveryZone      @relation(fields: [deliveryZoneId], references: [id])
+  createdBy         User              @relation("CreatedRequests", fields: [createdById], references: [id])
+  attempts          DeliveryAttempt[]
 
   @@index([hn, createdAt])
   @@map("delivery_requests")
 }
 
 model DeliveryAttempt {
-  id                String                @id @db.Char(26)
-  deliveryRequestId String                @db.Char(26)
-  riderId           String?               @db.Char(26)
-  status            DeliveryAttemptStatus @default(prepared)
+  id                String                 @id @db.Char(26)
+  deliveryRequestId String                 @db.Char(26)
+  riderId           String?                @db.Char(26)
+  status            DeliveryAttemptStatus  @default(prepared)
   claimedAt         DateTime?
   pickedUpAt        DateTime?
   deliveredAt       DateTime?
   failedAt          DateTime?
-  failureReason     String?               @db.VarChar(100)
+  failureReason     String?                @db.VarChar(100)
   returnedAt        DateTime?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  deliveryRequest   DeliveryRequest       @relation(fields: [deliveryRequestId], references: [id])
-  rider             User?                 @relation("ClaimedAttempts", fields: [riderId], references: [id])
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  deliveryRequest   DeliveryRequest        @relation(fields: [deliveryRequestId], references: [id])
+  rider             User?                  @relation("ClaimedAttempts", fields: [riderId], references: [id])
   qrTokens          PackageQrToken[]
   evidence          DeliveryEvidence?
   offlineEvents     OfflineDeliveryEvent[]
@@ -171,18 +193,18 @@ model DeliveryEvidence {
 }
 
 model OfflineDeliveryEvent {
-  id                  String          @id @db.Char(26)
-  eventUuid           String          @db.Char(36)
-  deliveryAttemptId   String          @db.Char(26)
-  riderId             String          @db.Char(26)
-  deliveryVersion     Int
-  eventType           String          @db.VarChar(100)
-  payload             Json
-  deviceCapturedAt    DateTime
-  serverReceivedAt    DateTime        @default(now())
-  createdAt           DateTime        @default(now())
-  deliveryAttempt     DeliveryAttempt @relation(fields: [deliveryAttemptId], references: [id])
-  syncConflict        SyncConflict?
+  id                String          @id @db.Char(26)
+  eventUuid         String          @db.Char(36)
+  deliveryAttemptId String          @db.Char(26)
+  riderId           String          @db.Char(26)
+  deliveryVersion   Int
+  eventType         String          @db.VarChar(100)
+  payload           Json
+  deviceCapturedAt  DateTime
+  serverReceivedAt  DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  deliveryAttempt   DeliveryAttempt @relation(fields: [deliveryAttemptId], references: [id])
+  syncConflict      SyncConflict?
 
   @@unique([eventUuid, riderId])
   @@map("offline_delivery_events")
@@ -204,7 +226,6 @@ model SyncConflict {
   deliveryAttempt        DeliveryAttempt       @relation(fields: [deliveryAttemptId], references: [id])
 
   @@index([status, createdAt])
-
   @@map("sync_conflicts")
 }
 
