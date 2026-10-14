@@ -4,6 +4,9 @@
 # certificate on each phone once (see docs/operations/https-staging.md).
 {
 	admin off
+	# Phones opening https://<IP> send no SNI, and inside Docker the connection's local IP is the
+	# container's, not HTTPS_HOST, so Caddy must be told which certificate to present.
+	default_sni {$HTTPS_HOST:localhost}
 }
 
 {$HTTPS_HOST:localhost} {
