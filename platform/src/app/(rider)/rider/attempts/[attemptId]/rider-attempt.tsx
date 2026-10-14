@@ -9,7 +9,7 @@ import type { OfflineEvent } from '@/pwa/offline-queue';
 import { toEvidenceJpeg } from '@/pwa/photo';
 import { deleteAttemptView, loadAttemptView, saveAttemptView } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
-import { Icon } from '@/rider/icons';
+import { Icon } from '@/brand/icons';
 import { statusTone } from '@/lib/status-tone';
 
 type AttemptView = {

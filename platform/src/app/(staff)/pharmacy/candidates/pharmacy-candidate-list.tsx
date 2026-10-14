@@ -44,6 +44,7 @@ export function PharmacyCandidateList() {
       return;
     }
     setCandidates((current) => current.filter((item) => item.visitNumber !== candidate.visitNumber));
+    window.dispatchEvent(new Event('health-rider:counts'));
     setMessage('สร้างงานส่งยาแล้ว');
   }
 
@@ -60,6 +61,7 @@ export function PharmacyCandidateList() {
     const done = new Set(result.data.visitNumbers);
     setCandidates((current) => current.filter((item) => !done.has(item.visitNumber)));
     setZoneFilter(ALL_ZONES);
+    window.dispatchEvent(new Event('health-rider:counts'));
     setMessage(`สร้างงานส่งยาแล้ว ${result.data.confirmed} รายในโซน ${zone.displayName}`);
   }
 

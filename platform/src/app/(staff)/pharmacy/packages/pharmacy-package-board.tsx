@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { PackageQrLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
+import { EmptyState } from '@/brand/empty-state';
 import { failureReasonLabels, formatThaiDateTime, shortCode } from '@/lib/labels';
 
 type Zone = { id: string; displayName: string; subdistrictCode: string; subdistrictName: string | null };
@@ -12,8 +13,12 @@ type Row = {
   latestAttempt: { id: string; status: DeliveryAttemptStatus; failureReason: string | null; failedAt: string | null } | null;
 };
 type Board = { toPrepare: Row[]; awaitingRider: Row[]; returnRequired: Row[] };
+export type BoardView = 'prepare' | 'awaiting' | 'returns';
 
-export function PharmacyPackageBoard() {
+const viewKey: Record<BoardView, keyof Board> = { prepare: 'toPrepare', awaiting: 'awaitingRider', returns: 'returnRequired' };
+
+// One pharmacy queue per menu item: packages to prepare, packages waiting for a rider, or medication to take back.
+export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [message, setMessage] = useState('กำลังโหลดรายการ');
   const [label, setLabel] = useState<{ attemptId: string; token: string } | null>(null);
@@ -39,10 +44,11 @@ export function PharmacyPackageBoard() {
     if (!result.ok) return setMessage(result.message);
     if (result.data.token) setLabel({ attemptId: result.data.attemptId, token: result.data.token });
     await load();
+    window.dispatchEvent(new Event('health-rider:counts'));
     setMessage(done(result.data));
   }
 
-  const allRows = board ? [...board.toPrepare, ...board.awaitingRider, ...board.returnRequired] : [];
+  const allRows = board ? board[viewKey[view]] : [];
   const subdistricts = new Map<string, string>();
   for (const row of allRows) {
     if (!subdistricts.has(row.zone.subdistrictCode) || row.zone.subdistrictName) {
@@ -54,9 +60,7 @@ export function PharmacyPackageBoard() {
     if (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) zones.set(row.zone.id, row.zone.displayName);
   }
   const matches = (row: Row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter);
-  const shown = board && {
-    toPrepare: board.toPrepare.filter(matches), awaitingRider: board.awaitingRider.filter(matches), returnRequired: board.returnRequired.filter(matches),
-  };
+  const shown = allRows.filter(matches);
 
   return (
     <div>
@@ -84,12 +88,12 @@ export function PharmacyPackageBoard() {
       )}
       <p aria-live="polite">{message}</p>
       {label && <PackageQrLabel attemptId={label.attemptId} token={label.token} onClose={() => setLabel(null)} />}
-      {shown && (
-        <>
-          <section>
-            <h2>ต้องเตรียมพัสดุ ({shown.toPrepare.length})</h2>
+      {board && view === 'prepare' && (
+        <section>
+          <h2>ต้องเตรียมพัสดุ ({shown.length})</h2>
+          {shown.length === 0 ? <EmptyState text="ไม่มีรายการที่ต้องเตรียมพัสดุ" /> : (
             <ul>
-              {shown.toPrepare.map((row) => (
+              {shown.map((row) => (
                 <li key={row.id}>
                   <p><strong>{row.patientName}</strong> · HN {row.hn} · {row.zone.displayName}</p>
                   {row.latestAttempt?.status === 'returned' && <p>ส่งใหม่หลังรับยาคืนแล้ว</p>}
@@ -99,11 +103,15 @@ export function PharmacyPackageBoard() {
                 </li>
               ))}
             </ul>
-          </section>
-          <section>
-            <h2>รอไรเดอร์รับงาน ({shown.awaitingRider.length})</h2>
+          )}
+        </section>
+      )}
+      {board && view === 'awaiting' && (
+        <section>
+          <h2>รอไรเดอร์รับงาน ({shown.length})</h2>
+          {shown.length === 0 ? <EmptyState text="ไม่มีพัสดุที่รอไรเดอร์รับงาน" /> : (
             <ul>
-              {shown.awaitingRider.map((row) => row.latestAttempt && (
+              {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
                   <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, () => 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก')}>
@@ -112,11 +120,15 @@ export function PharmacyPackageBoard() {
                 </li>
               ))}
             </ul>
-          </section>
-          <section>
-            <h2>รอรับยาคืน ({shown.returnRequired.length})</h2>
+          )}
+        </section>
+      )}
+      {board && view === 'returns' && (
+        <section>
+          <h2>รอรับยาคืน ({shown.length})</h2>
+          {shown.length === 0 ? <EmptyState text="ไม่มียาที่รอรับคืน" /> : (
             <ul>
-              {shown.returnRequired.map((row) => row.latestAttempt && (
+              {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)}</p>
                   <p>เหตุผล: {failureReasonLabels[row.latestAttempt.failureReason as keyof typeof failureReasonLabels] ?? '-'} · {formatThaiDateTime(row.latestAttempt.failedAt)}</p>
@@ -126,8 +138,8 @@ export function PharmacyPackageBoard() {
                 </li>
               ))}
             </ul>
-          </section>
-        </>
+          )}
+        </section>
       )}
     </div>
   );

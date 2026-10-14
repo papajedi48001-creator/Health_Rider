@@ -2,10 +2,16 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
+import { Icon, type IconName } from '@/brand/icons';
 import { statusTone } from '@/lib/status-tone';
 import { callApi } from '@/lib/api-client';
 import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
+
+const statusIcons: Record<DeliveryAttemptStatus, IconName> = {
+  prepared: 'package', claimed: 'scooter', in_transit: 'truck', delivered: 'checkCircle',
+  delivery_failed: 'xCircle', return_required: 'undo', returned: 'checkCircle', sync_review: 'alert',
+};
 
 type Attempt = {
   id: string; status: DeliveryAttemptStatus; createdAt: string; deliveredAt: string | null; failedAt: string | null;
@@ -75,7 +81,10 @@ export function OperationsDashboard() {
         <>
           <div className="stat-row">
             {Object.entries(counts).map(([status, count]) => (
-              <span key={status} className={`stat ${statusTone(status as DeliveryAttemptStatus)}`}><strong>{count}</strong>{statusLabels[status as DeliveryAttemptStatus]}</span>
+              <span key={status} className={`stat ${statusTone(status as DeliveryAttemptStatus)}`}>
+                <span className="stat-icon"><Icon name={statusIcons[status as DeliveryAttemptStatus]} size={22} /></span>
+                <span className="stat-body"><strong>{count}</strong>{statusLabels[status as DeliveryAttemptStatus]}</span>
+              </span>
             ))}
           </div>
           <table>

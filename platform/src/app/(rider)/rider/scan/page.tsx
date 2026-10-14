@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { statusLabels } from '@/lib/labels';
-import { Icon } from '@/rider/icons';
+import { EmptyState } from '@/brand/empty-state';
+import { Icon } from '@/brand/icons';
 import { statusTone } from '@/lib/status-tone';
 
 type BarcodeDetectorLike = { detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>> };
@@ -96,10 +97,7 @@ export default function RiderScanPage() {
 
       <h2>งานของฉัน{attempts && attempts.length > 0 ? ` (${attempts.length})` : ''}</h2>
       {attempts === null ? <p className="muted">กำลังโหลดงาน</p> : attempts.length === 0 ? (
-        <div className="empty-state">
-          <Icon name="package" size={36} />
-          <p>ยังไม่มีงานที่ค้างอยู่ สแกน QR ที่พัสดุเพื่อรับงาน</p>
-        </div>
+        <EmptyState text="ยังไม่มีงานที่ค้างอยู่ สแกน QR ที่พัสดุเพื่อรับงาน" />
       ) : (
         <ul className="job-list">
           {attempts.map((attempt) => (

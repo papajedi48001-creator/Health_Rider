@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
-import { Icon } from '@/rider/icons';
+import { Icon } from '@/brand/icons';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
+import { LogoMark } from '@/brand/logo';
 
 // The rider app frame: a slim top bar, a single mobile column and bottom tabs.
 export async function RiderShell({ children }: { children: ReactNode }) {
@@ -13,7 +14,7 @@ export async function RiderShell({ children }: { children: ReactNode }) {
   return (
     <div className="rider-app">
       <header className="rider-topbar">
-        <span className="rider-brand">Health Rider</span>
+        <span className="rider-brand"><LogoMark size={30} /> Health Rider</span>
         <Link href="/rider/profile" className="rider-user" aria-label={`ข้อมูลผู้ใช้ ${session.displayName}`}>
           <span className="avatar avatar-small" aria-hidden="true">{session.displayName.trim().charAt(0)}</span>
           <span className="rider-user-name">{session.displayName}</span>

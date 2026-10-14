@@ -6,27 +6,31 @@ import { roleHome } from '@/auth/role-home';
 import type { UserRole } from '@/auth/roles';
 import { MainNav, type NavGroup } from '@/auth/main-nav';
 import { roleLabels } from '@/lib/labels';
-import { Icon } from '@/rider/icons';
+import { Brand } from '@/brand/logo';
+import { Icon, type IconName } from '@/brand/icons';
 
-const navigation: Array<{ group: string; href: string; label: string; roles: UserRole[] }> = [
-  { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', roles: ['pharmacy', 'admin'] },
-  { group: 'เภสัชกรรม', href: '/pharmacy/packages', label: 'เตรียมพัสดุ/รับยาคืน', roles: ['pharmacy', 'admin'] },
-  { group: 'การจัดส่ง', href: '/operations', label: 'ภาพรวมการจัดส่ง', roles: ['coordinator', 'admin', 'auditor'] },
-  { group: 'การจัดส่ง', href: '/operations/exceptions', label: 'งานที่ต้องตรวจสอบ', roles: ['coordinator', 'admin', 'auditor'] },
-  { group: 'การจัดส่ง', href: '/audit', label: 'ประวัติการตรวจสอบ', roles: ['auditor', 'admin'] },
-  { group: 'ผู้ดูแลระบบ', href: '/admin', label: 'บัญชีผู้ใช้', roles: ['admin'] },
-  { group: 'ผู้ดูแลระบบ', href: '/admin/zones', label: 'โซนจัดส่ง', roles: ['admin'] },
-  { group: 'ผู้ดูแลระบบ', href: '/admin/rates', label: 'ค่าบริการ', roles: ['admin'] },
+const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
+  { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
+  { group: 'เภสัชกรรม', href: '/pharmacy/packages', label: 'เตรียมพัสดุ', icon: 'package', roles: ['pharmacy', 'admin'] },
+  { group: 'เภสัชกรรม', href: '/pharmacy/awaiting-rider', label: 'รอไรเดอร์รับงาน', icon: 'scooter', roles: ['pharmacy', 'admin'] },
+  { group: 'เภสัชกรรม', href: '/pharmacy/returns', label: 'รอรับยาคืน', icon: 'undo', roles: ['pharmacy', 'admin'] },
+  { group: 'การจัดส่ง', href: '/operations', label: 'ภาพรวมการจัดส่ง', icon: 'dashboard', roles: ['coordinator', 'admin', 'auditor'] },
+  { group: 'การจัดส่ง', href: '/operations/exceptions', label: 'งานที่ต้องตรวจสอบ', icon: 'alert', roles: ['coordinator', 'admin', 'auditor'] },
+  { group: 'การจัดส่ง', href: '/audit', label: 'ประวัติการตรวจสอบ', icon: 'shield', roles: ['auditor', 'admin'] },
+  { group: 'ผู้ดูแลระบบ', href: '/admin', label: 'บัญชีผู้ใช้', icon: 'users', roles: ['admin'] },
+  { group: 'ผู้ดูแลระบบ', href: '/admin/zones', label: 'โซนจัดส่ง', icon: 'map', roles: ['admin'] },
+  { group: 'ผู้ดูแลระบบ', href: '/admin/rates', label: 'ค่าบริการ', icon: 'coins', roles: ['admin'] },
   // Lets a rider who opens a staff page get back to the rider app.
-  { group: 'ไรเดอร์', href: '/rider/scan', label: 'กลับไปหน้าไรเดอร์', roles: ['rider'] },
+  { group: 'ไรเดอร์', href: '/rider/scan', label: 'กลับไปหน้าไรเดอร์', icon: 'scan', roles: ['rider'] },
 ];
 
 function groupsFor(role: UserRole): NavGroup[] {
   const groups: NavGroup[] = [];
   for (const item of navigation.filter((entry) => entry.roles.includes(role))) {
     const group = groups.find((entry) => entry.label === item.group);
-    if (group) group.items.push({ href: item.href, label: item.label });
-    else groups.push({ label: item.group, items: [{ href: item.href, label: item.label }] });
+    const entry = { href: item.href, label: item.label, icon: item.icon };
+    if (group) group.items.push(entry);
+    else groups.push({ label: item.group, items: [entry] });
   }
   return groups;
 }
@@ -41,8 +45,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
     <div className="staff-app">
       <header className="staff-sidebar">
         <Link href={roleHome(session.role)} className="brand">
-          <span className="brand-mark" aria-hidden="true"><Icon name="package" size={20} /></span>
-          <span className="brand-text"><strong>Health Rider</strong><small>โรงพยาบาลวาริชภูมิ</small></span>
+          <Brand />
         </Link>
         <MainNav groups={groupsFor(session.role)} />
         <div className="staff-user">

@@ -21,7 +21,7 @@ test('narrows the package board by subdistrict, then by zone within it', async (
     awaitingRider: [], returnRequired: [],
   }), { status: 200 })));
 
-  render(<PharmacyPackageBoard />);
+  render(<PharmacyPackageBoard view="prepare" />);
 
   expect(await screen.findByText('ต้องเตรียมพัสดุ (3)')).toBeInTheDocument();
   expect(screen.getByRole('option', { name: 'ตำบล 470602' })).toBeInTheDocument();

@@ -82,10 +82,11 @@ test('takes a failed delivery back to pharmacy and allows a new package', async 
   const failed = rider.page.getByRole('listitem').filter({ hasText: patientName });
   await expect(failed.getByText(/^ส่งไม่สำเร็จ: ไม่พบผู้รับ/)).toHaveCSS('color', 'rgb(180, 35, 24)');
 
-  await pharmacy.page.goto('/pharmacy/packages');
+  await pharmacy.page.goto('/pharmacy/returns');
   await pharmacy.page.getByRole('listitem').filter({ hasText: patientName }).getByRole('button', { name: 'ยืนยันรับยาคืน' }).click();
   await expect(pharmacy.page.getByText('รับยาคืนแล้ว เตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง')).toBeVisible();
   expect(await attemptStatus(attemptId)).toBe('returned');
+  await pharmacy.page.goto('/pharmacy/packages');
   const retry = pharmacy.page.getByRole('listitem').filter({ hasText: patientName });
   await expect(retry).toContainText('ส่งใหม่หลังรับยาคืนแล้ว');
   await expect(retry.getByRole('button', { name: 'เตรียมพัสดุและออก QR' })).toBeVisible();

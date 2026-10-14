@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
 import { roleHome, safeNextPath } from '@/auth/role-home';
 import { LoginForm } from '@/app/login/login-form';
-import { Icon } from '@/rider/icons';
+import { Brand } from '@/brand/logo';
+import { Mascot } from '@/brand/mascot';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,11 +22,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="login-page">
       <div className="login-card">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true"><Icon name="package" size={20} /></span>
-          <span className="brand-text"><strong>Health Rider</strong><small>โรงพยาบาลวาริชภูมิ</small></span>
-        </div>
-        <h1>เข้าสู่ระบบ Health Rider</h1>
+        <Mascot width={200} title="น้องไรด์ มาสคอต Health Rider" />
+        <div className="brand"><Brand size={40} /></div>
+        <h1>เข้าสู่ระบบ</h1>
+        <p className="login-tagline">ระบบส่งยาถึงบ้าน ปลอดภัย ตรวจสอบได้ทุกขั้นตอน</p>
         <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? ''} />
       </div>
     </main>

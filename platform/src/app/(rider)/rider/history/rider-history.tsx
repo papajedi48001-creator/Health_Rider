@@ -6,7 +6,8 @@ import type { HistoryFilter, HistoryOutcome } from '@/domain/delivery/rider-hist
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { failureReasonLabels, formatThaiDateTime, recipientRelationLabels } from '@/lib/labels';
-import { Icon } from '@/rider/icons';
+import { EmptyState } from '@/brand/empty-state';
+import { Icon } from '@/brand/icons';
 import { bangkokDateString } from '@/lib/time';
 
 type HistoryItem = {
@@ -93,7 +94,7 @@ export function RiderHistory() {
           </div>
         )}
       </section>
-      <p aria-live="polite" role="status">{message}</p>
+      {history && history.total === 0 ? <EmptyState text={message} /> : <p aria-live="polite" role="status">{message}</p>}
       {history && history.items.length > 0 && (
         <>
           <ul className="job-list">
