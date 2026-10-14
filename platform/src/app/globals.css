@@ -395,7 +395,7 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .btn-large { min-height: 56px; font-size: 1.08rem; }
 .btn:disabled, .btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
-.action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.action-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 .action-row .btn { padding: 10px 8px; font-size: 0.95rem; }
 
 .chip {

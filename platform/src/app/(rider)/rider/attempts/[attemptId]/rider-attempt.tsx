@@ -149,9 +149,6 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
             {view.patient.telephone ? (
               <a className="btn btn-secondary" href={`tel:${view.patient.telephone}`}><Icon name="phone" /> โทรหาผู้รับ</a>
             ) : <span className="btn btn-secondary" aria-disabled="true"><Icon name="phone" /> ไม่มีเบอร์โทร</span>}
-            <a className="btn btn-secondary" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(view.patient.address)}`} target="_blank" rel="noreferrer">
-              <Icon name="map" /> นำทาง
-            </a>
           </div>
         </section>
       )}
