@@ -120,22 +120,30 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
 
   return (
     <main>
+      <Link className="back-link" href="/rider/scan">‹ งานของฉัน</Link>
       <h1>บันทึกงานจัดส่ง</h1>
       <p aria-live="polite" role="status">{message}{pending > 0 ? ` (ค้างส่ง ${pending} รายการ)` : ''}</p>
-      {loadError && <p>{loadError}</p>}
+      {loadError && <p className="badge pending">{loadError}</p>}
       {view && (
         <section aria-label="ข้อมูลผู้รับ">
-          <h2>{view.patient.name}</h2>
-          <p>HN <code>{view.patient.hn}</code> · อายุ {view.patient.age ?? '-'} ปี</p>
-          <p>โทร {view.patient.telephone ? <a href={`tel:${view.patient.telephone}`}>{view.patient.telephone}</a> : '-'}</p>
+          <div className="card-head">
+            <h2>{view.patient.name}</h2>
+            <span className={`badge${pending > 0 ? ' pending' : ''}`}>สถานะ: {statusText}</span>
+          </div>
+          <p className="meta">HN <code>{view.patient.hn}</code> · อายุ {view.patient.age ?? '-'} ปี</p>
           <p>{view.patient.address}</p>
-          <p>สถานะ: {statusText}</p>
+          {view.patient.telephone ? (
+            <a className="button secondary" href={`tel:${view.patient.telephone}`}>โทร {view.patient.telephone}</a>
+          ) : <p className="meta">ไม่มีเบอร์โทร</p>}
         </section>
       )}
       {active && (
         <>
           {view.status === 'claimed' && !pickupPending && (
-            <button type="button" disabled={recording} onClick={() => void record('picked_up', {})}>บันทึกรับยา</button>
+            <section aria-label="ขั้นที่ 1 รับยา">
+              <h2>1. รับยาจากเภสัชกรรม</h2>
+              <button type="button" disabled={recording} onClick={() => void record('picked_up', {})}>บันทึกรับยา</button>
+            </section>
           )}
           <form onSubmit={(event) => void submitDelivery(event)} aria-label="บันทึกส่งยาสำเร็จ">
             <h2>ส่งยาสำเร็จ</h2>
@@ -159,12 +167,13 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
                 {failedDeliveryReasons.map((reason) => <option key={reason} value={reason}>{failureReasonLabels[reason]}</option>)}
               </select>
             </label>
-            <button type="submit" disabled={recording}>บันทึกส่งไม่สำเร็จ</button>
+            <button type="submit" className="danger" disabled={recording}>บันทึกส่งไม่สำเร็จ</button>
           </form>
         </>
       )}
-      {view?.status === 'return_required' && <p>นำยากลับมาคืนเภสัชกรรมภายในวันนี้</p>}
-      <p><Link href="/rider/scan">กลับไปหน้ารับงาน</Link></p>
+      {view?.status === 'return_required' && (
+        <section><p className="outcome-failed">นำยากลับมาคืนเภสัชกรรมภายในวันนี้</p></section>
+      )}
     </main>
   );
 }

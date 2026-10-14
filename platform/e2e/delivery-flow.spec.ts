@@ -59,6 +59,12 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await rider.page.getByRole('link', { name: 'ประวัติการส่ง' }).click();
   const delivered = rider.page.getByRole('listitem').filter({ hasText: patientName });
   await expect(delivered.getByText('ส่งสำเร็จ', { exact: true })).toHaveCSS('color', 'rgb(21, 128, 61)');
+  await expect(delivered.getByText('ผู้รับยา: คู่สมรส')).toBeVisible();
+  await expect(delivered.getByRole('img')).toHaveCount(0);
+  await delivered.getByRole('button', { name: 'ดูรูปหลักฐาน' }).click();
+  const photo = delivered.getByRole('img', { name: /รูปหลักฐานการส่งยา/ });
+  await expect(photo).toBeVisible();
+  await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
 
   const coordinator = await signedIn(browser, 'coordinator.uat');
   await coordinator.page.goto('/operations');

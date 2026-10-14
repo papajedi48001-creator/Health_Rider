@@ -59,28 +59,40 @@ export default function RiderScanPage() {
     <main>
       <h1>รับงานด้วย QR</h1>
       <p aria-live="polite" role="status">{message}</p>
-      <video ref={videoRef} hidden={!scanning} muted playsInline width={320} />
-      <button type="button" onClick={() => void startCamera()} disabled={scanning}>เปิดกล้องสแกน QR</button>
-      <form onSubmit={(event) => { event.preventDefault(); void claim(token); }}>
-        <label>
-          QR token
-          <input value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" />
-        </label>
-        <button type="submit">รับงาน</button>
-      </form>
-      <section>
-        <h2>งานของฉัน</h2>
-        {attempts.length === 0 ? <p>ยังไม่มีงานที่ค้างอยู่</p> : (
-          <ul>
-            {attempts.map((attempt) => (
-              <li key={attempt.id}>
-                <Link href={`/rider/attempts/${attempt.id}`}>{attempt.patientName}</Link> · {statusLabels[attempt.status]}
-                <br />{attempt.address}
-              </li>
-            ))}
-          </ul>
+      <section aria-label="รับงานใหม่">
+        <video ref={videoRef} hidden={!scanning} muted playsInline className="scanner" />
+        {!scanning && (
+          <button type="button" onClick={() => void startCamera()}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" />
+            </svg>
+            เปิดกล้องสแกน QR
+          </button>
         )}
+        <p className="divider">หรือกรอกรหัสใต้ QR</p>
+        <form onSubmit={(event) => { event.preventDefault(); void claim(token); }}>
+          <label>
+            QR token
+            <input value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
+          </label>
+          <button type="submit" className="secondary">รับงาน</button>
+        </form>
       </section>
+      <h2>งานของฉัน</h2>
+      {attempts.length === 0 ? <section><p className="meta">ยังไม่มีงานที่ค้างอยู่</p></section> : (
+        <ul>
+          {attempts.map((attempt) => (
+            <li key={attempt.id}>
+              <div className="card-head">
+                <h2>{attempt.patientName}</h2>
+                <span className="badge">{statusLabels[attempt.status]}</span>
+              </div>
+              <p className="meta">{attempt.address}</p>
+              <Link className="button secondary" href={`/rider/attempts/${attempt.id}`}>เปิดงาน</Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }

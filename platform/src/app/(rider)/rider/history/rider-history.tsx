@@ -5,7 +5,8 @@ import type { FailedDeliveryReason } from '@/domain/delivery/offline-event-rules
 import type { HistoryFilter, HistoryOutcome } from '@/domain/delivery/rider-history';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
-import { failureReasonLabels, formatThaiDateTime } from '@/lib/labels';
+import { failureReasonLabels, formatThaiDateTime, recipientRelationLabels } from '@/lib/labels';
+import type { RecipientRelation } from '@/domain/delivery/offline-event-rules';
 import { bangkokDateString } from '@/lib/time';
 
 type HistoryItem = {
@@ -17,6 +18,8 @@ type HistoryItem = {
   hn: string;
   patientName: string;
   address: string;
+  hasPhoto: boolean;
+  recipientRelation: RecipientRelation | null;
 };
 type HistoryPage = { page: number; pages: number; total: number; counts: Record<HistoryOutcome, number>; items: HistoryItem[] };
 
@@ -56,15 +59,17 @@ export function RiderHistory() {
   return (
     <main>
       <h1>ประวัติการส่งของฉัน</h1>
-      <section>
-        <label>
-          ตั้งแต่วันที่
-          <input type="date" value={from} max={to} onChange={(event) => event.target.value && change(() => setFrom(event.target.value))} />
-        </label>
-        <label>
-          ถึงวันที่
-          <input type="date" value={to} min={from} onChange={(event) => event.target.value && change(() => setTo(event.target.value))} />
-        </label>
+      <section aria-label="ตัวกรองประวัติ">
+        <div className="field-pair">
+          <label>
+            ตั้งแต่วันที่
+            <input type="date" value={from} max={to} onChange={(event) => event.target.value && change(() => setFrom(event.target.value))} />
+          </label>
+          <label>
+            ถึงวันที่
+            <input type="date" value={to} min={from} onChange={(event) => event.target.value && change(() => setTo(event.target.value))} />
+          </label>
+        </div>
         <label>
           สถานะการส่ง
           <select value={outcome} onChange={(event) => change(() => setOutcome(event.target.value as HistoryFilter))}>
@@ -74,40 +79,67 @@ export function RiderHistory() {
           </select>
         </label>
         {history && (
-          <p>
-            <span className="outcome-delivered">ส่งสำเร็จ {history.counts.delivered} ราย</span>
-            {' · '}
-            <span className="outcome-failed">ส่งไม่สำเร็จ {history.counts.failed} ราย</span>
-          </p>
+          <div className="stats" style={{ marginTop: 14 }}>
+            <p className="stat"><span className="outcome-delivered">ส่งสำเร็จ<strong>{history.counts.delivered} ราย</strong></span></p>
+            <p className="stat failed"><span className="outcome-failed">ส่งไม่สำเร็จ<strong>{history.counts.failed} ราย</strong></span></p>
+          </div>
         )}
       </section>
       <p aria-live="polite" role="status">{message}</p>
       {history && history.items.length > 0 && (
         <>
           <ul className="history">
-            {history.items.map((item) => (
-              <li key={item.id}>
-                <h2>{item.patientName}</h2>
-                <p>HN {item.hn} · {formatThaiDateTime(item.finishedAt)}</p>
-                <p>{item.address}</p>
-                {item.outcome === 'delivered' ? (
-                  <p className="outcome-delivered">ส่งสำเร็จ</p>
-                ) : (
-                  <p className="outcome-failed">
-                    ส่งไม่สำเร็จ{item.failureReason ? `: ${failureReasonLabels[item.failureReason] ?? item.failureReason}` : ''}
-                    {item.status === 'returned' ? ' (คืนยาแล้ว)' : item.status === 'return_required' ? ' (รอคืนยา)' : ''}
-                  </p>
-                )}
-              </li>
-            ))}
+            {history.items.map((item) => <HistoryCard key={item.id} item={item} />)}
           </ul>
           <nav aria-label="เปลี่ยนหน้า" className="pager">
-            <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>ก่อนหน้า</button>
-            <span>หน้า {history.page} จาก {history.pages} ({history.total} รายการ)</span>
-            <button type="button" disabled={page >= history.pages} onClick={() => setPage(page + 1)}>ถัดไป</button>
+            <button type="button" className="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>ก่อนหน้า</button>
+            <span>หน้า {history.page}/{history.pages}<br />({history.total} รายการ)</span>
+            <button type="button" className="secondary" disabled={page >= history.pages} onClick={() => setPage(page + 1)}>ถัดไป</button>
           </nav>
         </>
       )}
     </main>
+  );
+}
+
+// The evidence photo loads only when the rider asks for it, so lists never preview evidence (DESIGN.md)
+// and a phone on mobile data downloads one photo at a time.
+function HistoryCard({ item }: { item: HistoryItem }) {
+  const [showPhoto, setShowPhoto] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const photoUrl = `/api/rider/history/${item.id}/photo`;
+  return (
+    <li>
+      <div className="card-head">
+        <h2>{item.patientName}</h2>
+        {item.outcome === 'delivered'
+          ? <span className="badge outcome-delivered">ส่งสำเร็จ</span>
+          : <span className="badge outcome-failed">ไม่สำเร็จ</span>}
+      </div>
+      <p className="meta">HN {item.hn} · {formatThaiDateTime(item.finishedAt)}</p>
+      <p>{item.address}</p>
+      {item.outcome === 'delivered' ? (
+        item.recipientRelation && <p className="meta">ผู้รับยา: {recipientRelationLabels[item.recipientRelation] ?? item.recipientRelation}</p>
+      ) : (
+        <p className="outcome-failed">
+          ส่งไม่สำเร็จ{item.failureReason ? `: ${failureReasonLabels[item.failureReason] ?? item.failureReason}` : ''}
+          {item.status === 'returned' ? ' (คืนยาแล้ว)' : item.status === 'return_required' ? ' (รอคืนยา)' : ''}
+        </p>
+      )}
+      {item.hasPhoto && (
+        <>
+          <button type="button" className="secondary" aria-expanded={showPhoto} onClick={() => { setShowPhoto(!showPhoto); setPhotoFailed(false); }}>
+            {showPhoto ? 'ซ่อนรูปหลักฐาน' : 'ดูรูปหลักฐาน'}
+          </button>
+          {showPhoto && (photoFailed
+            ? <p className="badge pending">โหลดรูปไม่ได้ ต้องออนไลน์เพื่อดูรูปหลักฐาน</p>
+            : (
+              <a href={photoUrl} target="_blank" rel="noreferrer">
+                <img className="evidence-photo" src={photoUrl} alt={`รูปหลักฐานการส่งยา ${item.patientName}`} onError={() => setPhotoFailed(true)} />
+              </a>
+            ))}
+        </>
+      )}
+    </li>
   );
 }
