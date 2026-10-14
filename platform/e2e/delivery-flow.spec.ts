@@ -15,8 +15,8 @@ async function prepareAndClaim(browser: Browser, patientName: string) {
   const prepared = await (await pharmacy.page.request.post('/api/pharmacy/attempts/prepare', { data: { deliveryRequestId: request.id } })).json();
   const rider = await signedIn(browser, 'rider.internal.uat');
   await rider.page.goto('/rider/scan');
-  await rider.page.getByLabel('QR token').fill(prepared.token);
-  await rider.page.getByRole('button', { name: 'รับงาน' }).click();
+  await rider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
+  await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
   await expect(rider.page).toHaveURL(new RegExp(`/rider/attempts/${prepared.attemptId}$`));
   await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
   return { request, attemptId: prepared.attemptId as string, pharmacy, rider };
@@ -37,8 +37,8 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
 
   const rider = await signedIn(browser, 'rider.internal.uat');
   await rider.page.goto('/rider/scan');
-  await rider.page.getByLabel('QR token').fill(prepared.token);
-  await rider.page.getByRole('button', { name: 'รับงาน' }).click();
+  await rider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
+  await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
   await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
 
   await rider.context.setOffline(true);
@@ -59,6 +59,12 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await rider.page.getByRole('link', { name: 'ประวัติการส่ง' }).click();
   const delivered = rider.page.getByRole('listitem').filter({ hasText: patientName });
   await expect(delivered.getByText('ส่งสำเร็จ', { exact: true })).toHaveCSS('color', 'rgb(21, 128, 61)');
+  await delivered.getByRole('button', { name: 'ดูรูปหลักฐาน' }).click();
+  const photo = rider.page.getByRole('dialog').getByRole('img', { name: /รูปหลักฐานการส่ง/ });
+  await expect(photo).toBeVisible();
+  await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await rider.page.getByRole('button', { name: 'ปิดรูป' }).click();
+  await expect(rider.page.getByRole('dialog')).toHaveCount(0);
 
   const coordinator = await signedIn(browser, 'coordinator.uat');
   await coordinator.page.goto('/operations');

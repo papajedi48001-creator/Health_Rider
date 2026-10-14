@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { FailedDeliveryReason } from '@/domain/delivery/offline-event-rules';
+import type { FailedDeliveryReason, RecipientRelation } from '@/domain/delivery/offline-event-rules';
 import type { HistoryFilter, HistoryOutcome } from '@/domain/delivery/rider-history';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
-import { failureReasonLabels, formatThaiDateTime } from '@/lib/labels';
+import { failureReasonLabels, formatThaiDateTime, recipientRelationLabels } from '@/lib/labels';
+import { Icon } from '@/rider/icons';
 import { bangkokDateString } from '@/lib/time';
 
 type HistoryItem = {
@@ -14,6 +15,8 @@ type HistoryItem = {
   status: DeliveryAttemptStatus;
   finishedAt: string;
   failureReason: FailedDeliveryReason | null;
+  hasEvidence: boolean;
+  recipientRelation: RecipientRelation | null;
   hn: string;
   patientName: string;
   address: string;
@@ -29,6 +32,7 @@ export function RiderHistory() {
   const [page, setPage] = useState(1);
   const [history, setHistory] = useState<HistoryPage | null>(null);
   const [message, setMessage] = useState('กำลังโหลดประวัติการส่ง');
+  const [photoOf, setPhotoOf] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -47,6 +51,13 @@ export function RiderHistory() {
     return () => { current = false; };
   }, [from, to, outcome, page]);
 
+  useEffect(() => {
+    if (!photoOf) return;
+    const close = (event: KeyboardEvent) => event.key === 'Escape' && setPhotoOf(null);
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [photoOf]);
+
   // Any filter change starts again from the first page.
   function change(update: () => void) {
     update();
@@ -54,17 +65,19 @@ export function RiderHistory() {
   }
 
   return (
-    <main>
+    <main className="rider-page">
       <h1>ประวัติการส่งของฉัน</h1>
-      <section>
-        <label>
-          ตั้งแต่วันที่
-          <input type="date" value={from} max={to} onChange={(event) => event.target.value && change(() => setFrom(event.target.value))} />
-        </label>
-        <label>
-          ถึงวันที่
-          <input type="date" value={to} min={from} onChange={(event) => event.target.value && change(() => setTo(event.target.value))} />
-        </label>
+      <section className="rider-card filters" aria-label="ตัวกรอง">
+        <div className="date-range">
+          <label>
+            ตั้งแต่วันที่
+            <input type="date" value={from} max={to} onChange={(event) => event.target.value && change(() => setFrom(event.target.value))} />
+          </label>
+          <label>
+            ถึงวันที่
+            <input type="date" value={to} min={from} onChange={(event) => event.target.value && change(() => setTo(event.target.value))} />
+          </label>
+        </div>
         <label>
           สถานะการส่ง
           <select value={outcome} onChange={(event) => change(() => setOutcome(event.target.value as HistoryFilter))}>
@@ -74,39 +87,63 @@ export function RiderHistory() {
           </select>
         </label>
         {history && (
-          <p>
-            <span className="outcome-delivered">ส่งสำเร็จ {history.counts.delivered} ราย</span>
-            {' · '}
-            <span className="outcome-failed">ส่งไม่สำเร็จ {history.counts.failed} ราย</span>
-          </p>
+          <div className="summary">
+            <span className="summary-tile outcome-delivered"><strong>{history.counts.delivered}</strong> ส่งสำเร็จ</span>
+            <span className="summary-tile outcome-failed"><strong>{history.counts.failed}</strong> ส่งไม่สำเร็จ</span>
+          </div>
         )}
       </section>
       <p aria-live="polite" role="status">{message}</p>
       {history && history.items.length > 0 && (
         <>
-          <ul className="history">
+          <ul className="job-list">
             {history.items.map((item) => (
-              <li key={item.id}>
-                <h2>{item.patientName}</h2>
-                <p>HN {item.hn} · {formatThaiDateTime(item.finishedAt)}</p>
+              <li key={item.id} className="history-item">
+                <div className="history-head">
+                  <h2>{item.patientName}</h2>
+                  {item.outcome === 'delivered' ? (
+                    <span className="chip chip-success outcome-delivered">ส่งสำเร็จ</span>
+                  ) : (
+                    <span className="chip chip-danger outcome-failed">ส่งไม่สำเร็จ</span>
+                  )}
+                </div>
+                <p className="muted">HN {item.hn} · {formatThaiDateTime(item.finishedAt)}</p>
                 <p>{item.address}</p>
                 {item.outcome === 'delivered' ? (
-                  <p className="outcome-delivered">ส่งสำเร็จ</p>
+                  item.recipientRelation && <p>ผู้รับยา: {recipientRelationLabels[item.recipientRelation] ?? item.recipientRelation}</p>
                 ) : (
                   <p className="outcome-failed">
                     ส่งไม่สำเร็จ{item.failureReason ? `: ${failureReasonLabels[item.failureReason] ?? item.failureReason}` : ''}
                     {item.status === 'returned' ? ' (คืนยาแล้ว)' : item.status === 'return_required' ? ' (รอคืนยา)' : ''}
                   </p>
                 )}
+                {item.hasEvidence && (
+                  <button type="button" className="btn btn-secondary btn-block" onClick={() => setPhotoOf(item)}>
+                    <Icon name="image" /> ดูรูปหลักฐาน
+                  </button>
+                )}
               </li>
             ))}
           </ul>
           <nav aria-label="เปลี่ยนหน้า" className="pager">
-            <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>ก่อนหน้า</button>
-            <span>หน้า {history.page} จาก {history.pages} ({history.total} รายการ)</span>
-            <button type="button" disabled={page >= history.pages} onClick={() => setPage(page + 1)}>ถัดไป</button>
+            <button type="button" className="btn btn-secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>ก่อนหน้า</button>
+            <span>หน้า {history.page}/{history.pages}<br /><small>{history.total} รายการ</small></span>
+            <button type="button" className="btn btn-secondary" disabled={page >= history.pages} onClick={() => setPage(page + 1)}>ถัดไป</button>
           </nav>
         </>
+      )}
+      {photoOf && (
+        <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={`รูปหลักฐานการส่ง ${photoOf.patientName}`} onClick={() => setPhotoOf(null)}>
+          <div className="photo-viewer-body" onClick={(event) => event.stopPropagation()}>
+            <div className="photo-viewer-head">
+              <strong>{photoOf.patientName}</strong>
+              <button type="button" className="icon-button" aria-label="ปิดรูป" onClick={() => setPhotoOf(null)} autoFocus><Icon name="close" /></button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a private, uncached image served by our own API */}
+            <img src={`/api/rider/attempts/${photoOf.id}/evidence`} alt={`รูปหลักฐานการส่ง ${photoOf.patientName}`} />
+            <p className="muted">{formatThaiDateTime(photoOf.finishedAt)}</p>
+          </div>
+        </div>
       )}
     </main>
   );

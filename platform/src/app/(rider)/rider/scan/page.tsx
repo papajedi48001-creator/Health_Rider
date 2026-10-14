@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { statusLabels } from '@/lib/labels';
+import { Icon } from '@/rider/icons';
+import { statusTone } from '@/rider/status-tone';
 
 type BarcodeDetectorLike = { detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>> };
 type MyAttempt = { id: string; status: DeliveryAttemptStatus; patientName: string; address: string };
@@ -15,16 +17,18 @@ export default function RiderScanPage() {
   const [token, setToken] = useState('');
   const [message, setMessage] = useState('สแกน QR ที่พัสดุเพื่อรับงาน');
   const [scanning, setScanning] = useState(false);
-  const [attempts, setAttempts] = useState<MyAttempt[]>([]);
+  const [attempts, setAttempts] = useState<MyAttempt[] | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const claimingRef = useRef(false);
+  const stopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    void callApi<{ attempts: MyAttempt[] }>('/api/rider/attempts').then((result) => result.ok && setAttempts(result.data.attempts));
+    void callApi<{ attempts: MyAttempt[] }>('/api/rider/attempts').then((result) => setAttempts(result.ok ? result.data.attempts : []));
+    return () => stopRef.current?.();
   }, []);
 
   async function claim(value: string) {
-    if (claimingRef.current) return;
+    if (claimingRef.current || !value.trim()) return;
     claimingRef.current = true;
     setMessage('กำลังรับงาน');
     const result = await callApi<{ attemptId: string }>('/api/rider/claims', { json: { token: value.trim() } });
@@ -44,7 +48,14 @@ export default function RiderScanPage() {
     videoRef.current.srcObject = stream;
     await videoRef.current.play();
     setScanning(true);
-    const stop = () => { stream.getTracks().forEach((track) => track.stop()); setScanning(false); };
+    setMessage('เล็ง QR บนพัสดุให้อยู่ในกรอบ');
+    const stop = () => {
+      stream.getTracks().forEach((track) => track.stop());
+      if (videoRef.current?.srcObject === stream) videoRef.current.srcObject = null;
+      stopRef.current = null;
+      setScanning(false);
+    };
+    stopRef.current = stop;
     const tick = async () => {
       const video = videoRef.current;
       if (!video || video.srcObject !== stream) return stop();
@@ -56,31 +67,55 @@ export default function RiderScanPage() {
   }
 
   return (
-    <main>
-      <h1>รับงานด้วย QR</h1>
+    <main className="rider-page">
+      <h1>รับงาน</h1>
       <p aria-live="polite" role="status">{message}</p>
-      <video ref={videoRef} hidden={!scanning} muted playsInline width={320} />
-      <button type="button" onClick={() => void startCamera()} disabled={scanning}>เปิดกล้องสแกน QR</button>
-      <form onSubmit={(event) => { event.preventDefault(); void claim(token); }}>
-        <label>
-          QR token
-          <input value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" />
-        </label>
-        <button type="submit">รับงาน</button>
-      </form>
-      <section>
-        <h2>งานของฉัน</h2>
-        {attempts.length === 0 ? <p>ยังไม่มีงานที่ค้างอยู่</p> : (
-          <ul>
-            {attempts.map((attempt) => (
-              <li key={attempt.id}>
-                <Link href={`/rider/attempts/${attempt.id}`}>{attempt.patientName}</Link> · {statusLabels[attempt.status]}
-                <br />{attempt.address}
-              </li>
-            ))}
-          </ul>
+
+      <section className="rider-card" aria-label="สแกน QR">
+        <div className="scan-frame" hidden={!scanning}>
+          <video ref={videoRef} muted playsInline />
+        </div>
+        {scanning ? (
+          <button type="button" className="btn btn-secondary btn-block" onClick={() => stopRef.current?.()}>
+            <Icon name="close" /> ปิดกล้อง
+          </button>
+        ) : (
+          <button type="button" className="btn btn-primary btn-block btn-large" onClick={() => void startCamera()}>
+            <Icon name="scan" size={26} /> สแกน QR รับงาน
+          </button>
         )}
+        <p className="divider"><span>หรือกรอกรหัสใต้ QR</span></p>
+        <form className="inline-form" onSubmit={(event) => { event.preventDefault(); void claim(token); }}>
+          <label>
+            รหัสใต้ QR
+            <input value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
+          </label>
+          <button type="submit" className="btn btn-secondary btn-block" disabled={!token.trim()}>ยืนยันรหัส</button>
+        </form>
       </section>
+
+      <h2>งานของฉัน{attempts && attempts.length > 0 ? ` (${attempts.length})` : ''}</h2>
+      {attempts === null ? <p className="muted">กำลังโหลดงาน</p> : attempts.length === 0 ? (
+        <div className="empty-state">
+          <Icon name="package" size={36} />
+          <p>ยังไม่มีงานที่ค้างอยู่ สแกน QR ที่พัสดุเพื่อรับงาน</p>
+        </div>
+      ) : (
+        <ul className="job-list">
+          {attempts.map((attempt) => (
+            <li key={attempt.id}>
+              <Link href={`/rider/attempts/${attempt.id}`} className="job-link">
+                <span className="job-main">
+                  <strong>{attempt.patientName}</strong>
+                  <span className="muted">{attempt.address}</span>
+                  <span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span>
+                </span>
+                <Icon name="chevron" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }

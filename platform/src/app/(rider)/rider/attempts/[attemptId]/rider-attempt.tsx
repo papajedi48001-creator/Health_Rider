@@ -9,6 +9,8 @@ import type { OfflineEvent } from '@/pwa/offline-queue';
 import { toEvidenceJpeg } from '@/pwa/photo';
 import { deleteAttemptView, loadAttemptView, saveAttemptView } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
+import { Icon } from '@/rider/icons';
+import { statusTone } from '@/rider/status-tone';
 
 type AttemptView = {
   id: string;
@@ -27,6 +29,15 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
   // Event types recorded on this device and not yet acknowledged by the server.
   const [pendingTypes, setPendingTypes] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Shows the rider the photo they just took before they save the delivery.
+  function choosePhoto(file: File | undefined) {
+    setPhotoPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }
 
   const load = useCallback(async () => {
     try {
@@ -118,30 +129,51 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
   const statusText = view && (outcomePending ? 'บันทึกผลการส่งแล้ว รอส่งข้อมูล'
     : pickupPending && view.status === 'claimed' ? `${statusLabels.in_transit} (รอส่งข้อมูล)` : statusLabels[view.status]);
 
+  const offline = pending > 0 || loadError.startsWith('ออฟไลน์');
+
   return (
-    <main>
+    <main className="rider-page">
+      <Link href="/rider/scan" className="back-link"><Icon name="back" size={18} /> งานของฉัน</Link>
       <h1>บันทึกงานจัดส่ง</h1>
-      <p aria-live="polite" role="status">{message}{pending > 0 ? ` (ค้างส่ง ${pending} รายการ)` : ''}</p>
-      {loadError && <p>{loadError}</p>}
+      <p aria-live="polite" role="status" className={offline ? 'status-pending' : undefined}>{message}{pending > 0 ? ` (ค้างส่ง ${pending} รายการ)` : ''}</p>
+      {loadError && <p className="notice">{loadError}</p>}
       {view && (
-        <section aria-label="ข้อมูลผู้รับ">
+        <section aria-label="ข้อมูลผู้รับ" className="rider-card patient-card">
           <h2>{view.patient.name}</h2>
-          <p>HN <code>{view.patient.hn}</code> · อายุ {view.patient.age ?? '-'} ปี</p>
-          <p>โทร {view.patient.telephone ? <a href={`tel:${view.patient.telephone}`}>{view.patient.telephone}</a> : '-'}</p>
+          <p className="muted">HN <code>{view.patient.hn}</code> · อายุ {view.patient.age ?? '-'} ปี</p>
           <p>{view.patient.address}</p>
-          <p>สถานะ: {statusText}</p>
+          <p className="muted">โทร {view.patient.telephone ?? '-'}</p>
+          <p className={`chip ${outcomePending ? 'chip-warning' : statusTone(view.status)}`}>สถานะ: {statusText}</p>
+          <div className="action-row">
+            {view.patient.telephone ? (
+              <a className="btn btn-secondary" href={`tel:${view.patient.telephone}`}><Icon name="phone" /> โทรหาผู้รับ</a>
+            ) : <span className="btn btn-secondary" aria-disabled="true"><Icon name="phone" /> ไม่มีเบอร์โทร</span>}
+            <a className="btn btn-secondary" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(view.patient.address)}`} target="_blank" rel="noreferrer">
+              <Icon name="map" /> นำทาง
+            </a>
+          </div>
         </section>
       )}
       {active && (
         <>
           {view.status === 'claimed' && !pickupPending && (
-            <button type="button" disabled={recording} onClick={() => void record('picked_up', {})}>บันทึกรับยา</button>
+            <section className="rider-card step-card" aria-label="รับยา">
+              <h2><span className="step">1</span> รับยาจากเภสัชกรรม</h2>
+              <button type="button" className="btn btn-primary btn-block btn-large" disabled={recording} onClick={() => void record('picked_up', {})}>
+                <Icon name="package" /> บันทึกรับยา
+              </button>
+            </section>
           )}
-          <form onSubmit={(event) => void submitDelivery(event)} aria-label="บันทึกส่งยาสำเร็จ">
-            <h2>ส่งยาสำเร็จ</h2>
-            <label>
-              รูปหลักฐาน (ไม่ถ่ายใบหน้าหรือเอกสารของผู้ป่วย)
-              <input name="photo" type="file" accept="image/*" capture="environment" required />
+          <form onSubmit={(event) => void submitDelivery(event)} aria-label="บันทึกส่งยาสำเร็จ" className="rider-card step-card">
+            <h2><span className="step">2</span> ส่งยาสำเร็จ</h2>
+            <label className="photo-picker">
+              <input name="photo" type="file" accept="image/*" capture="environment" required onChange={(event) => choosePhoto(event.target.files?.[0])} />
+              {photoPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a local object URL, not a remote image
+                <img src={photoPreview} alt="รูปหลักฐานที่ถ่ายไว้" />
+              ) : <Icon name="camera" size={32} />}
+              <span>{photoPreview ? 'ถ่ายรูปหลักฐานใหม่' : 'ถ่ายรูปหลักฐาน'}</span>
+              <small>ไม่ถ่ายใบหน้าหรือเอกสารของผู้ป่วย</small>
             </label>
             <label>
               ผู้รับยา
@@ -149,9 +181,9 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
                 {recipientRelations.map((relation) => <option key={relation} value={relation}>{recipientRelationLabels[relation]}</option>)}
               </select>
             </label>
-            <button type="submit" disabled={recording}>บันทึกส่งยา</button>
+            <button type="submit" className="btn btn-success btn-block btn-large" disabled={recording}><Icon name="check" /> บันทึกส่งยา</button>
           </form>
-          <form onSubmit={(event) => void submitFailure(event)} aria-label="บันทึกส่งไม่สำเร็จ">
+          <form onSubmit={(event) => void submitFailure(event)} aria-label="บันทึกส่งไม่สำเร็จ" className="rider-card step-card">
             <h2>ส่งไม่สำเร็จ</h2>
             <label>
               เหตุผล
@@ -159,12 +191,11 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
                 {failedDeliveryReasons.map((reason) => <option key={reason} value={reason}>{failureReasonLabels[reason]}</option>)}
               </select>
             </label>
-            <button type="submit" disabled={recording}>บันทึกส่งไม่สำเร็จ</button>
+            <button type="submit" className="btn btn-danger btn-block" disabled={recording}>บันทึกส่งไม่สำเร็จ</button>
           </form>
         </>
       )}
-      {view?.status === 'return_required' && <p>นำยากลับมาคืนเภสัชกรรมภายในวันนี้</p>}
-      <p><Link href="/rider/scan">กลับไปหน้ารับงาน</Link></p>
+      {view?.status === 'return_required' && <p className="notice notice-danger">นำยากลับมาคืนเภสัชกรรมภายในวันนี้</p>}
     </main>
   );
 }
