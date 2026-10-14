@@ -10,7 +10,8 @@ services:
     volumes:
       - health-rider-db:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u$${MARIADB_USER} -p$${MARIADB_PASSWORD} --silent"]
+      # Passes only once the real server accepts TCP connections, not while first-run init uses a temporary server.
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 12
