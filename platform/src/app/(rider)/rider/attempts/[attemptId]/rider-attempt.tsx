@@ -24,7 +24,8 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
   const [view, setView] = useState<AttemptView | null>(null);
   const [loadError, setLoadError] = useState('');
   const [message, setMessage] = useState('บันทึกรับยาหรือส่งยาได้แม้ไม่มีสัญญาณ');
-  const [pending, setPending] = useState(0);
+  // Event types recorded on this device and not yet acknowledged by the server.
+  const [pendingTypes, setPendingTypes] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
 
   const load = useCallback(async () => {
@@ -48,7 +49,7 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
   }, [attemptId]);
 
   const refreshPending = useCallback(async () => {
-    setPending((await riderQueue.pending()).filter((event) => event.attemptId === attemptId).length);
+    setPendingTypes((await riderQueue.pending()).filter((event) => event.attemptId === attemptId).map((event) => event.eventType));
   }, [attemptId]);
 
   const sync = useCallback(async (recordedUuid?: string) => {
@@ -108,7 +109,14 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
     await record('delivery_failed', { reason: form.get('reason') as FailedDeliveryReason });
   }
 
-  const active = view && activeStatuses.includes(view.status);
+  const pending = pendingTypes.length;
+  // Hides actions already recorded on this device, so a rider without signal cannot record the same
+  // step twice and send the job to coordinator review.
+  const pickupPending = pendingTypes.includes('picked_up');
+  const outcomePending = pendingTypes.includes('delivered') || pendingTypes.includes('delivery_failed');
+  const active = view && activeStatuses.includes(view.status) && !outcomePending;
+  const statusText = view && (outcomePending ? 'บันทึกผลการส่งแล้ว รอส่งข้อมูล'
+    : pickupPending && view.status === 'claimed' ? `${statusLabels.in_transit} (รอส่งข้อมูล)` : statusLabels[view.status]);
 
   return (
     <main>
@@ -121,12 +129,12 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
           <p>HN <code>{view.patient.hn}</code> · อายุ {view.patient.age ?? '-'} ปี</p>
           <p>โทร {view.patient.telephone ? <a href={`tel:${view.patient.telephone}`}>{view.patient.telephone}</a> : '-'}</p>
           <p>{view.patient.address}</p>
-          <p>สถานะ: {statusLabels[view.status]}</p>
+          <p>สถานะ: {statusText}</p>
         </section>
       )}
       {active && (
         <>
-          {view.status === 'claimed' && (
+          {view.status === 'claimed' && !pickupPending && (
             <button type="button" disabled={recording} onClick={() => void record('picked_up', {})}>บันทึกรับยา</button>
           )}
           <form onSubmit={(event) => void submitDelivery(event)} aria-label="บันทึกส่งยาสำเร็จ">

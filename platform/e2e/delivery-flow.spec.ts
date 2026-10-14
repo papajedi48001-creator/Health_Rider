@@ -102,12 +102,11 @@ test('sends a pickup recorded before an address change to coordinator review', a
   expect(await attemptStatus(attemptId)).toBe('in_transit');
 });
 
-test('opens a claimed job and records pickup with no signal after the page was loaded once', async ({ browser }) => {
+test('opens a claimed job without signal and records pickup and delivery to send later', async ({ browser }) => {
   const patientName = `ผู้ป่วยออฟไลน์ ${Date.now()}`;
   const { attemptId, rider } = await prepareAndClaim(browser, patientName);
-  await rider.page.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await rider.page.reload();
-  await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
+  // The job was opened by in-app navigation after the claim, never by a full page load.
+  await expect.poll(() => rider.page.evaluate(async () => Boolean(await caches.match(location.pathname)))).toBe(true);
 
   await rider.context.setOffline(true);
   await rider.page.reload();
@@ -115,8 +114,16 @@ test('opens a claimed job and records pickup with no signal after the page was l
   await expect(rider.page.getByText('แสดงข้อมูลที่บันทึกไว้ในเครื่องตอนรับงาน')).toBeVisible();
   await rider.page.getByRole('button', { name: 'บันทึกรับยา' }).click();
   await expect(rider.page.getByRole('status')).toContainText('บันทึกไว้ในเครื่อง รอส่งเมื่อออนไลน์');
+  await expect(rider.page.getByText('สถานะ: กำลังนำส่ง (รอส่งข้อมูล)')).toBeVisible();
+  await expect(rider.page.getByRole('button', { name: 'บันทึกรับยา' })).toHaveCount(0);
+
+  await rider.page.getByLabel(/รูปหลักฐาน/).setInputFiles(samplePhoto);
+  await rider.page.getByRole('button', { name: 'บันทึกส่งยา' }).click();
+  await expect(rider.page.getByRole('status')).toContainText('ค้างส่ง 2 รายการ');
+  await expect(rider.page.getByText('สถานะ: บันทึกผลการส่งแล้ว รอส่งข้อมูล')).toBeVisible();
 
   await rider.context.setOffline(false);
-  await expect(rider.page.getByRole('status')).toContainText('ส่งข้อมูลที่ค้างไว้แล้ว 1 รายการ');
-  expect(await attemptStatus(attemptId)).toBe('in_transit');
+  await expect(rider.page.getByRole('status')).toContainText('ส่งข้อมูลที่ค้างไว้แล้ว 2 รายการ');
+  await expect(rider.page.getByText('สถานะ: ส่งสำเร็จ')).toBeVisible();
+  expect(await attemptStatus(attemptId)).toBe('delivered');
 });

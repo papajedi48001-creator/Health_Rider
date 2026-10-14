@@ -23,6 +23,23 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+// Rider pages opened by in-app navigation (for example straight after claiming a job) never pass
+// through the navigate handler, so the page asks for its own URL to be stored while online.
+self.addEventListener('message', (event) => {
+  const path = event.data && event.data.cachePage;
+  if (typeof path !== 'string' || !path.startsWith('/rider/')) return;
+  event.waitUntil(cachePage(new URL(path, self.location.origin).href));
+});
+
+async function cachePage(url) {
+  try {
+    const response = await fetch(url, { credentials: 'same-origin' });
+    if (response.ok && !response.redirected) await (await caches.open(shellCache)).put(url, response);
+  } catch {
+    // Offline or the server is unreachable; the page is stored on a later visit.
+  }
+}
+
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
