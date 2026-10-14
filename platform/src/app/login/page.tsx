@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="login-shell">
         <div className="login-hero">
           <Mascot width={260} variant="full" alt={`${mascotName} มาสคอต Health Rider`} />
-          <h2>สวัสดีครับ ผม{mascotName}</h2>
+          <h2>สวัสดีครับ ผม<span className="nowrap">{mascotName}</span></h2>
           <p>พร้อมพายาจากโรงพยาบาลไปถึงบ้านผู้ป่วยอย่างปลอดภัย</p>
         </div>
         <div className="login-card">
