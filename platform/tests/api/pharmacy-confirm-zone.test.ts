@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 const { createRequest, findZone, findRequests, createAudit, eligibleFor, currentSession } = vi.hoisted(() => ({
   createRequest: vi.fn(), findZone: vi.fn(), findRequests: vi.fn(), createAudit: vi.fn(), eligibleFor: vi.fn(), currentSession: vi.fn(),
 }));
-const tx = { deliveryRequest: { create: createRequest }, auditEvent: { create: createAudit } };
+const tx = { serviceRate: { findMany: async () => [] }, deliveryRequest: { create: createRequest }, auditEvent: { create: createAudit } };
 
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/hos/mysql-candidate-repository', () => ({ getHosCandidateRepository: () => ({ eligibleFor }) }));

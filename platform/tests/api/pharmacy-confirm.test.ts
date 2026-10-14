@@ -1,10 +1,10 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { createRequest, findZone, createAudit, eligibleFor, currentSession } = vi.hoisted(() => ({
-  createRequest: vi.fn(), findZone: vi.fn(), createAudit: vi.fn(), eligibleFor: vi.fn(), currentSession: vi.fn(),
+const { createRequest, findZone, findRates, createAudit, eligibleFor, currentSession } = vi.hoisted(() => ({
+  createRequest: vi.fn(), findZone: vi.fn(), findRates: vi.fn(), createAudit: vi.fn(), eligibleFor: vi.fn(), currentSession: vi.fn(),
 }));
-const tx = { deliveryZone: { findFirst: findZone }, deliveryRequest: { create: createRequest }, auditEvent: { create: createAudit } };
+const tx = { serviceRate: { findMany: findRates }, deliveryZone: { findFirst: findZone }, deliveryRequest: { create: createRequest }, auditEvent: { create: createAudit } };
 
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/hos/mysql-candidate-repository', () => ({ getHosCandidateRepository: () => ({ eligibleFor }) }));
@@ -25,6 +25,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   eligibleFor.mockResolvedValue([hosCandidate]);
   findZone.mockResolvedValue({ id: 'zone-1' });
+  findRates.mockResolvedValue([]);
   createRequest.mockImplementation(async ({ data }) => data);
 });
 
@@ -61,4 +62,21 @@ test('rejects a visit HOS no longer lists and a patient without a delivery zone'
   expect(response.status).toBe(422);
   await expect(response.json()).resolves.toEqual({ message: 'ไม่พบโซนจัดส่งสำหรับที่อยู่ผู้ป่วย' });
   expect(createRequest).not.toHaveBeenCalled();
+});
+
+test('keeps the zone rate in effect today on the request', async () => {
+  const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
+  currentSession.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
+  findRates.mockResolvedValue([
+    { subdistrictCode: '470907', deliveryZoneId: null, rateSatang: 3000, effectiveFrom: new Date('2026-01-01T00:00:00.000Z') },
+    { subdistrictCode: '470907', deliveryZoneId: 'zone-1', rateSatang: 5000, effectiveFrom: new Date('2026-10-01T00:00:00.000Z') },
+  ]);
+
+  const response = await POST(confirm({ visitNumber: 'VN-TEST-001', date: '2026-10-14' }));
+
+  expect(response.status).toBe(201);
+  await expect(response.json()).resolves.toEqual(expect.objectContaining({ rateSatang: 5000, rateEffectiveFrom: '2026-10-01T00:00:00.000Z' }));
+  expect(findRates).toHaveBeenCalledWith(expect.objectContaining({
+    where: expect.objectContaining({ OR: [{ deliveryZoneId: 'zone-1' }, { deliveryZoneId: null, subdistrictCode: '470907' }] }),
+  }));
 });
