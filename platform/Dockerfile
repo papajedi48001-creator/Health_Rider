@@ -1,18 +1,26 @@
-FROM node:22-alpine AS dependencies
+FROM node:22-alpine AS base
+# Prisma's query engine needs OpenSSL on Alpine.
+RUN apk add --no-cache openssl
 WORKDIR /app
+
+FROM base AS dependencies
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
 RUN npm ci
 
-FROM node:22-alpine AS build
-WORKDIR /app
+FROM base AS build
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN npx prisma generate && npm run build
 
-FROM node:22-alpine AS runtime
-WORKDIR /app
+# One-shot image that applies migrations (and optionally seeds UAT data) before the web service starts.
+FROM build AS migrate
+CMD ["npx", "prisma", "migrate", "deploy"]
+
+FROM base AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static

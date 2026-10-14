@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { requireRole, UnauthorizedError } from '@/auth/require-role';
-import { getSessionFromRequest } from '@/auth/session';
+import { getSessionFromRequest } from '@/auth/current-session';
 import { claimPackageQr } from '@/domain/delivery/claim-package-qr';
 import { newPublicId } from '@/domain/delivery/status';
 import { writeAuditEvent } from '@/domain/audit/write-audit-event';
 import { db } from '@/lib/db';
+import { readJsonBody } from '@/lib/http';
 
 export async function POST(request: NextRequest) {
   try {
-    const rider = requireRole(getSessionFromRequest(request), 'rider');
-    const body = await request.json();
+    const rider = requireRole(await getSessionFromRequest(request), 'rider');
+    const body = await readJsonBody(request) as { token?: unknown } | undefined;
     if (!body || typeof body.token !== 'string' || body.token.length < 20) {
       return NextResponse.json({ message: 'รหัส QR ไม่ถูกต้อง' }, { status: 422 });
     }
+    const token = body.token;
 
-    const result = await db.$transaction((tx) => claimPackageQr(body.token, rider.id, new Date(), {
+    const result = await db.$transaction((tx) => claimPackageQr(token, rider.id, new Date(), {
       transaction: (work) => work({
         findToken: (tokenHash) => tx.packageQrToken.findUnique({
           where: { tokenHash },

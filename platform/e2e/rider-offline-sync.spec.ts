@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { login } from './login';
 
 test('retains an offline rider event and acknowledges it after reconnecting', async ({ page, context }) => {
+  await login(page, 'rider.internal.uat');
   await page.goto('/rider/attempts/attempt-e2e');
   await context.setOffline(true);
   await page.getByRole('button', { name: 'บันทึกรับยา' }).click();

@@ -1,9 +1,10 @@
 import { expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { createSessionToken } from '@/auth/session';
 
 const { transaction, auditCreate } = vi.hoisted(() => ({ transaction: vi.fn(), auditCreate: vi.fn() }));
 
+const { currentSession } = vi.hoisted(() => ({ currentSession: vi.fn() }));
+vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({
   db: {
     $transaction: transaction,
@@ -15,11 +16,10 @@ vi.mock('@/lib/db', () => ({
 
 test('does not let a pharmacy user claim a package QR', async () => {
   const { POST } = await import('@/app/api/rider/claims/route');
-  process.env.AUTH_SECRET = 'test-session-secret';
-  const token = createSessionToken({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' }, 'test-session-secret');
+  currentSession.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
   const response = await POST(new NextRequest('http://localhost/api/rider/claims', {
     method: 'POST',
-    headers: { cookie: `health_rider_session=${token}`, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ token: 'opaque-token' }),
   }));
 

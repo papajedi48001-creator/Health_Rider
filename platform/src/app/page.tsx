@@ -1,8 +1,10 @@
-export default function HomePage() {
-  return (
-    <main>
-      <h1>ระบบจัดการ Health Rider</h1>
-      <p>ระบบบริหารการส่งยาถึงบ้าน โรงพยาบาลวาริชภูมิ</p>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+import { getSessionFromCookies } from '@/auth/current-session';
+import { roleHome } from '@/auth/role-home';
+
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const session = await getSessionFromCookies();
+  redirect(session ? roleHome(session.role) : '/login');
 }

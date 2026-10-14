@@ -13,3 +13,10 @@ test('requires pharmacy to confirm the same-day medication return before retry',
     findReturnRequiredAttempt: async () => ({ id: 'attempt-1', status: 'return_required', failedAt: new Date() }), update: async (record) => record,
   })).resolves.toMatchObject({ status: 'returned' });
 });
+
+test('rejects a return after the Thai calendar day of the failed attempt has ended', async () => {
+  const yesterdayInThailand = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  await expect(receiveMedicationReturn('attempt-1', { id: 'pharmacy-1', role: 'pharmacy', displayName: 'Pharmacy' }, {
+    findReturnRequiredAttempt: async () => ({ id: 'attempt-1', status: 'return_required', failedAt: yesterdayInThailand }), update: async (record) => record,
+  })).rejects.toThrow('ต้องรับยาคืนภายในวันเดียวกัน');
+});

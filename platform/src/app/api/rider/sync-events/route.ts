@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { requireRole, UnauthorizedError } from '@/auth/require-role';
-import { getSessionFromRequest } from '@/auth/session';
+import { getSessionFromRequest } from '@/auth/current-session';
 import { syncOfflineEvent } from '@/domain/delivery/sync-offline-event';
 import { newPublicId } from '@/domain/delivery/status';
 import { db } from '@/lib/db';
+import { readJsonBody } from '@/lib/http';
 
 export async function POST(request: NextRequest) {
   try {
-    const rider = requireRole(getSessionFromRequest(request), 'rider');
-    const event = await request.json();
+    const rider = requireRole(await getSessionFromRequest(request), 'rider');
+    const event = await readJsonBody(request);
     if (!validEvent(event)) return NextResponse.json({ message: 'ข้อมูลการบันทึกออฟไลน์ไม่ถูกต้อง' }, { status: 422 });
     const attempt = await db.deliveryAttempt.findFirst({ where: { id: event.attemptId, riderId: rider.id }, select: { id: true } });
     if (!attempt) return NextResponse.json({ message: 'ไม่พบงานจัดส่ง' }, { status: 404 });

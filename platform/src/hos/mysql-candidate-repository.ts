@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import { getHosDatabaseUrl } from '@/lib/env';
+import { bangkokDateString } from '@/lib/time';
 import type { HosCandidateRepository } from '@/hos/candidate-repository';
 import type { HosCandidate, HosCandidateRow } from '@/hos/types';
 
@@ -38,11 +39,22 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
 
     const [rows] = await this.connection.execute(candidateQuery(this.eligibleItemCodes.length), [
       ...this.eligibleItemCodes,
-      on.toISOString().slice(0, 10),
+      bangkokDateString(on),
     ]);
 
     return (rows as HosCandidateRow[]).map(mapCandidate);
   }
+}
+
+const globalForHos = globalThis as unknown as { hosCandidateRepository?: { uri: string; repository: HosCandidateRepository } };
+
+// Reuses one small read-only pool per process instead of opening a new pool on every request.
+export function getHosCandidateRepository(environment: Record<string, string | undefined>): HosCandidateRepository {
+  const uri = getHosDatabaseUrl(environment);
+  if (globalForHos.hosCandidateRepository?.uri !== uri) {
+    globalForHos.hosCandidateRepository = { uri, repository: createMysqlHosCandidateRepository(environment) };
+  }
+  return globalForHos.hosCandidateRepository.repository;
 }
 
 export function createMysqlHosCandidateRepository(environment: Record<string, string | undefined>): HosCandidateRepository {

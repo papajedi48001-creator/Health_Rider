@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromRequest } from '@/auth/session';
+import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole, UnauthorizedError } from '@/auth/require-role';
 import { db } from '@/lib/db';
 import { toRiderAttemptView } from '@/domain/delivery/rider-attempt-access';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ attemptId: string }> }) {
   try {
-    const session = requireRole(getSessionFromRequest(request), 'rider', 'coordinator', 'admin');
+    const session = requireRole(await getSessionFromRequest(request), 'rider', 'coordinator', 'admin');
     const { attemptId } = await context.params;
     const attempt = await db.deliveryAttempt.findUnique({
       where: { id: attemptId },

@@ -1,5 +1,4 @@
 import { expect, test, vi } from 'vitest';
-import { createSessionToken } from '@/auth/session';
 import { NextRequest } from 'next/server';
 
 const { create, findUnique } = vi.hoisted(() => ({
@@ -7,6 +6,8 @@ const { create, findUnique } = vi.hoisted(() => ({
   findUnique: vi.fn(),
 }));
 
+const { currentSession } = vi.hoisted(() => ({ currentSession: vi.fn() }));
+vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({
   db: {
     deliveryZone: { findUnique },
@@ -17,11 +18,10 @@ vi.mock('@/lib/db', () => ({
 
 test('rejects a rider confirming a HOS candidate', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
-  process.env.AUTH_SECRET = 'test-session-secret';
-  const token = createSessionToken({ id: 'rider-1', role: 'rider', displayName: 'ไรเดอร์' }, 'test-session-secret');
+  currentSession.mockResolvedValue({ id: 'rider-1', role: 'rider', displayName: 'ไรเดอร์' });
   const response = await POST(new NextRequest('http://localhost/api/pharmacy/candidates/confirm', {
     method: 'POST',
-    headers: { cookie: `health_rider_session=${token}`, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({}),
   }));
 
@@ -31,14 +31,13 @@ test('rejects a rider confirming a HOS candidate', async () => {
 
 test('allows pharmacy to create a delivery-zone request without monetary data', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
-  process.env.AUTH_SECRET = 'test-session-secret';
   findUnique.mockResolvedValue({ id: 'zone-1' });
   create.mockImplementation(async ({ data }) => data);
-  const token = createSessionToken({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' }, 'test-session-secret');
+  currentSession.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
 
   const response = await POST(new NextRequest('http://localhost/api/pharmacy/candidates/confirm', {
     method: 'POST',
-    headers: { cookie: `health_rider_session=${token}`, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       visitNumber: 'VN-TEST-001', hn: 'HN-TEST-001', patientName: 'ผู้ป่วยทดสอบ', patientAge: 64,
       telephone: '0800000000', deliveryAddress: 'บ้านทดสอบ', subdistrictCode: '46', villageCode: '01',

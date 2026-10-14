@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { MysqlHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 
 test('maps a legacy HOS row into a read-only candidate DTO', async () => {
@@ -31,4 +31,13 @@ test('maps a legacy HOS row into a read-only candidate DTO', async () => {
       villageCode: '01',
     },
   ]);
+});
+
+test('queries HOS with the Thai visit date', async () => {
+  const execute = vi.fn().mockResolvedValue([[]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await repository.eligibleFor(new Date('2026-10-13T18:30:00.000Z'));
+
+  expect(execute).toHaveBeenCalledWith(expect.any(String), ['100001', '2026-10-14']);
 });
