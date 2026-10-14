@@ -124,3 +124,169 @@ img { max-width: 100%; height: auto; }
 .outcome-failed { color: var(--danger); font-weight: 700; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .qr-token code { overflow-wrap: anywhere; user-select: all; }
+
+/* ---------------------------------------------------------------------------
+   Rider app: a single-column phone layout with an app bar, a bottom tab bar,
+   full-width 52px buttons and cards. Scoped to .rider-app so staff pages keep
+   their desktop layout.
+   --------------------------------------------------------------------------- */
+.rider-app {
+  --tint-primary: #e6f2f0;
+  --tint-success: #e8f5ec;
+  --tint-danger: #fbeceb;
+  --tint-warning: #fdf3e7;
+  --muted: #5b6f75;
+  min-height: 100dvh;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+.rider-app .rider-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 16px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+}
+.rider-app .rider-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+.rider-app .rider-user { flex: 1; min-width: 0; text-align: right; color: var(--muted); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rider-app .rider-bar form { padding: 0; margin: 0; border: 0; background: none; }
+.rider-app .rider-bar button {
+  width: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--line);
+}
+
+.rider-app main { max-width: 560px; padding: 16px; }
+.rider-app h1 { font-size: 1.35rem; margin: 4px 0 12px; }
+.rider-app h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.rider-app p { margin: 0 0 8px; }
+
+.rider-app section, .rider-app form, .rider-app li { border-radius: var(--radius-surface); }
+.rider-app section { padding: 16px; margin: 0 0 16px; }
+.rider-app form { padding: 16px; margin: 0 0 16px; gap: 14px; }
+.rider-app section form { padding: 0; margin: 0; }
+.rider-app ul { margin: 0 0 16px; }
+.rider-app li { padding: 16px; display: grid; gap: 6px; }
+.rider-app li p { margin: 0; }
+
+/* Buttons: full width, large touch targets, one clear primary per card. */
+.rider-app button, .rider-app .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-control);
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.rider-app button.secondary, .rider-app .button.secondary { background: var(--surface); color: var(--primary); }
+.rider-app button.danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
+.rider-app button:active, .rider-app .button:active { transform: translateY(1px); }
+.rider-app button:focus-visible, .rider-app .button:focus-visible, .rider-app input:focus-visible, .rider-app select:focus-visible {
+  outline: 3px solid #5eead4;
+  outline-offset: 2px;
+}
+.rider-app .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.rider-app input, .rider-app select { min-height: 48px; font-size: 1rem; }
+.rider-app input[type='file'] { padding: 10px; }
+.rider-app .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* The live status strip stays visible under the app bar. */
+.rider-app [role='status'] { margin: 0 0 16px; padding: 12px 14px; border-left-width: 4px; font-weight: 600; }
+
+.rider-app .eyebrow { color: var(--muted); font-size: 0.9rem; }
+.rider-app .meta { color: var(--muted); font-size: 0.95rem; }
+.rider-app .divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.9rem; margin: 4px 0; }
+.rider-app .divider::before, .rider-app .divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+
+/* Status badges always carry text; colour only reinforces it. */
+.rider-app .badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: var(--tint-primary);
+  color: var(--primary);
+}
+.rider-app .badge.outcome-delivered { background: var(--tint-success); color: var(--success); }
+.rider-app .badge.outcome-failed { background: var(--tint-danger); color: var(--danger); }
+.rider-app .badge.pending { background: var(--tint-warning); color: var(--warning); }
+
+.rider-app .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.rider-app .card-head h2 { margin: 0; }
+
+.rider-app .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.rider-app .stat { padding: 10px 12px; border-radius: var(--radius-control); background: var(--tint-success); }
+.rider-app .stat.failed { background: var(--tint-danger); }
+.rider-app .stat strong { display: block; font-size: 1.5rem; line-height: 1.2; }
+
+.rider-app .scanner { width: 100%; border-radius: var(--radius-surface); background: #000; aspect-ratio: 4 / 3; object-fit: cover; }
+.rider-app .evidence-photo { display: block; width: 100%; border-radius: var(--radius-control); border: 1px solid var(--line); }
+.rider-app .back-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+
+.rider-app .pager { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; }
+.rider-app .pager span { color: var(--muted); font-size: 0.9rem; text-align: center; }
+
+/* Bottom tab bar, within thumb reach. */
+.rider-app .rider-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.rider-app .rider-tabs a {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 8px 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-top: 3px solid transparent;
+}
+.rider-app .rider-tabs a[aria-current='page'] { color: var(--primary); border-top-color: var(--primary); }
+.rider-app .rider-tabs svg { width: 26px; height: 26px; }
+.rider-app .badge { white-space: nowrap; flex-shrink: 0; }
+.rider-app .field-pair > label, .rider-app .field-pair input { min-width: 0; }
+.rider-app input[type='date'] { appearance: none; -webkit-appearance: none; }
+.rider-app input[type='file']::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-control);
+  background: var(--tint-primary);
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+}

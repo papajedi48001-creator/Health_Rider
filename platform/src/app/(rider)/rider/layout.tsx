@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <RoleGate roles={['rider']}>
+    <RoleGate roles={['rider']} shell="rider">
       <RegisterServiceWorker />
       {children}
     </RoleGate>

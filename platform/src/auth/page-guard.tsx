@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
 import type { UserRole } from '@/auth/roles';
 import { MainNav } from '@/auth/main-nav';
+import { RiderNav } from '@/auth/rider-nav';
 
 const navigation: Array<{ href: string; label: string; roles: UserRole[] }> = [
   { href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', roles: ['pharmacy', 'admin'] },
@@ -17,9 +18,31 @@ const navigation: Array<{ href: string; label: string; roles: UserRole[] }> = [
   { href: '/rider/history', label: 'ประวัติการส่ง', roles: ['rider'] },
 ];
 
-export async function RoleGate({ roles, children }: { roles: readonly UserRole[]; children: ReactNode }) {
+export async function RoleGate({ roles, children, shell = 'staff' }: { roles: readonly UserRole[]; children: ReactNode; shell?: 'staff' | 'rider' }) {
   const session = await getSessionFromCookies();
   if (!session) redirect('/login');
+
+  // Riders work on phones: an app bar, the page, and a bottom tab bar within thumb reach.
+  if (shell === 'rider' && roles.includes(session.role)) {
+    return (
+      <div className="rider-app">
+        <header className="rider-bar">
+          <span className="rider-brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M12 11v5M9.5 13.5h5" />
+            </svg>
+            Health Rider
+          </span>
+          <span className="rider-user">{session.displayName}</span>
+          <form action="/api/auth/logout" method="post">
+            <button type="submit">ออกจากระบบ</button>
+          </form>
+        </header>
+        {children}
+        <RiderNav />
+      </div>
+    );
+  }
 
   return (
     <>

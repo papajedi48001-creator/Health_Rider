@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true, status: true, deliveredAt: true, failedAt: true, failureReason: true,
         deliveryRequest: { select: { hn: true, patientName: true, deliveryAddress: true } },
+        evidence: { select: { recipientRelation: true } },
       },
     });
     const result = pageOfHistory(attempts, query.outcome, query.page);
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest) {
         hn: attempt.deliveryRequest.hn,
         patientName: attempt.deliveryRequest.patientName,
         address: attempt.deliveryRequest.deliveryAddress,
+        hasPhoto: attempt.evidence !== null,
+        recipientRelation: attempt.evidence?.recipientRelation ?? null,
       })),
     }, { headers: { 'cache-control': 'no-store' } });
   });
