@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
+import { statusTone } from '@/lib/status-tone';
 import { callApi } from '@/lib/api-client';
 import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
@@ -52,7 +53,7 @@ export function OperationsDashboard() {
 
   return (
     <div>
-      <form aria-label="ตัวกรอง" onSubmit={(event) => event.preventDefault()}>
+      <form aria-label="ตัวกรอง" className="filter-bar" onSubmit={(event) => event.preventDefault()}>
         <label>วันที่ <input type="date" value={filters.date} onChange={(event) => event.target.value && setFilters({ ...filters, date: event.target.value })} /></label>
         <label>
           สถานะ
@@ -72,7 +73,11 @@ export function OperationsDashboard() {
       <p aria-live="polite">{message}</p>
       {data && data.attempts.length > 0 && (
         <>
-          <p>{Object.entries(counts).map(([status, count]) => `${statusLabels[status as DeliveryAttemptStatus]} ${count}`).join(' · ')}</p>
+          <div className="stat-row">
+            {Object.entries(counts).map(([status, count]) => (
+              <span key={status} className={`stat ${statusTone(status as DeliveryAttemptStatus)}`}><strong>{count}</strong>{statusLabels[status as DeliveryAttemptStatus]}</span>
+            ))}
+          </div>
           <table>
             <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>โซน</th><th>ไรเดอร์</th><th>สถานะ</th><th>เวลาล่าสุด</th><th /></tr></thead>
             <tbody>
@@ -82,7 +87,7 @@ export function OperationsDashboard() {
                   <td>{attempt.deliveryRequest.patientName}<br /><code>{attempt.deliveryRequest.hn}</code></td>
                   <td>{attempt.deliveryRequest.deliveryZone.displayName}</td>
                   <td>{attempt.rider?.displayName ?? '-'}</td>
-                  <td>{statusLabels[attempt.status]}</td>
+                  <td><span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span></td>
                   <td>{formatThaiDateTime(attempt.deliveredAt ?? attempt.failedAt ?? attempt.createdAt)}</td>
                   <td>
                     {amendableStatuses.includes(attempt.status) && (editing === attempt.id ? (

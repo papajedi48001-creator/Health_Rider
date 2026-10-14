@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
 import { roleHome, safeNextPath } from '@/auth/role-home';
 import { LoginForm } from '@/app/login/login-form';
+import { Icon } from '@/rider/icons';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +19,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (session) redirect(next ?? roleHome(session.role));
 
   return (
-    <main>
-      <h1>เข้าสู่ระบบ Health Rider</h1>
-      <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? ''} />
+    <main className="login-page">
+      <div className="login-card">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true"><Icon name="package" size={20} /></span>
+          <span className="brand-text"><strong>Health Rider</strong><small>โรงพยาบาลวาริชภูมิ</small></span>
+        </div>
+        <h1>เข้าสู่ระบบ Health Rider</h1>
+        <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? ''} />
+      </div>
     </main>
   );
 }

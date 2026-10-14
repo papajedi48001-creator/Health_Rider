@@ -7,7 +7,7 @@ import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { statusLabels } from '@/lib/labels';
 import { Icon } from '@/rider/icons';
-import { statusTone } from '@/rider/status-tone';
+import { statusTone } from '@/lib/status-tone';
 
 type BarcodeDetectorLike = { detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>> };
 type MyAttempt = { id: string; status: DeliveryAttemptStatus; patientName: string; address: string };

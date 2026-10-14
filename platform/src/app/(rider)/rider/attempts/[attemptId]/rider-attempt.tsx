@@ -10,7 +10,7 @@ import { toEvidenceJpeg } from '@/pwa/photo';
 import { deleteAttemptView, loadAttemptView, saveAttemptView } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
 import { Icon } from '@/rider/icons';
-import { statusTone } from '@/rider/status-tone';
+import { statusTone } from '@/lib/status-tone';
 
 type AttemptView = {
   id: string;

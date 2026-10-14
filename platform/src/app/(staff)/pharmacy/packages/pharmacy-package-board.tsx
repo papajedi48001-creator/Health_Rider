@@ -61,7 +61,7 @@ export function PharmacyPackageBoard() {
   return (
     <div>
       {board && (
-        <>
+        <div className="filter-bar">
           <label>
             ตำบล
             <select value={subdistrictFilter} onChange={(event) => { setSubdistrictFilter(event.target.value); setZoneFilter(''); }}>
@@ -80,7 +80,7 @@ export function PharmacyPackageBoard() {
               ))}
             </select>
           </label>
-        </>
+        </div>
       )}
       <p aria-live="polite">{message}</p>
       {label && <PackageQrLabel attemptId={label.attemptId} token={label.token} onClose={() => setLabel(null)} />}
