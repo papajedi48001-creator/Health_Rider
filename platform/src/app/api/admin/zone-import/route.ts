@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 const LOOKBACK_DAYS = 90;
 
-// HOS villages that had eligible visits recently, marked with whether a zone already covers them.
+// HOSxP villages that had eligible visits recently, marked with whether a zone already covers them.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'admin');

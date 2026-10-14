@@ -69,8 +69,8 @@ export function parseZone(value: unknown): { subdistrictCode: string; subdistric
   const villageCode = typeof body.villageCode === 'string' ? body.villageCode.trim().padStart(2, '0') : '';
   const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
   // HOSxP chwpart+amppart+tmbpart: tmbpart alone repeats across districts.
-  if (!/^\d{6}$/.test(subdistrictCode)) throw new DomainError('รหัสตำบลต้องเป็นตัวเลข 6 หลัก (จังหวัด+อำเภอ+ตำบล) ให้ตรงกับ HOS');
-  if (!/^[0-9A-Za-z]{1,32}$/.test(villageCode)) throw new DomainError('รหัสหมู่บ้านต้องตรงกับ HOS');
+  if (!/^\d{6}$/.test(subdistrictCode)) throw new DomainError('รหัสตำบลต้องเป็นตัวเลข 6 หลัก (จังหวัด+อำเภอ+ตำบล) ให้ตรงกับ HOSxP');
+  if (!/^[0-9A-Za-z]{1,32}$/.test(villageCode)) throw new DomainError('รหัสหมู่บ้านต้องตรงกับ HOSxP');
   if (!displayName) throw new DomainError('ต้องระบุชื่อโซน');
   return { subdistrictCode, subdistrictName, villageCode, displayName };
 }

@@ -9,7 +9,7 @@ import { startOfBangkokDay } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
-// Eligible HOS visits for a Thai date that do not yet have a Delivery Request.
+// Eligible HOSxP visits for a Thai date that do not yet have a Delivery Request.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');

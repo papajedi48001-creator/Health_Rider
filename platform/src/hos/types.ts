@@ -10,7 +10,7 @@ export type HosCandidate = {
   villageCode: string;
 };
 
-// A candidate as pharmacy sees it: the active delivery zone its HOS address maps to, if any.
+// A candidate as pharmacy sees it: the active delivery zone its HOSxP address maps to, if any.
 export type ZonedCandidate = HosCandidate & { zone: { id: string; displayName: string } | null };
 
 export type HosCandidateRow = {
@@ -25,7 +25,7 @@ export type HosCandidateRow = {
   village_code: string | number | null;
 };
 
-// A HOS village with eligible visits, used to set up delivery zones.
+// A HOSxP village with eligible visits, used to set up delivery zones.
 export type HosVillage = {
   subdistrictCode: string;
   villageCode: string;

@@ -12,18 +12,18 @@ const NO_ZONE = 'none';
 export function PharmacyCandidateList() {
   const [date, setDate] = useState(() => bangkokDateString(new Date()));
   const [candidates, setCandidates] = useState<ZonedCandidate[]>([]);
-  const [message, setMessage] = useState('กำลังโหลดรายการจาก HOS');
+  const [message, setMessage] = useState('กำลังโหลดรายการจาก HOSxP');
   const [confirming, setConfirming] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [subdistrictFilter, setSubdistrictFilter] = useState(ALL_SUBDISTRICTS);
   const [zoneFilter, setZoneFilter] = useState(ALL_ZONES);
 
   const loadCandidates = useCallback(async (on: string) => {
-    setMessage('กำลังโหลดรายการจาก HOS');
+    setMessage('กำลังโหลดรายการจาก HOSxP');
     const result = await callApi<ZonedCandidate[]>(`/api/pharmacy/candidates?date=${on}`);
     if (!result.ok) {
       setCandidates([]);
-      setMessage('ไม่สามารถโหลดรายการจาก HOS ได้');
+      setMessage('ไม่สามารถโหลดรายการจาก HOSxP ได้');
       return;
     }
     setCandidates(result.data);

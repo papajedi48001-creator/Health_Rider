@@ -11,7 +11,7 @@ Health Rider เป็นระบบบริหารการส่งยา�
 
 ## ขอบเขตที่คงอยู่
 
-- HOS เป็นแหล่งข้อมูลแบบอ่านอย่างเดียว; เภสัชกรรมยืนยัน candidate ก่อนสร้างงานเสมอ
+- HOSxP เป็นแหล่งข้อมูลแบบอ่านอย่างเดียว; เภสัชกรรมยืนยัน candidate ก่อนสร้างงานเสมอ
 - เภสัชกรรมเตรียมพัสดุ ออก Package QR แบบ opaque และยืนยันรับยาคืน
 - Rider ภายในและผู้รับจ้างภายนอกรับงานด้วย QR ขณะออนไลน์ แล้วบันทึกรับ/ส่ง/ส่งไม่สำเร็จแบบ offline-first
 - Coordinator ติดตามงาน แก้เฉพาะที่อยู่หรือโทรศัพท์ระหว่างส่ง และจัดการ sync conflict
@@ -38,7 +38,7 @@ Health Rider เป็นระบบบริหารการส่งยา�
 
 ## การทำงานและสิทธิ์
 
-1. Pharmacy ยืนยัน candidate จาก HOS แล้วเลือกโซน/หมู่บ้านเพื่อสร้าง Delivery Request โดยไม่มีข้อมูลจำนวนเงิน
+1. Pharmacy ยืนยัน candidate จาก HOSxP แล้วเลือกโซน/หมู่บ้านเพื่อสร้าง Delivery Request โดยไม่มีข้อมูลจำนวนเงิน
 2. Pharmacy เตรียมพัสดุและออก QR; Rider ที่ล็อกอิน claim QR แบบ atomic ขณะออนไลน์ได้เพียงคนเดียว
 3. Rider ทำงานออฟไลน์หลัง claim สำเร็จ; server acknowledge ก่อนล้าง event/หลักฐานในเครื่อง
 4. Failed Delivery ต้องระบุเหตุผลและส่งยาคืนภายในวันเดียวกันก่อนสร้าง attempt/QR ใหม่
@@ -47,14 +47,14 @@ Health Rider เป็นระบบบริหารการส่งยา�
 
 ## การทดสอบและ UAT
 
-การยอมรับระบบเน้นการส่งยาครบวงจรและความปลอดภัยของข้อมูล: HOS read-only, เภสัชกรรม, QR claim, offline pickup/delivery/sync, failed delivery/return/retry, in-transit amendment, conflict review และ audit read-only
+การยอมรับระบบเน้นการส่งยาครบวงจรและความปลอดภัยของข้อมูล: HOSxP read-only, เภสัชกรรม, QR claim, offline pickup/delivery/sync, failed delivery/return/retry, in-transit amendment, conflict review และ audit read-only
 
 ต้องนำ test, route, หน้า UI, seed, เอกสาร UAT/operations/release และข้อความใด ๆ ที่อ้างถึง finance, payout, rate หรือจำนวนเงินออก แล้วรัน migration ใหม่กับ UAT database ว่าง รวมทั้ง test suite, production build และ Compose configuration ก่อนส่ง UAT รอบใหม่
 
 ## นอกขอบเขต
 
-ไม่มี payment execution, บัญชีธนาคาร, GPS, OTP, route optimisation, patient notification, consent workflow หรือการเขียนกลับ HOS
+ไม่มี payment execution, บัญชีธนาคาร, GPS, OTP, route optimisation, patient notification, consent workflow หรือการเขียนกลับ HOSxP
 
 ## เกณฑ์ความสำเร็จ
 
-ระบบที่สร้างจากฐานข้อมูล UAT ใหม่ไม่มี schema, API, route, role หรือเอกสารปฏิบัติงานเกี่ยวกับค่าตอบแทน และผู้ใช้สามารถทดสอบงานส่งยาตั้งแต่ HOS candidate จนถึงส่งสำเร็จหรือรับยาคืน โดยรักษาสิทธิ์ข้อมูลและ audit trail ตามข้อกำหนดเดิม
+ระบบที่สร้างจากฐานข้อมูล UAT ใหม่ไม่มี schema, API, route, role หรือเอกสารปฏิบัติงานเกี่ยวกับค่าตอบแทน และผู้ใช้สามารถทดสอบงานส่งยาตั้งแต่ HOSxP candidate จนถึงส่งสำเร็จหรือรับยาคืน โดยรักษาสิทธิ์ข้อมูลและ audit trail ตามข้อกำหนดเดิม

@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest';
 import { MysqlHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 
-test('maps a legacy HOS row into a read-only candidate DTO', async () => {
+test('maps a legacy HOSxP row into a read-only candidate DTO', async () => {
   const repository = new MysqlHosCandidateRepository({
     execute: async () => [
       [
@@ -35,7 +35,7 @@ test('maps a legacy HOS row into a read-only candidate DTO', async () => {
   ]);
 });
 
-test('queries HOS with the Thai visit date', async () => {
+test('queries HOSxP with the Thai visit date', async () => {
   const execute = vi.fn().mockResolvedValue([[]]);
   const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
 
@@ -54,7 +54,7 @@ test('reads the subdistrict as the full HOSxP address code', async () => {
   expect(execute.mock.calls[0]?.[0]).toContain('CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code');
 });
 
-test('lists HOS villages once per normalised code with their visit counts', async () => {
+test('lists HOSxP villages once per normalised code with their visit counts', async () => {
   const execute = vi.fn().mockResolvedValue([[
     { subdistrict_code: '470603', village_code: '6', subdistrict_name: Buffer.from('ต.ปลาโหล', 'utf8'), visits: 40 },
     { subdistrict_code: '470603', village_code: '06', subdistrict_name: 'ต.ปลาโหล', visits: '8' },

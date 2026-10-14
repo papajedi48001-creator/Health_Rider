@@ -22,7 +22,7 @@ beforeEach(() => {
   ]);
 });
 
-test('previews HOS villages with names and which ones already have a zone', async () => {
+test('previews HOSxP villages with names and which ones already have a zone', async () => {
   const { GET } = await import('@/app/api/admin/zone-import/route');
   currentSession.mockResolvedValue(admin);
 

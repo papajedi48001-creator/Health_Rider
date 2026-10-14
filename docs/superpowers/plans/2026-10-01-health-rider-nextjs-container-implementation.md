@@ -4,7 +4,7 @@
 
 **Goal:** Build a containerized Next.js/React and MariaDB Health Rider application that supports the approved, auditable medication-delivery workflow.
 
-**Architecture:** A clean `platform/` Next.js App Router project is created in a new worktree. Route handlers call focused TypeScript service modules, Prisma owns the Health Rider MariaDB schema, and an isolated HOS adapter is read-only. Rider offline behavior lives in browser-only PWA modules and synchronizes idempotent events through the application API.
+**Architecture:** A clean `platform/` Next.js App Router project is created in a new worktree. Route handlers call focused TypeScript service modules, Prisma owns the Health Rider MariaDB schema, and an isolated HOSxP adapter is read-only. Rider offline behavior lives in browser-only PWA modules and synchronizes idempotent events through the application API.
 
 **Tech Stack:** Node.js 22 LTS, Next.js App Router, React, TypeScript, Prisma, MariaDB 11, Docker Compose, Vitest, Playwright, IndexedDB, Workbox service worker.
 
@@ -13,13 +13,13 @@
 ## Global Constraints
 
 - All user-facing copy is Thai-first; values in logs and tests contain no real patient data or credentials.
-- HOS is an external read-only dependency configured only by `HOS_DATABASE_URL`; automated tests never connect to HOS.
+- HOSxP is an external read-only dependency configured only by `HOS_DATABASE_URL`; automated tests never connect to HOSxP.
 - Health Rider owns its MariaDB schema, uses ULID public identifiers, and stores money as integer satang.
 - QR values are opaque random expiring identifiers and never embed patient or medication information.
 - QR claim is online and atomic; offline recording begins only after a successful claim.
 - Rider access is restricted to data for attempts they claimed: full name, HN, age, telephone and address only.
 - Every business mutation is audited; closed payout periods and audit records are immutable.
-- Do not open production services, create HOS accounts, use real patient records, or perform a data migration.
+- Do not open production services, create HOSxP accounts, use real patient records, or perform a data migration.
 
 ## Review Focus
 
@@ -44,7 +44,7 @@
 
 - [ ] **Step 1: Write failing smoke and compose assertions.**
 
-Assert Thai page title/landing copy renders and Compose declares only `web` and `db`, uses a MariaDB healthcheck, and has no HOS container.
+Assert Thai page title/landing copy renders and Compose declares only `web` and `db`, uses a MariaDB healthcheck, and has no HOSxP container.
 
 - [ ] **Step 2: Run the focused tests to verify they fail.**
 
@@ -53,7 +53,7 @@ Expected: FAIL because the platform project and Compose configuration do not exi
 
 - [ ] **Step 3: Scaffold the TypeScript Next.js application and Docker Compose configuration.**
 
-Use a multi-stage Node 22 image, a named MariaDB volume, non-secret `.env.example`, and runtime validation requiring `DATABASE_URL`; the HOS adapter must refuse reads with a clear configuration error when its separate `HOS_DATABASE_URL` is absent.
+Use a multi-stage Node 22 image, a named MariaDB volume, non-secret `.env.example`, and runtime validation requiring `DATABASE_URL`; the HOSxP adapter must refuse reads with a clear configuration error when its separate `HOS_DATABASE_URL` is absent.
 
 - [ ] **Step 4: Run build and configuration verification.**
 
@@ -175,7 +175,7 @@ git add platform
 git commit -m "feat: snapshot effective delivery zone rates"
 ```
 
-### Task 5: Read HOS candidates and confirm pharmacy requests
+### Task 5: Read HOSxP candidates and confirm pharmacy requests
 
 **Files:**
 - Create: `platform/src/hos/candidate-repository.ts`, `platform/src/hos/mysql-candidate-repository.ts`, `platform/src/hos/types.ts`
@@ -185,32 +185,32 @@ git commit -m "feat: snapshot effective delivery zone rates"
 - Create: `platform/tests/hos/mysql-candidate-repository.test.ts`, `platform/tests/domain/confirm-candidate.test.ts`, `platform/tests/api/pharmacy-confirm.test.ts`
 
 **Interfaces:**
-- `HosCandidateRepository.eligibleFor(range): Promise<HosCandidate[]>` returns DTOs, never Prisma/HOS models.
+- `HosCandidateRepository.eligibleFor(range): Promise<HosCandidate[]>` returns DTOs, never Prisma/HOSxP models.
 - `confirmCandidate(candidate, pharmacist): Promise<DeliveryRequest>` validates pharmacy role, rate and delivery snapshot.
 
 - [ ] **Step 1: Write failing adapter and confirmation tests.**
 
-Use a fake HOS connection fixture to prove encoding conversion and candidate mapping; assert merely reading a candidate creates no request.
+Use a fake HOSxP connection fixture to prove encoding conversion and candidate mapping; assert merely reading a candidate creates no request.
 
 - [ ] **Step 2: Run focused tests to verify they fail.**
 
 Run: `npm run test -- tests/hos/mysql-candidate-repository.test.ts tests/domain/confirm-candidate.test.ts tests/api/pharmacy-confirm.test.ts`  
 Expected: FAIL because adapter, confirmation service and routes are absent.
 
-- [ ] **Step 3: Implement read-only HOS adapter, configurable eligibility rules, confirmation service, API and Thai pharmacy page.**
+- [ ] **Step 3: Implement read-only HOSxP adapter, configurable eligibility rules, confirmation service, API and Thai pharmacy page.**
 
-Enforce that only pharmacy/admin can confirm; never place HOS credentials or medication details in client bundles.
+Enforce that only pharmacy/admin can confirm; never place HOSxP credentials or medication details in client bundles.
 
 - [ ] **Step 4: Run focused tests and the pharmacy page test.**
 
 Run: `npm run test -- tests/hos/mysql-candidate-repository.test.ts tests/domain/confirm-candidate.test.ts tests/api/pharmacy-confirm.test.ts`  
 Expected: PASS.
 
-- [ ] **Step 5: Commit HOS intake.**
+- [ ] **Step 5: Commit HOSxP intake.**
 
 ```bash
 git add platform
-git commit -m "feat: confirm pharmacy delivery requests from HOS"
+git commit -m "feat: confirm pharmacy delivery requests from HOSxP"
 ```
 
 ### Task 6: Prepare packages and claim opaque QR codes atomically
@@ -365,4 +365,4 @@ git commit -m "feat: complete operations and monthly rider payouts"
 
 ## Coverage Review
 
-Tasks 1–2 create the container and trustworthy data/audit substrate. Tasks 3–6 provide authorization, HOS intake, rate snapshot, pharmacy packaging and atomic rider claim. Tasks 7–8 implement the high-risk offline/exception branches. Task 9 completes daily operations, financial reporting and end-to-end verification. No task writes to HOS or adds excluded notification, routing, GPS, OTP, consent, payment execution, or production deployment capabilities.
+Tasks 1–2 create the container and trustworthy data/audit substrate. Tasks 3–6 provide authorization, HOSxP intake, rate snapshot, pharmacy packaging and atomic rider claim. Tasks 7–8 implement the high-risk offline/exception branches. Task 9 completes daily operations, financial reporting and end-to-end verification. No task writes to HOSxP or adds excluded notification, routing, GPS, OTP, consent, payment execution, or production deployment capabilities.

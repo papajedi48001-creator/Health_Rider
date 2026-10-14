@@ -5,7 +5,7 @@ import type { UserRole } from '@/auth/roles';
 import { MainNav } from '@/auth/main-nav';
 
 const navigation: Array<{ href: string; label: string; roles: UserRole[] }> = [
-  { href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOS', roles: ['pharmacy', 'admin'] },
+  { href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', roles: ['pharmacy', 'admin'] },
   { href: '/pharmacy/packages', label: 'เตรียมพัสดุ/รับยาคืน', roles: ['pharmacy', 'admin'] },
   { href: '/operations', label: 'ภาพรวมการจัดส่ง', roles: ['coordinator', 'admin', 'auditor'] },
   { href: '/operations/exceptions', label: 'งานที่ต้องตรวจสอบ', roles: ['coordinator', 'admin', 'auditor'] },

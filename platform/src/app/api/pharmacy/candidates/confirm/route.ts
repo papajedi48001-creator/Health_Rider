@@ -10,7 +10,7 @@ import { readJsonBody } from '@/lib/http';
 import { handleRoute, invalidInput } from '@/lib/route';
 import { startOfBangkokDay } from '@/lib/time';
 
-// Patient details are re-read from HOS on the server; the browser only names the visit to confirm.
+// Patient details are re-read from HOSxP on the server; the browser only names the visit to confirm.
 export async function POST(request: NextRequest) {
   return handleRoute(async () => {
     const pharmacist = requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const visitNumber = body.visitNumber;
 
     const candidate = (await getHosCandidateRepository(process.env).eligibleFor(on)).find((item) => item.visitNumber === visitNumber);
-    if (!candidate) return NextResponse.json({ message: 'ไม่พบผู้ป่วยรายนี้ในรายการที่เข้าเกณฑ์จาก HOS' }, { status: 404 });
+    if (!candidate) return NextResponse.json({ message: 'ไม่พบผู้ป่วยรายนี้ในรายการที่เข้าเกณฑ์จาก HOSxP' }, { status: 404 });
 
     const confirmed = await db.$transaction(async (tx) => {
       const created = await confirmCandidate(candidate, pharmacist, {

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the first Health Rider release: HOS read-only intake, pharmacy QR preparation, secure rider delivery with offline evidence, operations review, and monthly rider payout reporting.
+**Goal:** Build the first Health Rider release: HOSxP read-only intake, pharmacy QR preparation, secure rider delivery with offline evidence, operations review, and monthly rider payout reporting.
 
-**Architecture:** Create a Laravel 12 application in `platform/` with a MySQL 8 Health Rider database and a separate read-only HOS connection. Inertia/Vue provides the role-based web UI; the rider view is an installable PWA with IndexedDB event queue. The Laravel API is the sole authority for status transitions, QR claims, authorisation, audit events, and payout calculation.
+**Architecture:** Create a Laravel 12 application in `platform/` with a MySQL 8 Health Rider database and a separate read-only HOSxP connection. Inertia/Vue provides the role-based web UI; the rider view is an installable PWA with IndexedDB event queue. The Laravel API is the sole authority for status transitions, QR claims, authorisation, audit events, and payout calculation.
 
 **Tech Stack:** PHP 8.3, Laravel 12, MySQL 8, Laravel Sanctum/session authentication, Inertia.js, Vue 3, Vite PWA, IndexedDB, Pest, Vitest, Playwright.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- HOS is read-only; the application must never write to HOS.
+- HOSxP is read-only; the application must never write to HOSxP.
 - QR contains only an opaque expiring random package identifier, never patient or medication data.
 - QR claim requires an online atomic server confirmation; offline capture begins only after claim.
 - Rider data access is limited to the rider's claimed attempts and includes name, HN, age, telephone number, and delivery address only.
@@ -41,7 +41,7 @@ platform/
     Actions/                         # small state-transition and audit actions
     Domain/Delivery/                 # requests, attempts, evidence, QR and sync logic
     Domain/Payout/                   # payout period and line calculation
-    Domain/Hos/                      # read-only HOS candidate adapter
+    Domain/Hos/                      # read-only HOSxP candidate adapter
     Http/Controllers/
     Http/Requests/
     Models/
@@ -55,7 +55,7 @@ platform/
   resources/views/
 ```
 
-`docs/` and `CONTEXT.md` remain at repository root. No credentials, production HOS addresses, or patient fixtures belong in the repository.
+`docs/` and `CONTEXT.md` remain at repository root. No credentials, production HOSxP addresses, or patient fixtures belong in the repository.
 
 ### Task 1: Bootstrap the application and delivery domain baseline
 
@@ -193,7 +193,7 @@ git add platform
 git commit -m "feat: snapshot effective delivery zone rates"
 ```
 
-### Task 4: Build the read-only HOS candidate adapter and pharmacy confirmation
+### Task 4: Build the read-only HOSxP candidate adapter and pharmacy confirmation
 
 **Files:**
 - Create: `platform/app/Domain/Hos/HosCandidateRepository.php`, `platform/app/Domain/Hos/MysqlHosCandidateRepository.php`
@@ -203,19 +203,19 @@ git commit -m "feat: snapshot effective delivery zone rates"
 - Test: `platform/tests/Feature/Pharmacy/ConfirmHosCandidateTest.php`, `platform/tests/Unit/Domain/Hos/MysqlHosCandidateRepositoryTest.php`
 
 **Interfaces:**
-- `HosCandidateRepository::eligibleFor(DateRange $range): Collection` returns a transport DTO, never an Eloquent HOS model.
+- `HosCandidateRepository::eligibleFor(DateRange $range): Collection` returns a transport DTO, never an Eloquent HOSxP model.
 - `CreateDeliveryRequest::handle(HosCandidate $candidate, User $pharmacist): DeliveryRequest` snapshots approved delivery data and rate.
 
-- [ ] **Step 1: Write a failing feature test that a pharmacist can confirm a candidate but an HOS candidate alone never creates a Delivery Request.**
+- [ ] **Step 1: Write a failing feature test that a pharmacist can confirm a candidate but an HOSxP candidate alone never creates a Delivery Request.**
 
 - [ ] **Step 2: Run the focused test to verify it fails.**
 
 Run: `php artisan test tests/Feature/Pharmacy/ConfirmHosCandidateTest.php`  
 Expected: FAIL because candidate adapter and confirmation action do not exist.
 
-- [ ] **Step 3: Implement the HOS adapter against the `hos` connection and isolate legacy encoding conversion within the adapter.**
+- [ ] **Step 3: Implement the HOSxP adapter against the `hos` connection and isolate legacy encoding conversion within the adapter.**
 
-Configure eligibility rules rather than hard-coding service identifiers. Use a fake repository in automated tests; do not use a real HOS database in tests.
+Configure eligibility rules rather than hard-coding service identifiers. Use a fake repository in automated tests; do not use a real HOSxP database in tests.
 
 - [ ] **Step 4: Implement pharmacy confirmation UI and action, then verify only pharmacy/admin roles can create a request.**
 
@@ -224,7 +224,7 @@ Configure eligibility rules rather than hard-coding service identifiers. Use a f
 Run: `php artisan test tests/Feature/Pharmacy/ConfirmHosCandidateTest.php tests/Unit/Domain/Hos/MysqlHosCandidateRepositoryTest.php`  
 Expected: PASS.
 
-- [ ] **Step 6: Commit HOS intake and pharmacy confirmation.**
+- [ ] **Step 6: Commit HOSxP intake and pharmacy confirmation.**
 
 ```bash
 git add platform
@@ -470,6 +470,6 @@ git commit -m "feat: close monthly rider payout periods"
 
 ## Coverage Review
 
-The ten tasks cover every first-release specification area: HOS read-only intake (Task 4), pharmacy and QR workflow (Tasks 4–6), role-limited views (Task 2 and Task 6), offline rider operation (Task 7), returns/amendments/conflicts (Task 8), daily monitoring and immutable history (Task 9), and zone-based monthly payout/reporting (Tasks 3 and 10). Excluded features remain excluded from all tasks.
+The ten tasks cover every first-release specification area: HOSxP read-only intake (Task 4), pharmacy and QR workflow (Tasks 4–6), role-limited views (Task 2 and Task 6), offline rider operation (Task 7), returns/amendments/conflicts (Task 8), daily monitoring and immutable history (Task 9), and zone-based monthly payout/reporting (Tasks 3 and 10). Excluded features remain excluded from all tasks.
 
-The only execution prerequisite outside this repository is access to a non-production HOS read-only connection and representative de-identified test data; the application must run all automated tests without either.
+The only execution prerequisite outside this repository is access to a non-production HOSxP read-only connection and representative de-identified test data; the application must run all automated tests without either.

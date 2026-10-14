@@ -43,7 +43,7 @@ test('rejects a rider confirming a zone', async () => {
   expect(createRequest).not.toHaveBeenCalled();
 });
 
-test('confirms only the unconfirmed HOS visits that map to the zone', async () => {
+test('confirms only the unconfirmed HOSxP visits that map to the zone', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm-zone/route');
   currentSession.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
 

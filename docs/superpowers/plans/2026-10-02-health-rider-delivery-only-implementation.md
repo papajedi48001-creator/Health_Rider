@@ -12,12 +12,12 @@
 
 ## Global Constraints
 
-- HOS remains read-only; pharmacy confirmation is required before a Delivery Request exists.
+- HOSxP remains read-only; pharmacy confirmation is required before a Delivery Request exists.
 - Keep only roles `pharmacy`, `coordinator`, `rider`, `admin` and `auditor`.
 - Delivery Zone/หมู่บ้าน is a location and filtering reference only; do not retain or introduce monetary data.
 - QR claim stays online and atomic; offline capture starts only after claim succeeds.
 - Preserve patient-data minimisation, privacy-preserving evidence, immutable audit, same-day return/retry, and offline sync/conflict rules.
-- UAT database is disposable: reset it before applying the revised migration; no production or real HOS changes.
+- UAT database is disposable: reset it before applying the revised migration; no production or real HOSxP changes.
 
 ## Review Focus
 
@@ -45,7 +45,7 @@
 
 **Interfaces:**
 - Consumes: `HosCandidate`, `SessionUser`, `DeliveryZone` matching by subdistrict/village.
-- Produces: `ConfirmedDeliveryRequest` with `id`, HOS/patient delivery fields, `deliveryZoneId`, and `createdById`; it has no rate fields and `ConfirmationStore` has no `resolveRate` member.
+- Produces: `ConfirmedDeliveryRequest` with `id`, HOSxP/patient delivery fields, `deliveryZoneId`, and `createdById`; it has no rate fields and `ConfirmationStore` has no `resolveRate` member.
 
 - [ ] **Step 1: Write the failing confirmation tests**
 
@@ -158,7 +158,7 @@ Expected: FAIL by finding the current financial documents/copy.
 
 - [ ] **Step 3: Rewrite active operating material**
 
-Remove the finance UAT file and financial account. Replace rate-snapshot checks with delivery-zone selection/visibility checks. Remove payment wording from rider failure, pharmacy confirmation, training, staging and release documents. Preserve the testing of HOS read-only, QR privacy, offline sync, return/retry, coordinator amendment and audit read-only access.
+Remove the finance UAT file and financial account. Replace rate-snapshot checks with delivery-zone selection/visibility checks. Remove payment wording from rider failure, pharmacy confirmation, training, staging and release documents. Preserve the testing of HOSxP read-only, QR privacy, offline sync, return/retry, coordinator amendment and audit read-only access.
 
 - [ ] **Step 4: Run the scope check and Markdown review**
 
@@ -185,7 +185,7 @@ git commit -m "docs: align UAT with delivery-only scope"
 
 - [ ] **Step 1: Record the reset boundary before any destructive command**
 
-Verify the selected `DATABASE_URL` is the disposable UAT/local Compose database, not HOS or production. Capture a backup/export according to hospital policy before reset; do not print credentials.
+Verify the selected `DATABASE_URL` is the disposable UAT/local Compose database, not HOSxP or production. Capture a backup/export according to hospital policy before reset; do not print credentials.
 
 - [ ] **Step 2: Reset the confirmed disposable database and apply migrations**
 
@@ -207,7 +207,7 @@ Run: `DATABASE_URL=<confirmed disposable UAT URL> npm run test -- tests/integrat
 
 Run: start the built app on an isolated port, then `PLAYWRIGHT_BASE_URL=http://127.0.0.1:<port> npm run test:e2e`
 
-Expected: unit tests, build, Compose configuration, MariaDB QR concurrency test and browser workflows pass. Do not treat HOS/live staging UAT as complete from these local checks.
+Expected: unit tests, build, Compose configuration, MariaDB QR concurrency test and browser workflows pass. Do not treat HOSxP/live staging UAT as complete from these local checks.
 
 - [ ] **Step 5: Commit any verification-document adjustment and report UAT boundary**
 
@@ -216,7 +216,7 @@ git add docs/operations/staging-production-guide.md
 git commit -m "docs: document delivery-only database reset"
 ```
 
-Only commit if the guide changed; otherwise leave this task without an empty commit. Report that real HOS/staging UAT still requires hospital execution and sign-off.
+Only commit if the guide changed; otherwise leave this task without an empty commit. Report that real HOSxP/staging UAT still requires hospital execution and sign-off.
 
 ## Plan Self-Review
 

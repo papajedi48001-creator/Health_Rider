@@ -20,7 +20,7 @@ export function getHosDatabaseUrl(environment: Environment): string {
   const hosDatabaseUrl = environment.HOS_DATABASE_URL?.trim();
 
   if (!hosDatabaseUrl) {
-    throw new Error('HOS_DATABASE_URL is required before reading HOS data');
+    throw new Error('HOS_DATABASE_URL is required before reading HOSxP data');
   }
 
   return hosDatabaseUrl;

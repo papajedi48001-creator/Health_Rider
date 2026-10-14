@@ -29,7 +29,7 @@ beforeEach(() => {
   createRequest.mockImplementation(async ({ data }) => data);
 });
 
-test('rejects a rider confirming a HOS candidate', async () => {
+test('rejects a rider confirming a HOSxP candidate', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
   currentSession.mockResolvedValue({ id: 'rider-1', role: 'rider', displayName: 'ไรเดอร์' });
 
@@ -39,7 +39,7 @@ test('rejects a rider confirming a HOS candidate', async () => {
   expect(createRequest).not.toHaveBeenCalled();
 });
 
-test('creates the request from HOS data, not from what the browser sent', async () => {
+test('creates the request from HOSxP data, not from what the browser sent', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
   currentSession.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
 
@@ -52,7 +52,7 @@ test('creates the request from HOS data, not from what the browser sent', async 
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'delivery_request.created_from_hos_candidate' }) }));
 });
 
-test('rejects a visit HOS no longer lists and a patient without a delivery zone', async () => {
+test('rejects a visit HOSxP no longer lists and a patient without a delivery zone', async () => {
   const { POST } = await import('@/app/api/pharmacy/candidates/confirm/route');
   currentSession.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
 

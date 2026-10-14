@@ -60,9 +60,9 @@ export function AdminZones() {
   const shownZones = subdistrictFilter ? zones.filter((zone) => zone.subdistrictCode === subdistrictFilter) : zones;
 
   async function loadVillages() {
-    setMessage('กำลังอ่านหมู่บ้านจาก HOS');
+    setMessage('กำลังอ่านหมู่บ้านจาก HOSxP');
     const result = await callApi<{ villages: HosVillage[] }>('/api/admin/zone-import');
-    if (!result.ok) return setMessage(`อ่านหมู่บ้านจาก HOS ไม่ได้: ${result.message}`);
+    if (!result.ok) return setMessage(`อ่านหมู่บ้านจาก HOSxP ไม่ได้: ${result.message}`);
     setVillages(result.data.villages);
     setSelected(new Set(result.data.villages.filter((village) => !village.exists).map(villageKey)));
     setMessage('');
@@ -88,7 +88,7 @@ export function AdminZones() {
     if (!result.ok) return setMessage(result.message);
     setVillages(null);
     await load();
-    setMessage(`เพิ่มโซนจาก HOS แล้ว ${result.data.created} โซน`);
+    setMessage(`เพิ่มโซนจาก HOSxP แล้ว ${result.data.created} โซน`);
   }
 
   const importable = (villages ?? []).filter((village) => !village.exists && selected.has(villageKey(village))).length;
@@ -96,10 +96,10 @@ export function AdminZones() {
   return (
     <section aria-labelledby="admin-zones">
       <h2 id="admin-zones">โซนจัดส่ง</h2>
-      <p>รหัสตำบลคือ <code>chwpart+amppart+tmbpart</code> และรหัสหมู่บ้านคือ <code>moopart</code> ของผู้ป่วยใน HOS</p>
+      <p>รหัสตำบลคือ <code>chwpart+amppart+tmbpart</code> และรหัสหมู่บ้านคือ <code>moopart</code> ของผู้ป่วยใน HOSxP</p>
       <p aria-live="polite">{message}</p>
-      <section aria-label="นำเข้าโซนจาก HOS">
-        <button type="button" onClick={() => void loadVillages()}>ดึงหมู่บ้านจาก HOS (90 วันล่าสุด)</button>
+      <section aria-label="นำเข้าโซนจาก HOSxP">
+        <button type="button" onClick={() => void loadVillages()}>ดึงหมู่บ้านจาก HOSxP (90 วันล่าสุด)</button>
         {villages && (
           <>
             <table>
@@ -149,7 +149,7 @@ export function AdminZones() {
             <tr key={zone.id}>
               <td colSpan={5}>
                 <form onSubmit={(event) => void save(event, zone)} aria-label={`แก้ไขโซน ${zone.displayName}`}>
-                  <p>ตำบล <code>{zone.subdistrictCode}</code> หมู่ <code>{zone.villageCode}</code> (รหัสต้องตรงกับ HOS จึงแก้ไม่ได้)</p>
+                  <p>ตำบล <code>{zone.subdistrictCode}</code> หมู่ <code>{zone.villageCode}</code> (รหัสต้องตรงกับ HOSxP จึงแก้ไม่ได้)</p>
                   <label>ชื่อโซน <input name="displayName" defaultValue={zone.displayName} required /></label>
                   <label>ชื่อตำบล <input name="subdistrictName" defaultValue={zone.subdistrictName ?? ''} /></label>
                   <button type="submit">บันทึก</button>

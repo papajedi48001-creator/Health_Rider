@@ -10,7 +10,7 @@ import { readJsonBody } from '@/lib/http';
 import { handleRoute, invalidInput } from '@/lib/route';
 import { startOfBangkokDay } from '@/lib/time';
 
-// Confirms every unconfirmed HOS visit in one zone for a date, reading HOS once; all or nothing.
+// Confirms every unconfirmed HOSxP visit in one zone for a date, reading HOSxP once; all or nothing.
 export async function POST(request: NextRequest) {
   return handleRoute(async () => {
     const pharmacist = requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');
