@@ -22,3 +22,18 @@ export type HosCandidateRow = {
   subdistrict_code: string | number | null;
   village_code: string | number | null;
 };
+
+// A HOS village with eligible visits, used to set up delivery zones.
+export type HosVillage = {
+  subdistrictCode: string;
+  villageCode: string;
+  subdistrictName: string | null;
+  visits: number;
+};
+
+export type HosVillageRow = {
+  subdistrict_code: string | number | null;
+  village_code: string | number | null;
+  subdistrict_name: string | Buffer | null;
+  visits: number | string;
+};

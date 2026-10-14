@@ -51,3 +51,19 @@ test('reads the subdistrict as the full HOSxP address code', async () => {
 
   expect(execute.mock.calls[0]?.[0]).toContain('CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code');
 });
+
+test('lists HOS villages once per normalised code with their visit counts', async () => {
+  const execute = vi.fn().mockResolvedValue([[
+    { subdistrict_code: '470603', village_code: '6', subdistrict_name: Buffer.from('ต.ปลาโหล', 'utf8'), visits: 40 },
+    { subdistrict_code: '470603', village_code: '06', subdistrict_name: 'ต.ปลาโหล', visits: '8' },
+    { subdistrict_code: '470602', village_code: '1', subdistrict_name: null, visits: 3 },
+    { subdistrict_code: null, village_code: '1', subdistrict_name: null, visits: 9 },
+  ]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await expect(repository.villagesSince(new Date('2026-07-16T00:00:00.000Z'))).resolves.toEqual([
+    { subdistrictCode: '470602', villageCode: '01', subdistrictName: null, visits: 3 },
+    { subdistrictCode: '470603', villageCode: '06', subdistrictName: 'ต.ปลาโหล', visits: 48 },
+  ]);
+  expect(execute).toHaveBeenCalledWith(expect.stringContaining('LEFT JOIN thaiaddress'), ['100001', '2026-07-16']);
+});
