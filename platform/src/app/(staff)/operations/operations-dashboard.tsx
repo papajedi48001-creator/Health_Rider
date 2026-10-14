@@ -1,0 +1,106 @@
+'use client';
+
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
+import { callApi } from '@/lib/api-client';
+import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
+import { bangkokDateString } from '@/lib/time';
+
+type Attempt = {
+  id: string; status: DeliveryAttemptStatus; createdAt: string; deliveredAt: string | null; failedAt: string | null;
+  rider: { displayName: string } | null;
+  deliveryRequest: { id: string; hn: string; patientName: string; telephone: string | null; deliveryAddress: string; deliveryVersion: number; deliveryZone: { displayName: string } };
+};
+type Dashboard = { attempts: Attempt[]; zones: Array<{ id: string; displayName: string }> };
+
+const amendableStatuses: DeliveryAttemptStatus[] = ['claimed', 'in_transit', 'sync_review'];
+
+export function OperationsDashboard() {
+  const [filters, setFilters] = useState({ date: bangkokDateString(new Date()), status: '', zoneId: '' });
+  const [data, setData] = useState<Dashboard | null>(null);
+  const [message, setMessage] = useState('กำลังโหลด');
+  const [editing, setEditing] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+    const result = await callApi<Dashboard>(`/api/operations/dashboard?${query}`);
+    if (!result.ok) return setMessage(result.message);
+    setData(result.data);
+    setMessage(result.data.attempts.length === 0 ? 'ไม่มีงานตามตัวกรองนี้' : '');
+  }, [filters]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function amend(event: FormEvent<HTMLFormElement>, attempt: Attempt) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const result = await callApi(`/api/operations/requests/${attempt.deliveryRequest.id}/amend`, {
+      json: {
+        deliveryAddress: form.get('deliveryAddress'), telephone: form.get('telephone'), reason: form.get('reason'),
+        expectedVersion: attempt.deliveryRequest.deliveryVersion,
+      },
+    });
+    if (!result.ok) return setMessage(result.message);
+    setEditing(null);
+    await load();
+    setMessage('แก้ไขข้อมูลจัดส่งแล้ว ไรเดอร์จะเห็นข้อมูลใหม่เมื่อเปิดงานขณะออนไลน์');
+  }
+
+  const counts = data?.attempts.reduce<Record<string, number>>((total, attempt) => ({ ...total, [attempt.status]: (total[attempt.status] ?? 0) + 1 }), {}) ?? {};
+
+  return (
+    <div>
+      <form aria-label="ตัวกรอง" onSubmit={(event) => event.preventDefault()}>
+        <label>วันที่ <input type="date" value={filters.date} onChange={(event) => event.target.value && setFilters({ ...filters, date: event.target.value })} /></label>
+        <label>
+          สถานะ
+          <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
+            <option value="">ทั้งหมด</option>
+            {deliveryAttemptStatuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+          </select>
+        </label>
+        <label>
+          โซน
+          <select value={filters.zoneId} onChange={(event) => setFilters({ ...filters, zoneId: event.target.value })}>
+            <option value="">ทั้งหมด</option>
+            {data?.zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.displayName}</option>)}
+          </select>
+        </label>
+      </form>
+      <p aria-live="polite">{message}</p>
+      {data && data.attempts.length > 0 && (
+        <>
+          <p>{Object.entries(counts).map(([status, count]) => `${statusLabels[status as DeliveryAttemptStatus]} ${count}`).join(' · ')}</p>
+          <table>
+            <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>โซน</th><th>ไรเดอร์</th><th>สถานะ</th><th>เวลาล่าสุด</th><th /></tr></thead>
+            <tbody>
+              {data.attempts.map((attempt) => (
+                <tr key={attempt.id}>
+                  <td><code>{shortCode(attempt.id)}</code></td>
+                  <td>{attempt.deliveryRequest.patientName}<br /><code>{attempt.deliveryRequest.hn}</code></td>
+                  <td>{attempt.deliveryRequest.deliveryZone.displayName}</td>
+                  <td>{attempt.rider?.displayName ?? '-'}</td>
+                  <td>{statusLabels[attempt.status]}</td>
+                  <td>{formatThaiDateTime(attempt.deliveredAt ?? attempt.failedAt ?? attempt.createdAt)}</td>
+                  <td>
+                    {amendableStatuses.includes(attempt.status) && (editing === attempt.id ? (
+                      <form onSubmit={(event) => void amend(event, attempt)} aria-label="แก้ไขข้อมูลระหว่างส่ง">
+                        <label>ที่อยู่ <textarea name="deliveryAddress" defaultValue={attempt.deliveryRequest.deliveryAddress} /></label>
+                        <label>โทรศัพท์ <input name="telephone" defaultValue={attempt.deliveryRequest.telephone ?? ''} /></label>
+                        <label>เหตุผล <input name="reason" required /></label>
+                        <button type="submit">บันทึกการแก้ไข</button>
+                        <button type="button" onClick={() => setEditing(null)}>ยกเลิก</button>
+                      </form>
+                    ) : <button type="button" onClick={() => setEditing(attempt.id)}>แก้ที่อยู่/โทรศัพท์</button>)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}

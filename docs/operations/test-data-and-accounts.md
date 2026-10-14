@@ -4,11 +4,15 @@
 
 | Role | Username ตัวอย่าง | ใช้ทดสอบ |
 | --- | --- | --- |
-| pharmacy | `uat-pharmacy` | ยืนยัน candidate, QR, รับยาคืน |
-| rider internal | `uat-rider-in` | claim/offline/sync |
-| rider external | `uat-rider-out` | ขอบเขต contractor rider |
-| coordinator | `uat-coordinator` | exception/amendment/conflict |
-| auditor | `uat-auditor` | read-only audit |
-| admin | `uat-admin` | role/configuration verification |
+| pharmacy | `pharmacy.uat` | ยืนยัน candidate, QR, รับยาคืน |
+| rider internal | `rider.internal.uat` | claim/offline/sync |
+| rider external | `rider.external.uat` | ขอบเขต contractor rider |
+| coordinator | `coordinator.uat` | exception/amendment/conflict |
+| auditor | `auditor.uat` | read-only audit |
+| admin | `admin.uat` | role/configuration verification |
+
+บัญชีเหล่านี้สร้างด้วย `npm run db:seed` (ดู `platform/README.md`) โดยใช้รหัสผ่านจาก `SEED_UAT_PASSWORD` ซึ่งต้องยาวอย่างน้อย 12 ตัวอักษรและไม่เก็บใน Git การรัน seed ซ้ำจะตั้งรหัสผ่านใหม่และเปิดใช้งานบัญชีอีกครั้ง
+
+โซน/หมู่บ้านนำเข้าจากไฟล์ CSV ที่กำหนดใน `SEED_ZONES_FILE` (คอลัมน์ `subdistrictCode,villageCode,displayName`) รหัสต้องตรงกับ `patient.tmbpart` และ `patient.moopart` ใน HOS ตัวอย่างรูปแบบอยู่ที่ `platform/prisma/seed-data/delivery-zones.example.csv` ซึ่งเป็นรหัสทดสอบ `99` เท่านั้น
 
 เตรียม candidate อย่างน้อย 3 รายการ: ส่งสำเร็จ, ส่งไม่สำเร็จ/คืนยา, และงานสำหรับ offline conflict. ไม่ใช้ HN/ชื่อ/โทรศัพท์ของผู้ป่วยจริงในภาพหน้าจอหรือ defect log.

@@ -1,0 +1,48 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromRequest } from '@/auth/current-session';
+import { requireRole } from '@/auth/require-role';
+import { hashPassword } from '@/auth/session';
+import { parseNewUser } from '@/domain/admin/user-rules';
+import { audit } from '@/domain/audit/write-audit-event';
+import { newPublicId } from '@/domain/delivery/status';
+import { db } from '@/lib/db';
+import { readJsonBody } from '@/lib/http';
+import { handleRoute } from '@/lib/route';
+
+export const dynamic = 'force-dynamic';
+
+const userSelect = {
+  id: true, username: true, displayName: true, role: true, active: true,
+  riderProfile: { select: { riderCode: true, employmentCategory: true } },
+} as const;
+
+export async function GET(request: NextRequest) {
+  return handleRoute(async () => {
+    requireRole(await getSessionFromRequest(request), 'admin');
+    const users = await db.user.findMany({ orderBy: [{ role: 'asc' }, { username: 'asc' }], select: userSelect });
+    return NextResponse.json({ users });
+  });
+}
+
+export async function POST(request: NextRequest) {
+  return handleRoute(async () => {
+    const admin = requireRole(await getSessionFromRequest(request), 'admin');
+    const input = parseNewUser(await readJsonBody(request));
+    const passwordHash = await hashPassword(input.password);
+    const user = await db.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          id: newPublicId(), username: input.username, displayName: input.displayName, role: input.role, passwordHash,
+          ...(input.rider ? { riderProfile: { create: { id: newPublicId(), ...input.rider } } } : {}),
+        },
+        select: userSelect,
+      });
+      await audit(tx, {
+        actorId: admin.id, action: 'user.created', auditableType: 'User', auditableId: created.id,
+        newValues: { username: created.username, role: created.role, riderCode: created.riderProfile?.riderCode ?? null },
+      });
+      return created;
+    });
+    return NextResponse.json(user, { status: 201 });
+  });
+}

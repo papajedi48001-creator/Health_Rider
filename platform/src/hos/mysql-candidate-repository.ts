@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import { getHosDatabaseUrl } from '@/lib/env';
+import { bangkokDateString } from '@/lib/time';
 import type { HosCandidateRepository } from '@/hos/candidate-repository';
 import type { HosCandidate, HosCandidateRow } from '@/hos/types';
 
@@ -10,11 +11,11 @@ type ReadOnlyConnection = {
 function candidateQuery(itemCodeCount: number): string {
   const itemCodePlaceholders = Array.from({ length: itemCodeCount }, () => '?').join(', ');
   return `
-  SELECT
+  SELECT DISTINCT
     o.vn AS visit_number,
     o.hn AS hn,
     CONCAT_WS(' ', p.fname, p.lname) AS patient_name,
-    NULL AS patient_age,
+    TIMESTAMPDIFF(YEAR, p.birthday, o.vstdate) AS patient_age,
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
     p.informaddr AS delivery_address,
     p.tmbpart AS subdistrict_code,
@@ -25,6 +26,7 @@ function candidateQuery(itemCodeCount: number): string {
 `;
 }
 
+// One row per visit even when several eligible items were dispensed in it.
 export class MysqlHosCandidateRepository implements HosCandidateRepository {
   constructor(
     private readonly connection: ReadOnlyConnection,
@@ -38,11 +40,22 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
 
     const [rows] = await this.connection.execute(candidateQuery(this.eligibleItemCodes.length), [
       ...this.eligibleItemCodes,
-      on.toISOString().slice(0, 10),
+      bangkokDateString(on),
     ]);
 
     return (rows as HosCandidateRow[]).map(mapCandidate);
   }
+}
+
+const globalForHos = globalThis as unknown as { hosCandidateRepository?: { uri: string; repository: HosCandidateRepository } };
+
+// Reuses one small read-only pool per process instead of opening a new pool on every request.
+export function getHosCandidateRepository(environment: Record<string, string | undefined>): HosCandidateRepository {
+  const uri = getHosDatabaseUrl(environment);
+  if (globalForHos.hosCandidateRepository?.uri !== uri) {
+    globalForHos.hosCandidateRepository = { uri, repository: createMysqlHosCandidateRepository(environment) };
+  }
+  return globalForHos.hosCandidateRepository.repository;
 }
 
 export function createMysqlHosCandidateRepository(environment: Record<string, string | undefined>): HosCandidateRepository {

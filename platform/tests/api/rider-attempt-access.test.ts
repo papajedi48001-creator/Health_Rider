@@ -1,10 +1,11 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { canViewRiderAttempt, toRiderAttemptView } from '@/domain/delivery/rider-attempt-access';
-import { createSessionToken } from '@/auth/session';
 import { NextRequest } from 'next/server';
 
 const { findUnique } = vi.hoisted(() => ({ findUnique: vi.fn() }));
 
+const { currentSession } = vi.hoisted(() => ({ currentSession: vi.fn() }));
+vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({
   db: { deliveryAttempt: { findUnique } },
 }));
@@ -19,6 +20,7 @@ const attempt = {
     patientAge: 64,
     telephone: '0800000000',
     deliveryAddress: 'บ้านทดสอบ หมู่ 1',
+    deliveryVersion: 2,
     medicineName: 'must-not-be-exposed',
   },
 };
@@ -28,7 +30,6 @@ const reader = {
 };
 
 beforeEach(() => {
-  process.env.AUTH_SECRET = 'test-session-secret';
   findUnique.mockResolvedValue(attempt);
 });
 
@@ -44,6 +45,7 @@ test('projects only the permitted patient identity fields', () => {
   expect(toRiderAttemptView(attempt)).toEqual({
     id: '01J00000000000000000000010',
     status: 'claimed',
+    deliveryVersion: 2,
     patient: {
       hn: 'HN-TEST-001',
       name: 'ผู้ป่วยทดสอบ',
@@ -56,14 +58,9 @@ test('projects only the permitted patient identity fields', () => {
 
 test('returns no patient data to a rider who did not claim the attempt', async () => {
   const { GET } = await import('@/app/api/rider/attempts/[attemptId]/route');
-  const token = createSessionToken(
-    { id: '01J00000000000000000000012', role: 'rider', displayName: 'ไรเดอร์คนอื่น' },
-    'test-session-secret',
-  );
+  currentSession.mockResolvedValue({ id: '01J00000000000000000000012', role: 'rider', displayName: 'ไรเดอร์คนอื่น' });
   const response = await GET(
-    new NextRequest('http://localhost/api/rider/attempts/01J00000000000000000000010', {
-      headers: { cookie: `health_rider_session=${token}` },
-    }),
+    new NextRequest('http://localhost/api/rider/attempts/01J00000000000000000000010'),
     { params: Promise.resolve({ attemptId: attempt.id }) },
   );
 

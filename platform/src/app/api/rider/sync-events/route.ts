@@ -1,32 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { requireRole, UnauthorizedError } from '@/auth/require-role';
-import { getSessionFromRequest } from '@/auth/session';
+import { getSessionFromRequest } from '@/auth/current-session';
+import { requireRole } from '@/auth/require-role';
+import { audit } from '@/domain/audit/write-audit-event';
+import { parseOfflineEventDetails } from '@/domain/delivery/offline-event-rules';
+import { newPublicId, type DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { syncOfflineEvent } from '@/domain/delivery/sync-offline-event';
-import { newPublicId } from '@/domain/delivery/status';
+import { InvalidEvidencePhotoError, saveEvidencePhoto } from '@/evidence/photo-storage';
 import { db } from '@/lib/db';
+import { readJsonBody } from '@/lib/http';
+import { handleRoute, invalidInput } from '@/lib/route';
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type IncomingEvent = { eventUuid: string; attemptId: string; deliveryVersion: number; eventType: string; deviceCapturedAt: string; payload: Record<string, unknown> };
 
 export async function POST(request: NextRequest) {
-  try {
-    const rider = requireRole(getSessionFromRequest(request), 'rider');
-    const event = await request.json();
-    if (!validEvent(event)) return NextResponse.json({ message: 'ข้อมูลการบันทึกออฟไลน์ไม่ถูกต้อง' }, { status: 422 });
-    const attempt = await db.deliveryAttempt.findFirst({ where: { id: event.attemptId, riderId: rider.id }, select: { id: true } });
-    if (!attempt) return NextResponse.json({ message: 'ไม่พบงานจัดส่ง' }, { status: 404 });
-    const result = await syncOfflineEvent(event, rider, {
-      findByUuid: (eventUuid, riderId) => db.offlineDeliveryEvent.findUnique({ where: { eventUuid_riderId: { eventUuid, riderId } } }),
-      create: (record) => db.offlineDeliveryEvent.create({ data: { id: newPublicId(), eventUuid: record.eventUuid, deliveryAttemptId: record.attemptId, riderId: record.riderId, deliveryVersion: record.deliveryVersion, eventType: record.eventType, payload: record.payload as Prisma.InputJsonValue, deviceCapturedAt: new Date(record.deviceCapturedAt), serverReceivedAt: record.serverReceivedAt } }),
-    });
-    return NextResponse.json({ acknowledged: true, duplicate: result.kind === 'duplicate' });
-  } catch (error) {
-    if (error instanceof UnauthorizedError) return NextResponse.json({ message: error.message }, { status: 403 });
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return NextResponse.json({ acknowledged: true, duplicate: true });
-    throw error;
-  }
+  return handleRoute(async () => {
+    const rider = requireRole(await getSessionFromRequest(request), 'rider');
+    const event = await readJsonBody(request);
+    if (!validEvent(event)) return invalidInput('ข้อมูลการบันทึกออฟไลน์ไม่ถูกต้อง');
+    const details = parseOfflineEventDetails(event.eventType, event.payload);
+    const deviceCapturedAt = new Date(event.deviceCapturedAt);
+    if (!details || Number.isNaN(deviceCapturedAt.getTime())) return invalidInput('ข้อมูลการบันทึกออฟไลน์ไม่ถูกต้อง');
+
+    const owned = await db.deliveryAttempt.findFirst({ where: { id: event.attemptId, riderId: rider.id }, select: { id: true } });
+    if (!owned) return NextResponse.json({ message: 'ไม่พบงานจัดส่ง' }, { status: 404 });
+
+    let photoPath: string | null = null;
+    if (details.eventType === 'delivered') {
+      if (typeof event.payload.photo !== 'string') return invalidInput('ต้องมีรูปหลักฐานการส่ง');
+      try {
+        photoPath = await saveEvidencePhoto(event.attemptId, event.eventUuid, event.payload.photo);
+      } catch (error) {
+        if (error instanceof InvalidEvidencePhotoError) return invalidInput(error.message);
+        throw error;
+      }
+    }
+
+    // The photo is kept on the evidence volume, never inside the event row.
+    const { photo: _photo, ...storedPayload } = event.payload;
+    const outcome = await db.$transaction(async (tx) => syncOfflineEvent(
+      { eventUuid: event.eventUuid, attemptId: event.attemptId, deliveryVersion: event.deliveryVersion, deviceCapturedAt, details, photoPath },
+      rider,
+      {
+        findByUuid: (eventUuid, riderId) => tx.offlineDeliveryEvent.findUnique({ where: { eventUuid_riderId: { eventUuid, riderId } }, select: { id: true } }),
+        lockRiderAttempt: async (attemptId, riderId) => {
+          const locked = await tx.$queryRaw<Array<{ id: string; status: DeliveryAttemptStatus; deliveryVersion: number }>>`
+            SELECT a.id, a.status, r.deliveryVersion FROM delivery_attempts a
+            INNER JOIN delivery_requests r ON r.id = a.deliveryRequestId
+            WHERE a.id = ${attemptId} AND a.riderId = ${riderId} FOR UPDATE`;
+          return locked[0] ? { ...locked[0], deliveryVersion: Number(locked[0].deliveryVersion) } : null;
+        },
+        createEvent: (record) => tx.offlineDeliveryEvent.create({
+          data: {
+            id: newPublicId(), eventUuid: record.eventUuid, deliveryAttemptId: record.attemptId, riderId: record.riderId,
+            deliveryVersion: record.deliveryVersion, eventType: record.details.eventType,
+            payload: { ...storedPayload, ...(record.photoPath ? { photoPath: record.photoPath } : {}) } as Prisma.InputJsonValue,
+            deviceCapturedAt: record.deviceCapturedAt, serverReceivedAt: record.serverReceivedAt,
+          },
+          select: { id: true },
+        }),
+        updateAttempt: (attemptId, update) => tx.deliveryAttempt.update({ where: { id: attemptId }, data: update }),
+        createEvidence: (record) => tx.deliveryEvidence.create({ data: { id: newPublicId(), ...record } }),
+        createConflict: (record) => tx.syncConflict.create({ data: { id: newPublicId(), ...record } }),
+        createAudit: (entry) => audit(tx, { ...entry, auditableType: 'DeliveryAttempt' }),
+      },
+    ));
+
+    return NextResponse.json({ acknowledged: true, duplicate: outcome.kind === 'duplicate', outcome });
+  });
 }
 
-function validEvent(value: unknown): value is { eventUuid: string; attemptId: string; deliveryVersion: number; eventType: string; deviceCapturedAt: string; payload: Record<string, unknown> } {
+function validEvent(value: unknown): value is IncomingEvent {
   if (!value || typeof value !== 'object') return false;
   const event = value as Record<string, unknown>;
-  return typeof event.eventUuid === 'string' && typeof event.attemptId === 'string' && Number.isInteger(event.deliveryVersion) && typeof event.eventType === 'string' && typeof event.deviceCapturedAt === 'string' && !!event.payload && typeof event.payload === 'object';
+  return typeof event.eventUuid === 'string' && uuidPattern.test(event.eventUuid)
+    && typeof event.attemptId === 'string' && Number.isInteger(event.deliveryVersion)
+    && typeof event.eventType === 'string' && typeof event.deviceCapturedAt === 'string'
+    && !!event.payload && typeof event.payload === 'object' && !Array.isArray(event.payload);
 }

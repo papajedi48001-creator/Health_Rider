@@ -1,50 +1,51 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { HosCandidate } from '@/hos/types';
+import { callApi } from '@/lib/api-client';
+import { bangkokDateString } from '@/lib/time';
 
 export function PharmacyCandidateList() {
+  const [date, setDate] = useState(() => bangkokDateString(new Date()));
   const [candidates, setCandidates] = useState<HosCandidate[]>([]);
   const [message, setMessage] = useState('กำลังโหลดรายการจาก HOS');
   const [confirming, setConfirming] = useState<string | null>(null);
 
-  useEffect(() => {
-    void loadCandidates();
-  }, []);
-
-  async function loadCandidates() {
-    const response = await fetch('/api/pharmacy/candidates');
-    if (!response.ok) {
+  const loadCandidates = useCallback(async (on: string) => {
+    setMessage('กำลังโหลดรายการจาก HOS');
+    const result = await callApi<HosCandidate[]>(`/api/pharmacy/candidates?date=${on}`);
+    if (!result.ok) {
+      setCandidates([]);
       setMessage('ไม่สามารถโหลดรายการจาก HOS ได้');
       return;
     }
-    const result = (await response.json()) as HosCandidate[];
-    setCandidates(result);
-    setMessage(result.length === 0 ? 'ไม่พบผู้ป่วยที่รอยืนยัน' : '');
-  }
+    setCandidates(result.data);
+    setMessage(result.data.length === 0 ? 'ไม่พบผู้ป่วยที่รอยืนยัน' : '');
+  }, []);
+
+  useEffect(() => {
+    void loadCandidates(date);
+  }, [date, loadCandidates]);
 
   async function confirm(candidate: HosCandidate) {
     setConfirming(candidate.visitNumber);
     setMessage('');
-    const response = await fetch('/api/pharmacy/candidates/confirm', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(candidate),
-    });
-
-    if (!response.ok) {
-      setMessage('ไม่สามารถสร้างงานส่งยาได้ โปรดตรวจสอบโซนและหมู่บ้าน');
-      setConfirming(null);
+    const result = await callApi('/api/pharmacy/candidates/confirm', { json: { visitNumber: candidate.visitNumber, date } });
+    setConfirming(null);
+    if (!result.ok) {
+      setMessage(`ไม่สามารถสร้างงานส่งยาได้: ${result.message}`);
       return;
     }
-
     setCandidates((current) => current.filter((item) => item.visitNumber !== candidate.visitNumber));
     setMessage('สร้างงานส่งยาแล้ว');
-    setConfirming(null);
   }
 
   return (
     <section aria-live="polite">
+      <label>
+        วันที่รับบริการ
+        <input type="date" value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
+      </label>
       {message && <p>{message}</p>}
       <ul>
         {candidates.map((candidate) => (
