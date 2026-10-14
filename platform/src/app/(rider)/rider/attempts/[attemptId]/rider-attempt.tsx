@@ -7,6 +7,7 @@ import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { failureReasonLabels, recipientRelationLabels, statusLabels } from '@/lib/labels';
 import type { OfflineEvent } from '@/pwa/offline-queue';
 import { toEvidenceJpeg } from '@/pwa/photo';
+import { deleteAttemptView, loadAttemptView, saveAttemptView } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
 
 type AttemptView = {
@@ -17,6 +18,7 @@ type AttemptView = {
 };
 
 const pendingMessage = 'บันทึกไว้ในเครื่อง รอส่งเมื่อออนไลน์';
+const activeStatuses: DeliveryAttemptStatus[] = ['claimed', 'in_transit'];
 
 export function RiderAttempt({ attemptId }: { attemptId: string }) {
   const [view, setView] = useState<AttemptView | null>(null);
@@ -29,13 +31,19 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
     try {
       const response = await fetch(`/api/rider/attempts/${attemptId}`, { cache: 'no-store' });
       if (!response.ok) {
+        if (response.status === 404) await deleteAttemptView(attemptId).catch(() => undefined);
         setLoadError(response.status === 404 ? 'ไม่พบงานจัดส่งนี้ หรือไม่ใช่งานที่คุณรับไว้' : 'โหลดข้อมูลงานไม่สำเร็จ');
         return;
       }
-      setView((await response.json()) as AttemptView);
+      const loaded = (await response.json()) as AttemptView;
+      setView(loaded);
       setLoadError('');
+      if (activeStatuses.includes(loaded.status)) await saveAttemptView(attemptId, loaded).catch(() => undefined);
+      else await deleteAttemptView(attemptId).catch(() => undefined);
     } catch {
-      setLoadError('ออฟไลน์อยู่ ข้อมูลผู้ป่วยจะแสดงเมื่อกลับมาออนไลน์');
+      const cached = (await loadAttemptView(attemptId).catch(() => null)) as AttemptView | null;
+      setView((current) => current ?? cached);
+      setLoadError(cached ? 'ออฟไลน์อยู่ แสดงข้อมูลที่บันทึกไว้ในเครื่องตอนรับงาน' : 'ออฟไลน์อยู่ ข้อมูลผู้ป่วยจะแสดงเมื่อกลับมาออนไลน์');
     }
   }, [attemptId]);
 
@@ -100,7 +108,7 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
     await record('delivery_failed', { reason: form.get('reason') as FailedDeliveryReason });
   }
 
-  const active = view && ['claimed', 'in_transit'].includes(view.status);
+  const active = view && activeStatuses.includes(view.status);
 
   return (
     <main>

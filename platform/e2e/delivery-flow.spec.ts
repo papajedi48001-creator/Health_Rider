@@ -101,3 +101,22 @@ test('sends a pickup recorded before an address change to coordinator review', a
   await expect(coordinator.page.getByText('บันทึกผลการตรวจสอบแล้ว')).toBeVisible();
   expect(await attemptStatus(attemptId)).toBe('in_transit');
 });
+
+test('opens a claimed job and records pickup with no signal after the page was loaded once', async ({ browser }) => {
+  const patientName = `ผู้ป่วยออฟไลน์ ${Date.now()}`;
+  const { attemptId, rider } = await prepareAndClaim(browser, patientName);
+  await rider.page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await rider.page.reload();
+  await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
+
+  await rider.context.setOffline(true);
+  await rider.page.reload();
+  await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
+  await expect(rider.page.getByText('แสดงข้อมูลที่บันทึกไว้ในเครื่องตอนรับงาน')).toBeVisible();
+  await rider.page.getByRole('button', { name: 'บันทึกรับยา' }).click();
+  await expect(rider.page.getByRole('status')).toContainText('บันทึกไว้ในเครื่อง รอส่งเมื่อออนไลน์');
+
+  await rider.context.setOffline(false);
+  await expect(rider.page.getByRole('status')).toContainText('ส่งข้อมูลที่ค้างไว้แล้ว 1 รายการ');
+  expect(await attemptStatus(attemptId)).toBe('in_transit');
+});

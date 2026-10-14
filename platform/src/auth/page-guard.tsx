@@ -9,6 +9,7 @@ const navigation: Array<{ href: string; label: string; roles: UserRole[] }> = [
   { href: '/operations', label: 'ภาพรวมการจัดส่ง', roles: ['coordinator', 'admin', 'auditor'] },
   { href: '/operations/exceptions', label: 'งานที่ต้องตรวจสอบ', roles: ['coordinator', 'admin', 'auditor'] },
   { href: '/audit', label: 'ประวัติการตรวจสอบ', roles: ['auditor', 'admin'] },
+  { href: '/admin', label: 'ผู้ดูแลระบบ', roles: ['admin'] },
   { href: '/rider/scan', label: 'รับงาน/งานของฉัน', roles: ['rider'] },
 ];
 
