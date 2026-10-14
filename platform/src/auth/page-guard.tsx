@@ -14,6 +14,7 @@ const navigation: Array<{ href: string; label: string; roles: UserRole[] }> = [
   { href: '/admin/zones', label: 'โซนจัดส่ง', roles: ['admin'] },
   { href: '/admin/rates', label: 'ค่าบริการ', roles: ['admin'] },
   { href: '/rider/scan', label: 'รับงาน/งานของฉัน', roles: ['rider'] },
+  { href: '/rider/history', label: 'ประวัติการส่ง', roles: ['rider'] },
 ];
 
 export async function RoleGate({ roles, children }: { roles: readonly UserRole[]; children: ReactNode }) {

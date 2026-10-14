@@ -56,6 +56,10 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await expect(rider.page.getByText('สถานะ: ส่งสำเร็จ')).toBeVisible();
   expect(await attemptStatus(prepared.attemptId)).toBe('delivered');
 
+  await rider.page.getByRole('link', { name: 'ประวัติการส่ง' }).click();
+  const delivered = rider.page.getByRole('listitem').filter({ hasText: patientName });
+  await expect(delivered.getByText('ส่งสำเร็จ', { exact: true })).toHaveCSS('color', 'rgb(21, 128, 61)');
+
   const coordinator = await signedIn(browser, 'coordinator.uat');
   await coordinator.page.goto('/operations');
   await expect(coordinator.page.getByRole('row').filter({ hasText: patientName })).toContainText('ส่งสำเร็จ');
@@ -68,6 +72,9 @@ test('takes a failed delivery back to pharmacy and allows a new package', async 
   await rider.page.getByLabel('เหตุผล').selectOption('recipient_unavailable');
   await rider.page.getByRole('button', { name: 'บันทึกส่งไม่สำเร็จ' }).click();
   await expect(rider.page.getByText('นำยากลับมาคืนเภสัชกรรมภายในวันนี้')).toBeVisible();
+  await rider.page.goto('/rider/history');
+  const failed = rider.page.getByRole('listitem').filter({ hasText: patientName });
+  await expect(failed.getByText(/^ส่งไม่สำเร็จ: ไม่พบผู้รับ/)).toHaveCSS('color', 'rgb(180, 35, 24)');
 
   await pharmacy.page.goto('/pharmacy/packages');
   await pharmacy.page.getByRole('listitem').filter({ hasText: patientName }).getByRole('button', { name: 'ยืนยันรับยาคืน' }).click();

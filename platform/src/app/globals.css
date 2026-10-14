@@ -6,6 +6,7 @@
   --surface: #ffffff;
   --warning: #b45309;
   --danger: #b42318;
+  --success: #15803d;
   --line: #c9d6d3;
   --radius-control: 8px;
   --radius-surface: 12px;
@@ -119,4 +120,7 @@ img { max-width: 100%; height: auto; }
   section[aria-label='ฉลาก QR พัสดุ'] { border: 0; }
   main > *:not(div), main > div > *:not(section[aria-label='ฉลาก QR พัสดุ']) { display: none; }
 }
+.outcome-delivered { color: var(--success); font-weight: 700; }
+.outcome-failed { color: var(--danger); font-weight: 700; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .qr-token code { overflow-wrap: anywhere; user-select: all; }
