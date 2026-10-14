@@ -14,10 +14,12 @@ beforeEach(() => {
     {
       id: 'A1', status: 'delivered', deliveredAt: new Date('2026-10-13T03:00:00Z'), failedAt: null, failureReason: null,
       deliveryRequest: { hn: 'HN1', patientName: 'ผู้ป่วยหนึ่ง', deliveryAddress: 'บ้านหนึ่ง' },
+      evidence: { recipientRelation: 'self' },
     },
     {
       id: 'A2', status: 'return_required', deliveredAt: null, failedAt: new Date('2026-10-13T05:00:00Z'), failureReason: 'address_not_found',
       deliveryRequest: { hn: 'HN2', patientName: 'ผู้ป่วยสอง', deliveryAddress: 'บ้านสอง' },
+      evidence: null,
     },
   ]);
 });
@@ -34,8 +36,8 @@ test('lists only the signed-in rider’s delivered and failed attempts in the Ba
   const body = await response.json();
   expect(body).toMatchObject({ page: 1, pages: 1, total: 2, counts: { delivered: 1, failed: 1 } });
   expect(body.items).toEqual([
-    { id: 'A2', outcome: 'failed', status: 'return_required', finishedAt: '2026-10-13T05:00:00.000Z', failureReason: 'address_not_found', hn: 'HN2', patientName: 'ผู้ป่วยสอง', address: 'บ้านสอง' },
-    { id: 'A1', outcome: 'delivered', status: 'delivered', finishedAt: '2026-10-13T03:00:00.000Z', failureReason: null, hn: 'HN1', patientName: 'ผู้ป่วยหนึ่ง', address: 'บ้านหนึ่ง' },
+    { id: 'A2', outcome: 'failed', status: 'return_required', finishedAt: '2026-10-13T05:00:00.000Z', failureReason: 'address_not_found', hn: 'HN2', patientName: 'ผู้ป่วยสอง', address: 'บ้านสอง', hasPhoto: false, recipientRelation: null },
+    { id: 'A1', outcome: 'delivered', status: 'delivered', finishedAt: '2026-10-13T03:00:00.000Z', failureReason: null, hn: 'HN1', patientName: 'ผู้ป่วยหนึ่ง', address: 'บ้านหนึ่ง', hasPhoto: true, recipientRelation: 'self' },
   ]);
 });
 
