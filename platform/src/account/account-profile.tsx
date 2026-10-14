@@ -1,0 +1,172 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type FormEvent } from 'react';
+import type { UserRole } from '@/auth/roles';
+import { minimumPasswordLength } from '@/domain/admin/user-rules';
+import { callApi } from '@/lib/api-client';
+import { employmentLabels, formatThaiDateTime, roleLabels } from '@/lib/labels';
+
+type Profile = {
+  username: string;
+  displayName: string;
+  phone: string | null;
+  role: UserRole;
+  riderProfile: { riderCode: string; employmentCategory: string } | null;
+};
+
+type Change = { id: string; action: string; at: string; byMe: boolean; oldValues: Record<string, unknown> | null; newValues: Record<string, unknown> | null };
+
+const fieldLabels: Record<string, string> = { displayName: 'ชื่อที่แสดง', phone: 'เบอร์โทร', role: 'บทบาท', active: 'สถานะบัญชี' };
+const actionLabels: Record<string, string> = {
+  'user.created': 'สร้างบัญชี', 'user.updated': 'ผู้ดูแลระบบแก้ไขบัญชี', 'user.profile_updated': 'แก้ไขข้อมูลส่วนตัว', 'user.password_changed': 'เปลี่ยนรหัสผ่าน',
+};
+
+function shown(field: string, value: unknown): string {
+  if (value === null || value === undefined || value === '') return '-';
+  if (field === 'role' && typeof value === 'string') return roleLabels[value as UserRole] ?? value;
+  if (field === 'active') return value ? 'ใช้งาน' : 'ปิดใช้งาน';
+  return String(value);
+}
+
+// The signed-in user's own account: details the admin set, plus a name, phone and password they can change.
+export function AccountProfile() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('กำลังโหลดข้อมูลผู้ใช้');
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [changes, setChanges] = useState<Change[]>([]);
+
+  const loadChanges = () => void callApi<{ changes: Change[] }>('/api/me/changes').then((result) => result.ok && setChanges(result.data.changes));
+
+  useEffect(() => {
+    void callApi<Profile>('/api/me').then((result) => {
+      if (!result.ok) return setMessage(result.message);
+      setProfile(result.data);
+      setMessage('');
+    });
+    loadChanges();
+  }, []);
+
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    const result = await callApi<Profile>('/api/me', { method: 'PATCH', json: { displayName: form.get('displayName'), phone: form.get('phone') } });
+    setSaving(false);
+    if (!result.ok) return setMessage(result.message);
+    setProfile(result.data);
+    setEditing(false);
+    setMessage('บันทึกข้อมูลส่วนตัวแล้ว');
+    loadChanges();
+    router.refresh();
+  }
+
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const target = event.currentTarget;
+    const form = new FormData(target);
+    if (form.get('newPassword') !== form.get('confirmPassword')) return setPasswordMessage('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน');
+    setSaving(true);
+    const result = await callApi('/api/me/password', { json: { currentPassword: form.get('currentPassword'), newPassword: form.get('newPassword') } });
+    setSaving(false);
+    if (!result.ok) return setPasswordMessage(result.message);
+    target.reset();
+    loadChanges();
+    setPasswordMessage('เปลี่ยนรหัสผ่านแล้ว อุปกรณ์อื่นที่เคยเข้าสู่ระบบจะต้องเข้าสู่ระบบใหม่');
+  }
+
+  return (
+    <div className="account">
+      <h1>ข้อมูลผู้ใช้</h1>
+      <p aria-live="polite" role="status">{message}</p>
+      {profile && (
+        <>
+          <section className="rider-card profile-head" aria-label="บัญชีของฉัน">
+            <span className="avatar" aria-hidden="true">{profile.displayName.trim().charAt(0)}</span>
+            <div>
+              <h2>{profile.displayName}</h2>
+              <p className="muted">
+                {roleLabels[profile.role]}
+                {profile.riderProfile ? ` · ${employmentLabels[profile.riderProfile.employmentCategory] ?? profile.riderProfile.employmentCategory}` : ''}
+              </p>
+            </div>
+          </section>
+
+          <section className="rider-card" aria-label="ข้อมูลส่วนตัว">
+            <h2>ข้อมูลส่วนตัว</h2>
+            {editing ? (
+              <form className="inline-form" onSubmit={(event) => void saveProfile(event)}>
+                <label>
+                  ชื่อที่แสดง
+                  <input name="displayName" defaultValue={profile.displayName} required maxLength={255} autoComplete="name" />
+                </label>
+                <label>
+                  เบอร์โทร
+                  <input name="phone" type="tel" inputMode="tel" defaultValue={profile.phone ?? ''} placeholder="08xxxxxxxx" autoComplete="tel" />
+                </label>
+                <div className="button-row">
+                  <button type="button" className="btn btn-secondary" onClick={() => setEditing(false)} disabled={saving}>ยกเลิก</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>บันทึก</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <dl className="details">
+                  <dt>ชื่อที่แสดง</dt><dd>{profile.displayName}</dd>
+                  <dt>เบอร์โทร</dt><dd>{profile.phone ?? '-'}</dd>
+                  <dt>ชื่อผู้ใช้</dt><dd><code>{profile.username}</code></dd>
+                  <dt>บทบาท</dt><dd>{roleLabels[profile.role]}</dd>
+                  {profile.riderProfile && <><dt>รหัสไรเดอร์</dt><dd><code>{profile.riderProfile.riderCode}</code></dd></>}
+                </dl>
+                <button type="button" className="btn btn-secondary btn-block" onClick={() => { setEditing(true); setMessage(''); }}>แก้ไขข้อมูล</button>
+                <p className="muted">ชื่อผู้ใช้ บทบาท และรหัสไรเดอร์ แก้ได้โดยผู้ดูแลระบบ</p>
+              </>
+            )}
+          </section>
+
+          <form className="rider-card" aria-label="เปลี่ยนรหัสผ่าน" onSubmit={(event) => void changePassword(event)}>
+            <h2>เปลี่ยนรหัสผ่าน</h2>
+            <label>
+              รหัสผ่านปัจจุบัน
+              <input name="currentPassword" type="password" required autoComplete="current-password" />
+            </label>
+            <label>
+              รหัสผ่านใหม่ (อย่างน้อย {minimumPasswordLength} ตัวอักษร)
+              <input name="newPassword" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" />
+            </label>
+            <label>
+              ยืนยันรหัสผ่านใหม่
+              <input name="confirmPassword" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" />
+            </label>
+            {passwordMessage && <p className="notice">{passwordMessage}</p>}
+            <button type="submit" className="btn btn-primary btn-block" disabled={saving}>เปลี่ยนรหัสผ่าน</button>
+          </form>
+
+          <section className="rider-card" aria-label="ประวัติการแก้ไขบัญชี">
+            <h2>ประวัติการแก้ไขบัญชี</h2>
+            {changes.length === 0 ? <p className="muted">ยังไม่มีการแก้ไข</p> : (
+              <ol className="change-log">
+                {changes.map((change) => {
+                  const fields = Object.keys(change.newValues ?? {}).filter((field) => field in fieldLabels);
+                  return (
+                    <li key={change.id}>
+                      <strong>{actionLabels[change.action] ?? change.action}</strong>
+                      <span className="muted">{formatThaiDateTime(change.at)}{change.byMe ? '' : ' · โดยผู้ดูแลระบบ'}</span>
+                      {fields.map((field) => (
+                        <span key={field}>{fieldLabels[field]}: {shown(field, change.oldValues?.[field])} → {shown(field, change.newValues?.[field])}</span>
+                      ))}
+                      {change.newValues?.passwordReset === true && <span>ผู้ดูแลระบบตั้งรหัสผ่านใหม่</span>}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

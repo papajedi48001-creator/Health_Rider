@@ -13,6 +13,7 @@ const paths: Record<string, ReactNode> = {
   chevron: <path d="m9 5 7 7-7 7" />,
   back: <path d="m15 5-7 7 7 7" />,
   logout: <><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" /><path d="M10 16l-4-4 4-4M6 12h10" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 20a8 8 0 0 1 16 0" /></>,
   image: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 16-5-5-9 9" /></>,
 };
 

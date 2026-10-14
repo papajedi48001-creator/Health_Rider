@@ -7,6 +7,7 @@ import { Icon, type IconName } from '@/rider/icons';
 const tabs: Array<{ href: string; label: string; icon: IconName; matches: string[] }> = [
   { href: '/rider/scan', label: 'รับงาน', icon: 'scan', matches: ['/rider/scan', '/rider/attempts'] },
   { href: '/rider/history', label: 'ประวัติการส่ง', icon: 'history', matches: ['/rider/history'] },
+  { href: '/rider/profile', label: 'บัญชีของฉัน', icon: 'user', matches: ['/rider/profile'] },
 ];
 
 // Bottom tabs within thumb reach; a job page counts as part of the "รับงาน" tab.

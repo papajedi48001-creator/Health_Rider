@@ -144,7 +144,12 @@ img { max-width: 100%; height: auto; }
   border-bottom: 0;
 }
 .rider-brand { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.01em; }
-.rider-user { flex: 1; text-align: right; font-size: 0.9rem; opacity: 0.92; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rider-user {
+  flex: 1; min-width: 0;
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px;
+  min-height: 44px; color: #fff; text-decoration: none; font-size: 0.92rem; font-weight: 600;
+}
+.rider-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rider-app .rider-logout {
   display: inline-flex; align-items: center; justify-content: center;
   width: 44px; height: 44px; padding: 0; margin: 0;
@@ -183,6 +188,8 @@ img { max-width: 100%; height: auto; }
   border: 1px solid var(--line);
   border-radius: var(--radius-surface);
 }
+.rider-card > *, .rider-card label { min-width: 0; }
+.rider-card input, .rider-card select { min-width: 0; max-width: 100%; }
 .rider-card h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .rider-card .inline-form { margin: 0; padding: 0; border: 0; background: none; gap: 8px; }
 .muted { color: #5b6f75; font-size: 0.92rem; }
@@ -190,21 +197,21 @@ img { max-width: 100%; height: auto; }
 .notice-danger { background: #fef3f2; color: var(--danger); }
 
 /* Buttons: one primary action per step, full width on a phone, 48px or taller. */
-.rider-app .btn {
+.btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 48px; margin: 0; padding: 10px 18px;
   border-radius: 10px; border: 1.5px solid var(--primary);
   font: inherit; font-weight: 700; text-decoration: none; text-align: center;
   cursor: pointer;
 }
-.rider-app .btn-primary { background: var(--primary); color: #fff; }
-.rider-app .btn-success { background: var(--success); border-color: var(--success); color: #fff; }
-.rider-app .btn-secondary { background: var(--surface); color: var(--primary); }
-.rider-app .btn-danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
-.rider-app .btn-block { width: 100%; }
-.rider-app .btn-large { min-height: 56px; font-size: 1.08rem; }
-.rider-app .btn:disabled, .rider-app .btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
-.rider-app .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+.btn-secondary { background: var(--surface); color: var(--primary); }
+.btn-danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
+.btn-block { width: 100%; }
+.btn-large { min-height: 56px; font-size: 1.08rem; }
+.btn:disabled, .btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; margin: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
 .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .action-row .btn { padding: 10px 8px; font-size: 0.95rem; }
 
@@ -249,9 +256,9 @@ img { max-width: 100%; height: auto; }
 .back-link { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; text-decoration: none; margin-bottom: 4px; }
 .patient-card h2 { font-size: 1.25rem; }
 
-.filters .date-range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.filters input[type='date'] { padding: 8px; }
-.summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.filters .date-range { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.filters input[type='date'] { padding: 8px 6px; font-size: 0.95rem; }
+.summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 .summary-tile { display: grid; justify-items: center; padding: 8px; border-radius: var(--radius-control); background: var(--canvas); font-size: 0.9rem; }
 .summary-tile strong { font-size: 1.5rem; line-height: 1.2; }
 .history-item { display: grid; gap: 4px; padding: 14px 16px !important; }
@@ -269,3 +276,22 @@ img { max-width: 100%; height: auto; }
 .photo-viewer-body { width: min(100%, 560px); max-height: 100%; overflow: auto; display: grid; gap: 8px; padding: 12px; background: var(--surface); border-radius: var(--radius-surface); }
 .photo-viewer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .photo-viewer img { width: 100%; border-radius: var(--radius-control); background: var(--canvas); }
+
+/* Account page, shared by riders and staff. */
+.account-page { max-width: 640px; }
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: #e7f3f1; color: var(--primary); font-size: 1.4rem; font-weight: 700;
+}
+.avatar-small { width: 32px; height: 32px; font-size: 1rem; background: rgba(255, 255, 255, 0.2); color: #fff; }
+.profile-head { grid-template-columns: auto 1fr; align-items: center; }
+.profile-head h2 { margin: 0; }
+.details { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
+.details dt { color: #5b6f75; }
+.details dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.change-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.change-log li { display: grid; gap: 2px; padding: 10px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
+.change-log li:last-child { border-bottom: 0; }
+header .user-link { font-weight: 600; text-decoration: none; }

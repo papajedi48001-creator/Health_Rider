@@ -25,7 +25,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
     <>
       <header>
         <MainNav items={navigation.filter((item) => item.roles.includes(session.role)).map(({ href, label }) => ({ href, label }))} />
-        <span>{session.displayName}</span>
+        <a href={session.role === 'rider' ? '/rider/profile' : '/account'} className="user-link" title="ข้อมูลผู้ใช้">{session.displayName}</a>
         <form action="/api/auth/logout" method="post">
           <button type="submit">ออกจากระบบ</button>
         </form>
