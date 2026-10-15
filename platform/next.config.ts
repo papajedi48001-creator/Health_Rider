@@ -2,6 +2,13 @@ import type { NextConfig } from 'next';
 
 const development = process.env.NODE_ENV !== 'production';
 
+// Set NEXT_PUBLIC_BASE_PATH (for example /health-rider) when the app is served under a path of a
+// larger website. It is fixed at build time, so the image must be built with the same value.
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+if (basePath && !/^\/[A-Za-z0-9._~-]+(\/[A-Za-z0-9._~-]+)*$/.test(basePath)) {
+  throw new Error(`NEXT_PUBLIC_BASE_PATH must look like /health-rider (leading slash, no trailing slash), got "${basePath}"`);
+}
+
 // Next.js hydrates with inline scripts and the app uses inline styles, so those stay allowed; everything
 // else, including framing by other sites, is limited to this origin. Images include data: and blob:
 // for QR labels and camera photos.
@@ -30,6 +37,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  basePath,
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

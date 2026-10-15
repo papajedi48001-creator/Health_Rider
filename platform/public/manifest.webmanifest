@@ -2,10 +2,10 @@
   "name": "Health Rider โรงพยาบาลวาริชภูมิ",
   "short_name": "Health Rider",
   "lang": "th",
-  "start_url": "/rider/scan",
-  "scope": "/",
+  "start_url": "./rider/scan",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#F2F6F8",
   "theme_color": "#007F8B",
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
 }

@@ -1,6 +1,8 @@
 // Health Rider service worker: keeps the rider app shell available without signal.
 // API responses are never cached; patient data stays in the encrypted IndexedDB store.
-const shellCache = 'health-rider-shell-v2';
+const shellCache = 'health-rider-shell-v3';
+// The app may be served under a path such as /health-rider; the worker's scope is that path.
+const base = new URL(self.registration.scope).pathname.replace(/\/$/, '');
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -14,11 +16,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith(`${base}/api/`)) return;
 
-  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/brand/') || url.pathname === '/manifest.webmanifest' || url.pathname === '/icon.svg') {
+  const path = url.pathname.startsWith(`${base}/`) ? url.pathname.slice(base.length) : null;
+  if (path === null) return;
+
+  if (path.startsWith('/_next/static/') || path.startsWith('/brand/') || path === '/manifest.webmanifest' || path === '/icon.svg') {
     event.respondWith(cacheFirst(request));
-  } else if (request.mode === 'navigate' && url.pathname.startsWith('/rider/')) {
+  } else if (request.mode === 'navigate' && path.startsWith('/rider/')) {
     event.respondWith(networkFirst(request));
   }
 });
@@ -27,7 +32,7 @@ self.addEventListener('fetch', (event) => {
 // through the navigate handler, so the page asks for its own URL to be stored while online.
 self.addEventListener('message', (event) => {
   const path = event.data && event.data.cachePage;
-  if (typeof path !== 'string' || !path.startsWith('/rider/')) return;
+  if (typeof path !== 'string' || !path.startsWith(`${base}/rider/`)) return;
   event.waitUntil(cachePage(new URL(path, self.location.origin).href));
 });
 
@@ -55,7 +60,7 @@ async function networkFirst(request) {
     if (response.ok && !response.redirected) (await caches.open(shellCache)).put(request, response.clone());
     return response;
   } catch (error) {
-    const cached = await caches.match(request, { ignoreSearch: true }) ?? await caches.match('/rider/scan');
+    const cached = await caches.match(request, { ignoreSearch: true }) ?? await caches.match(`${base}/rider/scan`);
     if (cached) return cached;
     throw error;
   }

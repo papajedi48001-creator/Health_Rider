@@ -9,6 +9,7 @@ import { failureReasonLabels, formatThaiDateTime, recipientRelationLabels } from
 import { EmptyState } from '@/brand/empty-state';
 import { Icon } from '@/brand/icons';
 import { bangkokDateString } from '@/lib/time';
+import { withBasePath } from '@/lib/base-path';
 
 type HistoryItem = {
   id: string;
@@ -141,7 +142,7 @@ export function RiderHistory() {
               <button type="button" className="icon-button" aria-label="ปิดรูป" onClick={() => setPhotoOf(null)} autoFocus><Icon name="close" /></button>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element -- a private, uncached image served by our own API */}
-            <img src={`/api/rider/attempts/${photoOf.id}/evidence`} alt={`รูปหลักฐานการส่ง ${photoOf.patientName}`} />
+            <img src={withBasePath(`/api/rider/attempts/${photoOf.id}/evidence`)} alt={`รูปหลักฐานการส่ง ${photoOf.patientName}`} />
             <p className="muted">{formatThaiDateTime(photoOf.finishedAt)}</p>
           </div>
         </div>

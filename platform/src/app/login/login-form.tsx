@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { withBasePath } from '@/lib/base-path';
 
 export function LoginForm({ next, initialMessage }: { next: string | null; initialMessage: string }) {
   const [message, setMessage] = useState(initialMessage);
@@ -12,7 +13,7 @@ export function LoginForm({ next, initialMessage }: { next: string | null; initi
     setSubmitting(true);
     setMessage('');
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(withBasePath('/api/auth/login'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ username: form.get('username'), password: form.get('password') }),
@@ -22,7 +23,7 @@ export function LoginForm({ next, initialMessage }: { next: string | null; initi
         setMessage(body.message ?? 'เข้าสู่ระบบไม่สำเร็จ');
         return;
       }
-      window.location.assign(next ?? body.redirectTo);
+      window.location.assign(withBasePath(next ?? body.redirectTo));
     } catch {
       setMessage('เชื่อมต่อระบบไม่ได้ โปรดตรวจสอบสัญญาณแล้วลองใหม่');
     } finally {
@@ -31,7 +32,7 @@ export function LoginForm({ next, initialMessage }: { next: string | null; initi
   }
 
   return (
-    <form method="post" action="/api/auth/login" onSubmit={(event) => void submit(event)}>
+    <form method="post" action={withBasePath('/api/auth/login')} onSubmit={(event) => void submit(event)}>
       {next && <input type="hidden" name="next" value={next} />}
       <p aria-live="polite">{message}</p>
       <label>

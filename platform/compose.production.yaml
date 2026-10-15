@@ -1,0 +1,41 @@
+# Production on the hospital network: https://waritch-hosp.moph.go.th/health-rider
+# The database runs on the hospital MariaDB server (not in Docker) and HTTPS is handled by the
+# hospital's reverse proxy, which forwards /health-rider to this machine's port 3000.
+#   docker compose -f compose.production.yaml --env-file .env.production up -d --build
+services:
+  migrate:
+    build:
+      context: .
+      target: migrate
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/health-rider}
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL, e.g. mysql://health_rider:<password>@192.168.1.254:3306/health_rider}
+
+  web:
+    build:
+      context: .
+      target: runtime
+      args:
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/health-rider}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL, e.g. mysql://health_rider:<password>@192.168.1.254:3306/health_rider}
+      HOS_DATABASE_URL: ${HOS_DATABASE_URL:-}
+      HOS_ELIGIBLE_ITEM_CODES: ${HOS_ELIGIBLE_ITEM_CODES:-}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET to a random value of at least 32 characters}
+      EVIDENCE_STORAGE_PATH: /app/data/evidence
+    ports:
+      # Plain HTTP for the reverse proxy only. If the proxy runs on another server, set WEB_PUBLISH to
+      # this machine's LAN address and port (e.g. 192.168.1.50:3000) and firewall it to the proxy.
+      - "${WEB_PUBLISH:-127.0.0.1:3000}:3000"
+    volumes:
+      - health-rider-evidence:/app/data/evidence
+
+volumes:
+  health-rider-evidence:

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Icon } from '@/brand/icons';
 import { clearOfflineData } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
+import { withBasePath } from '@/lib/base-path';
 
 // Signing out clears the patient data kept on the phone for offline work, so the next person to use the
 // phone cannot read it. Records not yet sent are synced first; if that fails the rider decides.
@@ -29,7 +30,7 @@ export function RiderLogout() {
   }
 
   return (
-    <form action="/api/auth/logout" method="post" onSubmit={(event) => void submit(event)}>
+    <form action={withBasePath('/api/auth/logout')} method="post" onSubmit={(event) => void submit(event)}>
       <button type="submit" className="rider-logout" aria-label="ออกจากระบบ" disabled={busy}>
         <Icon name="logout" />
       </button>

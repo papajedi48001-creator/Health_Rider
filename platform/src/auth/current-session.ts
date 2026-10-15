@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import type { SessionUser } from '@/auth/require-role';
 import type { UserRole } from '@/auth/roles';
+import { basePath } from '@/lib/base-path';
 import { resolveSession, sessionCookieName, type SessionStore } from '@/auth/session';
 import { db } from '@/lib/db';
 import { getAuthSecret } from '@/lib/env';
@@ -30,7 +31,8 @@ export function sessionCookieOptions(expiresAt: Date, role: UserRole) {
     httpOnly: true,
     sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production' && process.env.SESSION_COOKIE_INSECURE !== 'true',
-    path: '/',
+    // Scoped to this app, since the hospital domain also serves other sites.
+    path: basePath || '/',
     ...(role === 'rider' ? { expires: expiresAt } : {}),
   };
 }
