@@ -23,3 +23,19 @@ test('dashboard answers an unknown status with 422 instead of a server error', a
 
   expect((await GET(new NextRequest('http://localhost/api/operations/dashboard?status=lost'))).status).toBe(422);
 });
+
+test('dashboard can include jobs still open from earlier days, so it matches the menu count', async () => {
+  const { GET } = await import('@/app/api/operations/dashboard/route');
+  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C' });
+
+  await GET(new NextRequest('http://localhost/api/operations/dashboard?date=2026-10-14&includeOpen=1'));
+
+  expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+    where: {
+      OR: [
+        { createdAt: { gte: new Date('2026-10-13T17:00:00.000Z'), lt: new Date('2026-10-14T17:00:00.000Z') } },
+        { status: { in: ['prepared', 'claimed', 'in_transit', 'sync_review', 'return_required'] } },
+      ],
+    },
+  }));
+});

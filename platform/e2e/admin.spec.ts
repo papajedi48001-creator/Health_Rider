@@ -51,7 +51,7 @@ test('admin corrects a whole-subdistrict price on the same day and the new price
   await zoneForm.getByRole('button', { name: 'เพิ่มโซน' }).click();
   await expect(page.getByRole('row').filter({ hasText: `โซนราคา ${suffix}` })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'ค่าบริการ' }).click();
+  await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'ค่าบริการ', exact: true }).click();
   const rateForm = page.getByRole('form', { name: 'เพิ่มค่าบริการ' });
   await rateForm.getByRole('combobox', { name: 'ตำบล', exact: true }).selectOption('970000');
   await rateForm.getByLabel('ค่าบริการ (บาท)').fill('30');

@@ -23,7 +23,7 @@ type Dashboard = { attempts: Attempt[]; zones: Array<{ id: string; displayName: 
 const amendableStatuses: DeliveryAttemptStatus[] = ['claimed', 'in_transit', 'sync_review'];
 
 export function OperationsDashboard() {
-  const [filters, setFilters] = useState({ date: bangkokDateString(new Date()), status: '', zoneId: '' });
+  const [filters, setFilters] = useState({ date: bangkokDateString(new Date()), status: '', zoneId: '', includeOpen: '1' });
   const [data, setData] = useState<Dashboard | null>(null);
   const [message, setMessage] = useState('กำลังโหลด');
   const [editing, setEditing] = useState<string | null>(null);
@@ -74,6 +74,10 @@ export function OperationsDashboard() {
             <option value="">ทั้งหมด</option>
             {data?.zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.displayName}</option>)}
           </select>
+        </label>
+        <label className="check-label">
+          <input type="checkbox" checked={filters.includeOpen === '1'} onChange={(event) => setFilters({ ...filters, includeOpen: event.target.checked ? '1' : '' })} />
+          รวมงานที่ยังไม่ปิดจากวันอื่น
         </label>
       </form>
       <p aria-live="polite">{message}</p>
