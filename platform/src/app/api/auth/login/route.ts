@@ -8,8 +8,11 @@ import { newPublicId } from '@/domain/delivery/status';
 import { db } from '@/lib/db';
 import { getAuthSecret } from '@/lib/env';
 import { readJsonBody } from '@/lib/http';
+import { clientAddress, isCrossSiteRequest } from '@/lib/request-origin';
 
-const throttle = new LoginThrottle();
+const usernameThrottle = new LoginThrottle(10);
+// Wider limit per client address, so changing the username tried does not lift the limit.
+const addressThrottle = new LoginThrottle(50);
 const invalidCredentials = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
 
 type LoginBody = { username?: unknown; password?: unknown; next?: unknown };
@@ -17,6 +20,8 @@ type LoginBody = { username?: unknown; password?: unknown; next?: unknown };
 // Accepts JSON from the login form script, and a plain form post if the page is used before its script loads
 // (so credentials are never sent in a URL).
 export async function POST(request: NextRequest) {
+  // Another site may not sign this browser in to an account of its choosing.
+  if (isCrossSiteRequest(request)) return NextResponse.json({ message: 'ไม่อนุญาตคำขอจากเว็บไซต์อื่น' }, { status: 403 });
   const isFormPost = request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded') ?? false;
   const body = isFormPost ? Object.fromEntries(await request.formData()) as LoginBody : await readJsonBody(request) as LoginBody | undefined;
   const next = typeof body?.next === 'string' ? safeNextPath(body.next) : null;
@@ -28,23 +33,28 @@ export async function POST(request: NextRequest) {
     return fail('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', 422);
   }
 
-  const username = body.username.trim();
+  // Usernames are stored in lower case and the column ignores case, so "Admin" must count as "admin".
+  const username = body.username.trim().toLowerCase();
+  const address = clientAddress(request);
   const now = new Date();
-  if (throttle.isBlocked(username, now.getTime())) {
+  if (usernameThrottle.isBlocked(username, now.getTime()) || (address && addressThrottle.isBlocked(address, now.getTime()))) {
     return fail('เข้าสู่ระบบผิดหลายครั้ง โปรดรอ 15 นาทีแล้วลองใหม่', 429);
   }
 
   const user = await db.user.findUnique({
     where: { username },
-    select: { id: true, role: true, active: true, passwordHash: true },
+    select: { id: true, role: true, active: true, pendingApproval: true, passwordHash: true },
   });
   const passwordMatches = await verifyLoginPassword(body.password, user?.passwordHash ?? null);
+  // Only someone who knows the password learns that the application is still waiting.
+  if (user && passwordMatches && user.pendingApproval) return fail('บัญชีนี้รอผู้ดูแลระบบอนุมัติ เมื่ออนุมัติแล้วจะเข้าสู่ระบบได้', 403);
   if (!user || !passwordMatches || !user.active) {
-    throttle.recordFailure(username, now.getTime());
+    usernameThrottle.recordFailure(username, now.getTime());
+    if (address) addressThrottle.recordFailure(address, now.getTime());
     return fail(invalidCredentials, 401);
   }
 
-  throttle.reset(username);
+  usernameThrottle.reset(username);
   const session = await db.$transaction(async (tx) => {
     const started = await startSession(user.id, now, getAuthSecret(process.env), {
       ...sessionStore,
@@ -65,3 +75,4 @@ export async function POST(request: NextRequest) {
 function redirectTo(location: string) {
   return new NextResponse(null, { status: 303, headers: { location } });
 }
+

@@ -13,14 +13,17 @@ export function parseProfileChanges(value: unknown): ProfileChanges {
     if (displayName.length > 255) throw new DomainError('ชื่อที่แสดงยาวเกินไป');
     changes.displayName = displayName;
   }
-  if (body.phone !== undefined) {
-    if (body.phone !== null && typeof body.phone !== 'string') throw new DomainError('เบอร์โทรไม่ถูกต้อง');
-    const phone = (body.phone ?? '').replace(/[\s-]/g, '');
-    if (phone && !/^0\d{8,9}$/.test(phone)) throw new DomainError('เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก ขึ้นต้นด้วย 0');
-    changes.phone = phone || null;
-  }
+  if (body.phone !== undefined) changes.phone = parsePhone(body.phone);
   if (Object.keys(changes).length === 0) throw new DomainError('ไม่มีข้อมูลที่เปลี่ยนแปลง');
   return changes;
+}
+
+// A Thai phone number with spaces and dashes removed, or null when left blank.
+export function parsePhone(value: unknown): string | null {
+  if (value !== null && value !== undefined && typeof value !== 'string') throw new DomainError('เบอร์โทรไม่ถูกต้อง');
+  const phone = (value ?? '').replace(/[\s-]/g, '');
+  if (phone && !/^0\d{8,9}$/.test(phone)) throw new DomainError('เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก ขึ้นต้นด้วย 0');
+  return phone || null;
 }
 
 export function parsePasswordChange(value: unknown): { currentPassword: string; newPassword: string } {

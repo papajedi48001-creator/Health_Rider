@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       counts['/pharmacy/awaiting-rider'] = queues.awaitingRider;
       counts['/pharmacy/returns'] = queues.returnRequired;
     }
-    if (can(session.role, 'coordinator', 'admin', 'auditor')) {
+    if (can(session.role, 'coordinator', 'admin')) {
       const [inTransit, returns, conflicts] = await Promise.all([
         db.deliveryAttempt.count({ where: { status: { in: ['claimed', 'in_transit'] } } }),
         db.deliveryAttempt.count({ where: { status: 'return_required' } }),
@@ -64,6 +64,9 @@ export async function GET(request: NextRequest) {
       ]);
       counts['/operations'] = inTransit;
       counts['/operations/exceptions'] = returns + conflicts;
+    }
+    if (session.role === 'admin') {
+      counts['/admin'] = await db.user.count({ where: { pendingApproval: true } });
     }
     if (session.role === 'rider') {
       counts['/rider/scan'] = await db.deliveryAttempt.count({

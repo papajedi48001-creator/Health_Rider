@@ -71,6 +71,7 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
       const result = summary.results[recordedUuid];
       if (!result?.acknowledged) setMessage(pendingMessage);
       else if (result.outcome?.kind === 'conflict') setMessage('ส่งข้อมูลแล้ว แต่ต้องรอผู้ประสานงานตรวจสอบก่อน');
+      else if (result.outcome?.kind === 'rejected') setMessage('งานนี้ปิดไปแล้ว ระบบไม่บันทึกรายการนี้');
       else setMessage('บันทึกและส่งข้อมูลแล้ว');
     } else if (summary.acknowledged > 0) {
       setMessage(`ส่งข้อมูลที่ค้างไว้แล้ว ${summary.acknowledged} รายการ`);

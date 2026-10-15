@@ -82,3 +82,8 @@ test('fee summary totals delivered jobs at the rate fixed on each request', () =
 test('CSV opens in Excel with Thai text and quoted commas', () => {
   expect(toCsv(['ชื่อ', 'จำนวน'], [['ก, ข', 2], ['"ค"', null]])).toBe('﻿ชื่อ,จำนวน\r\n"ก, ข",2\r\n"""ค""",\r\n');
 });
+
+test('stops spreadsheet formulas typed into names from running when the CSV is opened', () => {
+  expect(toCsv(['ชื่อ'], [['=HYPERLINK("http://evil")'], ['+1'], ['-2'], ['@SUM(A1)'], [-5]]))
+    .toBe('﻿ชื่อ\r\n"\'=HYPERLINK(""http://evil"")"\r\n\'+1\r\n\'-2\r\n\'@SUM(A1)\r\n-5\r\n');
+});

@@ -107,6 +107,14 @@ export function createMysqlHosCandidateRepository(environment: Record<string, st
     charset: 'TIS620',
     connectionLimit: 2,
   });
+  // Belt and braces with the SELECT-only HOSxP account: each new connection refuses writes. The command is
+  // queued on the connection before any query this repository sends.
+  pool.pool.on('connection', (connection) => {
+    connection.query('SET SESSION TRANSACTION READ ONLY', (error) => {
+      // Older servers (before MySQL 5.6.5 / MariaDB 10.0) do not know the statement; the account's grants still apply.
+      if (error) console.warn('HOSxP connection could not be set read-only:', error.message);
+    });
+  });
   const eligibleItemCodes = (environment.HOS_ELIGIBLE_ITEM_CODES ?? '')
     .split(',')
     .map((code) => code.trim())

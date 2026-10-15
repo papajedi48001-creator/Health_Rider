@@ -12,14 +12,14 @@ import { handleRoute } from '@/lib/route';
 export const dynamic = 'force-dynamic';
 
 const userSelect = {
-  id: true, username: true, displayName: true, role: true, active: true,
+  id: true, username: true, displayName: true, phone: true, role: true, active: true, pendingApproval: true, createdAt: true,
   riderProfile: { select: { riderCode: true, employmentCategory: true } },
 } as const;
 
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'admin');
-    const users = await db.user.findMany({ orderBy: [{ role: 'asc' }, { username: 'asc' }], select: userSelect });
+    const users = await db.user.findMany({ orderBy: [{ pendingApproval: 'desc' }, { role: 'asc' }, { username: 'asc' }], select: userSelect });
     return NextResponse.json({ users });
   });
 }

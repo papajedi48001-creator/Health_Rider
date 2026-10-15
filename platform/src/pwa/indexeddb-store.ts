@@ -118,3 +118,17 @@ export const indexedDbOfflineEventStore: OfflineEventStore = {
   save: saveOfflineEvent,
   remove: deleteOfflineEvent,
 };
+
+// Removes every offline record, its encryption key and the cached rider pages from this device.
+export async function clearOfflineData(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(databaseName);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    // Another tab still has the database open; it is deleted once that tab closes.
+    request.onblocked = () => resolve();
+  });
+  if ('caches' in globalThis) {
+    for (const name of await caches.keys()) await caches.delete(name);
+  }
+}

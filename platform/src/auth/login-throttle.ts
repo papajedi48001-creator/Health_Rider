@@ -1,32 +1,34 @@
-const maximumFailures = 10;
 const windowMs = 15 * 60 * 1000;
 
 type FailureWindow = { failures: number; startedAt: number };
 
-// Per-process limit on repeated password failures for one username. A single web container is deployed.
+// Per-process limit on repeated password failures for one key (a username or a client address).
+// A single web container is deployed.
 export class LoginThrottle {
   private readonly windows = new Map<string, FailureWindow>();
 
-  isBlocked(username: string, now: number): boolean {
-    const window = this.windows.get(username);
+  constructor(private readonly maximumFailures = 10) {}
+
+  isBlocked(key: string, now: number): boolean {
+    const window = this.windows.get(key);
     if (!window) return false;
     if (now - window.startedAt >= windowMs) {
-      this.windows.delete(username);
+      this.windows.delete(key);
       return false;
     }
-    return window.failures >= maximumFailures;
+    return window.failures >= this.maximumFailures;
   }
 
-  recordFailure(username: string, now: number): void {
-    const window = this.windows.get(username);
+  recordFailure(key: string, now: number): void {
+    const window = this.windows.get(key);
     if (!window || now - window.startedAt >= windowMs) {
-      this.windows.set(username, { failures: 1, startedAt: now });
+      this.windows.set(key, { failures: 1, startedAt: now });
       return;
     }
     window.failures += 1;
   }
 
-  reset(username: string): void {
-    this.windows.delete(username);
+  reset(key: string): void {
+    this.windows.delete(key);
   }
 }

@@ -39,6 +39,8 @@ model User {
   phone           String?           @db.VarChar(20)
   role            UserRole
   active          Boolean           @default(true)
+  // Set for a self-registered account until an admin approves or rejects it; such an account stays inactive.
+  pendingApproval Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   riderProfile    RiderProfile?

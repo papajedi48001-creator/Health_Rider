@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
-import { Icon } from '@/brand/icons';
+import { RiderLogout } from '@/rider/rider-logout';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
 import { LogoMark } from '@/brand/logo';
 import { Mascot } from '@/brand/mascot';
@@ -20,11 +20,7 @@ export async function RiderShell({ children }: { children: ReactNode }) {
           <span className="avatar avatar-small" aria-hidden="true">{session.displayName.trim().charAt(0)}</span>
           <span className="rider-user-name">{session.displayName}</span>
         </Link>
-        <form action="/api/auth/logout" method="post">
-          <button type="submit" className="rider-logout" aria-label="ออกจากระบบ">
-            <Icon name="logout" />
-          </button>
-        </form>
+        <RiderLogout />
       </header>
       {session.role === 'rider' ? (
         <>

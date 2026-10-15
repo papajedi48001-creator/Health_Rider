@@ -52,3 +52,15 @@ test('refuses a delivery without a photo and another rider\'s attempt', async ()
   await expect(syncOfflineEvent(event({ details: { eventType: 'delivered', recipientRelation: 'self' } }), rider, store)).rejects.toThrow('ต้องมีรูปหลักฐานการส่ง');
   await expect(syncOfflineEvent(event({}), { ...rider, id: 'rider-2' }, store)).rejects.toThrow('ไม่พบงานจัดส่ง');
 });
+
+test('does not reopen a finished delivery or ask for a photo, but keeps a trace in the audit trail', async () => {
+  for (const status of ['delivered', 'returned'] as const) {
+    const { state, store } = memoryStore(status);
+    await expect(syncOfflineEvent(event({ eventUuid: '22222222-2222-4222-8222-222222222222', details: { eventType: 'delivered', recipientRelation: 'self' } }), rider, store))
+      .resolves.toEqual({ kind: 'rejected' });
+    expect(state.status).toBe(status);
+    expect(state.events).toHaveLength(0);
+    expect(state.evidence).toHaveLength(0);
+    expect(state.audits).toEqual([expect.objectContaining({ action: 'delivery_attempt.event_rejected' })]);
+  }
+});

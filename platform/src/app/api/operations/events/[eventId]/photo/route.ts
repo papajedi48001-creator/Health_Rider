@@ -10,10 +10,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ eve
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
     const { eventId } = await context.params;
-    const event = await db.offlineDeliveryEvent.findUnique({ where: { id: eventId }, select: { payload: true } });
-    const photoPath = (event?.payload as Record<string, unknown> | null)?.photoPath;
-    if (typeof photoPath !== 'string') return NextResponse.json({ message: 'ไม่พบรูปหลักฐาน' }, { status: 404 });
-    const photo = await readEvidencePhoto(photoPath);
+    const event = await db.offlineDeliveryEvent.findUnique({ where: { id: eventId }, select: { eventType: true, payload: true } });
+    // Only a delivered event carries a photo, and its path is always written by the server.
+    const photoPath = event?.eventType === 'delivered' ? (event.payload as Record<string, unknown> | null)?.photoPath : undefined;
+    const photo = typeof photoPath === 'string' ? await readEvidencePhoto(photoPath) : null;
+    if (!photo) return NextResponse.json({ message: 'ไม่พบรูปหลักฐาน' }, { status: 404 });
     return new NextResponse(new Uint8Array(photo), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'no-store' } });
   });
 }
