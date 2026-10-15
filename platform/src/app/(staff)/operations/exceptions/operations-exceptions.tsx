@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
+import { EmptyState } from '@/brand/empty-state';
+import { Icon } from '@/brand/icons';
 import { conflictReasonLabels, failureReasonLabels, formatThaiDateTime, recipientRelationLabels, shortCode, statusLabels } from '@/lib/labels';
 
 type Exceptions = {
@@ -16,9 +18,10 @@ type Exceptions = {
 
 const eventLabels: Record<string, string> = { picked_up: 'รับยา', delivered: 'ส่งยาสำเร็จ', delivery_failed: 'ส่งไม่สำเร็จ' };
 
-export function OperationsExceptions({ canResolve }: { canResolve: boolean }) {
+export function OperationsExceptions({ canResolve, canReceiveReturn }: { canResolve: boolean; canReceiveReturn: boolean }) {
   const [data, setData] = useState<Exceptions | null>(null);
   const [message, setMessage] = useState('กำลังโหลด');
+  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const result = await callApi<Exceptions>('/api/operations/exceptions');
@@ -40,48 +43,118 @@ export function OperationsExceptions({ canResolve }: { canResolve: boolean }) {
     setMessage('บันทึกผลการตรวจสอบแล้ว หลักฐานเดิมยังเก็บไว้ครบ');
   }
 
+  async function receiveReturn(attemptId: string) {
+    setBusy(attemptId);
+    const result = await callApi(`/api/pharmacy/attempts/${attemptId}/return`, { json: {} });
+    setBusy(null);
+    if (!result.ok) return setMessage(result.message);
+    await load();
+    window.dispatchEvent(new Event('health-rider:counts'));
+    setMessage('รับยาคืนแล้ว เภสัชกรรมเตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง');
+  }
+
+  const returns = data?.returns ?? [];
+  const conflicts = data?.conflicts ?? [];
+
   return (
     <div>
       <p aria-live="polite">{message}</p>
-      <section aria-label="สถานะรายการ">
-        <h2>รอรับยาคืน ({data?.returns.length ?? 0})</h2>
-        <p>รายการที่ส่งไม่สำเร็จต้องได้รับการยืนยันกลับถึงเภสัชกรรมก่อนสร้าง QR ใหม่</p>
-        <ul>
-          {data?.returns.map((item) => (
-            <li key={item.id}>
-              {item.deliveryRequest.patientName} · พัสดุ {shortCode(item.id)} · {item.rider?.displayName ?? '-'} ·{' '}
-              {failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? '-'} · {formatThaiDateTime(item.failedAt)}
-            </li>
-          ))}
-        </ul>
-        <h2>หลักฐานที่รอตรวจสอบ ({data?.conflicts.length ?? 0})</h2>
-        <p>หลักฐานเดิมถูกเก็บไว้ครบถ้วน แม้ข้อมูลจัดส่งมีการแก้ไขภายหลัง</p>
-        <ul>
-          {data?.conflicts.map((conflict) => {
-            const event = conflict.offlineDeliveryEvent;
-            const relation = event.payload.recipientRelation as keyof typeof recipientRelationLabels | undefined;
-            return (
-              <li key={conflict.id}>
-                <h3>{conflict.deliveryAttempt.deliveryRequest.patientName} · พัสดุ {shortCode(conflict.deliveryAttemptId)}</h3>
-                <p>{eventLabels[event.eventType] ?? event.eventType} โดย {conflict.deliveryAttempt.rider?.displayName ?? '-'} · {conflictReasonLabels[conflict.reason] ?? conflict.reason}</p>
-                <p>บันทึกในเครื่อง {formatThaiDateTime(event.deviceCapturedAt)} · ถึงระบบ {formatThaiDateTime(event.serverReceivedAt)}</p>
-                <p>ข้อมูลจัดส่งฉบับที่ {event.deliveryVersion} (ปัจจุบันฉบับที่ {conflict.deliveryAttempt.deliveryRequest.deliveryVersion}) · สถานะก่อนหน้า {statusLabels[conflict.previousStatus]}</p>
-                {relation && <p>ผู้รับ: {recipientRelationLabels[relation] ?? relation}</p>}
-                {typeof event.payload.photoPath === 'string' && canResolve && (
-                  <p><a href={`/api/operations/events/${event.id}/photo`} target="_blank" rel="noreferrer">ดูรูปหลักฐาน</a></p>
-                )}
-                {canResolve && (
-                  <form onSubmit={(formEvent) => void resolve(formEvent, conflict.id)} aria-label="บันทึกผลการตรวจสอบ">
-                    <label><input type="radio" name="outcome" value="accept" required /> ยอมรับรายการนี้</label>
-                    <label><input type="radio" name="outcome" value="dismiss" /> ไม่ยอมรับ คงสถานะเดิม</label>
-                    <label>เหตุผล <input name="resolution" required /></label>
-                    <button type="submit">บันทึกผลการตรวจสอบ</button>
-                  </form>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      <div className="stat-row">
+        <a href="#returns" className={`stat stat-link${returns.length ? ' chip-warning' : ''}`}>
+          <span className="stat-icon"><Icon name="undo" size={22} /></span>
+          <span className="stat-body"><strong>{returns.length}</strong>รอรับยาคืน</span>
+        </a>
+        <a href="#conflicts" className={`stat stat-link${conflicts.length ? ' chip-danger' : ''}`}>
+          <span className="stat-icon"><Icon name="alert" size={22} /></span>
+          <span className="stat-body"><strong>{conflicts.length}</strong>หลักฐานรอตรวจสอบ</span>
+        </a>
+      </div>
+
+      <section id="returns" className="exception-section" aria-label="รอรับยาคืน">
+        <header className="exception-head">
+          <span className="exception-icon tone-warning"><Icon name="undo" size={22} /></span>
+          <div>
+            <h2>รอรับยาคืน <span className="count-chip">{returns.length}</span></h2>
+            <p className="muted">ส่งไม่สำเร็จแล้ว ต้องนำยากลับมาให้เภสัชกรรมยืนยันรับคืนในวันเดียวกัน ก่อนสร้าง QR ใหม่</p>
+            {!canReceiveReturn && returns.length > 0 && (
+              <p className="notice">หน้านี้ใช้ติดตาม ผู้ประสานงานหรือเภสัชกรรมเป็นผู้กดยืนยันรับยาคืนเมื่อได้รับยากลับมาแล้ว</p>
+            )}
+          </div>
+        </header>
+        {data && returns.length === 0 ? <EmptyState text="ไม่มียาที่รอรับคืน" /> : (
+          <table>
+            <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>ไรเดอร์</th><th>สาเหตุ</th><th>ส่งไม่สำเร็จเมื่อ</th>{canReceiveReturn && <th />}</tr></thead>
+            <tbody>
+              {returns.map((item) => (
+                <tr key={item.id}>
+                  <td><code>{shortCode(item.id)}</code></td>
+                  <td>{item.deliveryRequest.patientName}<br /><code>{item.deliveryRequest.hn}</code></td>
+                  <td>{item.rider?.displayName ?? '-'}</td>
+                  <td><span className="chip chip-danger">{failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? '-'}</span></td>
+                  <td>{formatThaiDateTime(item.failedAt)}</td>
+                  {canReceiveReturn && (
+                    <td>
+                      <button type="button" className="btn btn-primary btn-small" disabled={busy === item.id} onClick={() => void receiveReturn(item.id)}>
+                        {busy === item.id ? 'กำลังบันทึก' : 'ยืนยันรับยาคืน'}
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section id="conflicts" className="exception-section" aria-label="หลักฐานที่รอตรวจสอบ">
+        <header className="exception-head">
+          <span className="exception-icon tone-danger"><Icon name="alert" size={22} /></span>
+          <div>
+            <h2>หลักฐานที่รอตรวจสอบ <span className="count-chip">{conflicts.length}</span></h2>
+            <p className="muted">ไรเดอร์บันทึกขณะออฟไลน์แต่ข้อมูลไม่ตรงกับระบบ ตรวจแล้วเลือกยอมรับหรือคงสถานะเดิม หลักฐานเดิมเก็บไว้ครบ</p>
+          </div>
+        </header>
+        {data && conflicts.length === 0 ? <EmptyState text="ไม่มีหลักฐานที่รอตรวจสอบ" /> : (
+          <ul className="conflict-list">
+            {conflicts.map((conflict) => {
+              const event = conflict.offlineDeliveryEvent;
+              const relation = event.payload.recipientRelation as keyof typeof recipientRelationLabels | undefined;
+              return (
+                <li key={conflict.id} className="conflict-card">
+                  <div className="conflict-title">
+                    <h3>{conflict.deliveryAttempt.deliveryRequest.patientName}</h3>
+                    <code>พัสดุ {shortCode(conflict.deliveryAttemptId)}</code>
+                  </div>
+                  <p className="chip-row">
+                    <span className="chip chip-info">{eventLabels[event.eventType] ?? event.eventType}</span>
+                    <span className="chip chip-warning">{conflictReasonLabels[conflict.reason] ?? conflict.reason}</span>
+                  </p>
+                  <dl className="conflict-facts">
+                    <dt>ไรเดอร์</dt><dd>{conflict.deliveryAttempt.rider?.displayName ?? '-'}</dd>
+                    <dt>บันทึกในเครื่อง</dt><dd>{formatThaiDateTime(event.deviceCapturedAt)}</dd>
+                    <dt>ถึงระบบ</dt><dd>{formatThaiDateTime(event.serverReceivedAt)}</dd>
+                    <dt>ข้อมูลจัดส่ง</dt><dd>ฉบับที่ {event.deliveryVersion} (ปัจจุบันฉบับที่ {conflict.deliveryAttempt.deliveryRequest.deliveryVersion})</dd>
+                    <dt>สถานะก่อนหน้า</dt><dd>{statusLabels[conflict.previousStatus]}</dd>
+                    {relation && <><dt>ผู้รับ</dt><dd>{recipientRelationLabels[relation] ?? relation}</dd></>}
+                  </dl>
+                  {typeof event.payload.photoPath === 'string' && canResolve && (
+                    <a className="btn btn-secondary btn-small" href={`/api/operations/events/${event.id}/photo`} target="_blank" rel="noreferrer"><Icon name="image" size={18} /> ดูรูปหลักฐาน</a>
+                  )}
+                  {canResolve && (
+                    <form className="resolve-form" onSubmit={(formEvent) => void resolve(formEvent, conflict.id)} aria-label="บันทึกผลการตรวจสอบ">
+                      <div className="choice-row">
+                        <label className="choice"><input type="radio" name="outcome" value="accept" required /> ยอมรับรายการนี้</label>
+                        <label className="choice"><input type="radio" name="outcome" value="dismiss" /> ไม่ยอมรับ คงสถานะเดิม</label>
+                      </div>
+                      <label>เหตุผล <input name="resolution" required placeholder="เช่น โทรยืนยันกับไรเดอร์แล้ว" /></label>
+                      <button type="submit">บันทึกผลการตรวจสอบ</button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </div>
   );

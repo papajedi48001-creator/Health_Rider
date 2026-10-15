@@ -5,7 +5,7 @@ import { isSameBangkokDay } from '@/lib/time';
 type ReturnStore = { findReturnRequiredAttempt(attemptId: string): Promise<{ id: string; status: string; failedAt: Date | null } | null>; update(record: { id: string; status: 'returned'; returnedAt: Date }): Promise<unknown> };
 
 export async function receiveMedicationReturn(attemptId: string, pharmacist: SessionUser | null, store: ReturnStore) {
-  requireRole(pharmacist, 'pharmacy', 'admin');
+  requireRole(pharmacist, 'pharmacy', 'coordinator', 'admin');
   const attempt = await store.findReturnRequiredAttempt(attemptId);
   if (!attempt || attempt.status !== 'return_required' || !attempt.failedAt) throw new DomainError('ไม่พบงานที่รอรับยาคืน');
   const now = new Date();

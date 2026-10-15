@@ -51,13 +51,14 @@ model User {
 }
 
 model Session {
-  id        String    @id @db.Char(26)
-  tokenHash String    @unique @db.Char(64)
-  userId    String    @db.Char(26)
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id])
+  id         String    @id @db.Char(26)
+  tokenHash  String    @unique @db.Char(64)
+  userId     String    @db.Char(26)
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("sessions")

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getSessionFromCookies } from '@/auth/current-session';
+import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
 import { roleHome } from '@/auth/role-home';
 import type { UserRole } from '@/auth/roles';
 import { MainNav, type NavGroup } from '@/auth/main-nav';
@@ -42,7 +42,7 @@ function groupsFor(role: UserRole): NavGroup[] {
 // The staff frame: a sidebar on desktop that folds into a top bar with scrolling tabs on a phone.
 export async function RoleGate({ roles, children }: { roles: readonly UserRole[]; children: ReactNode }) {
   const session = await getSessionFromCookies();
-  if (!session) redirect('/login');
+  if (!session) redirect(await loginRedirectPath());
   const accountHref = session.role === 'rider' ? '/rider/profile' : '/account';
 
   return (

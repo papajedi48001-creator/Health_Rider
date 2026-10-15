@@ -16,14 +16,14 @@ export async function GET(request: NextRequest) {
       where: { createdAt: { gte: new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000) } },
       orderBy: { createdAt: 'asc' },
       select: {
-        id: true, hn: true, patientName: true, deliveryAddress: true, createdAt: true,
-        deliveryZone: { select: { id: true, displayName: true, subdistrictCode: true, subdistrictName: true } },
+        id: true, hosVisitNumber: true, hn: true, patientName: true, deliveryAddress: true, createdAt: true,
+        deliveryZone: { select: { id: true, displayName: true, subdistrictCode: true, subdistrictName: true, villageCode: true } },
         attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { id: true, status: true, failureReason: true, failedAt: true } },
       },
     });
 
     const rows = requests.map((item) => ({
-      id: item.id, hn: item.hn, patientName: item.patientName, deliveryAddress: item.deliveryAddress,
+      id: item.id, visitNumber: item.hosVisitNumber, hn: item.hn, patientName: item.patientName, deliveryAddress: item.deliveryAddress,
       zone: item.deliveryZone, createdAt: item.createdAt, latestAttempt: item.attempts[0] ?? null,
     }));
     return NextResponse.json({

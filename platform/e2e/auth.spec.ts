@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { idleSessions } from './fixtures';
 import { login } from './login';
 
 test('sends a visitor without a session to login and back after signing in', async ({ page }) => {
@@ -27,4 +28,24 @@ test('rejects a wrong password', async ({ page }) => {
   await page.getByLabel('รหัสผ่าน').fill('wrong-password');
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
   await expect(page.getByText('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')).toBeVisible();
+});
+
+test('ends a staff session when the browser closes or after 30 idle minutes', async ({ page, context }) => {
+  await login(page, 'coordinator.uat');
+  const staffCookie = (await context.cookies()).find((cookie) => cookie.name === 'health_rider_session');
+  expect(staffCookie?.expires).toBe(-1);
+
+  await idleSessions('coordinator.uat', 31);
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/login\?reason=expired$/);
+  await expect(page.getByText('หมดเวลาใช้งานหรือออกจากระบบแล้ว กรุณาเข้าสู่ระบบใหม่')).toBeVisible();
+});
+
+test('keeps a rider signed in on the phone for the shift', async ({ page, context }) => {
+  await login(page, 'rider.internal.uat');
+  const riderCookie = (await context.cookies()).find((cookie) => cookie.name === 'health_rider_session');
+  expect(riderCookie?.expires).toBeGreaterThan(Date.now() / 1000 + 11 * 60 * 60);
+  await idleSessions('rider.internal.uat', 120);
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/rider\/scan$/);
 });

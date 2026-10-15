@@ -5,7 +5,7 @@ import { employmentLabels } from '@/lib/labels';
 import { baht, NoActivity, ReportFilters, ReportSection, StatTile, useReport } from '@/reports/report-kit';
 
 type FeeReportData = {
-  totals: { deliveries: number; totalSatang: number; unpriced: number };
+  totals: { deliveries: number; totalSatang: number; unpriced: number; backfilled: number };
   byRider: Array<{ riderId: string; displayName: string; riderCode: string | null; employmentCategory: string | null; deliveries: number; totalSatang: number; unpriced: number }>;
 };
 
@@ -24,7 +24,10 @@ export function FeeReport() {
             <StatTile icon="alert" value={data.totals.unpriced} label="งานที่ยังไม่มีราคา" tone={data.totals.unpriced > 0 ? 'warning' : undefined} />
           </div>
           {data.totals.unpriced > 0 && (
-            <p className="notice">มีงานที่ส่งสำเร็จแต่โซนยังไม่ได้ตั้งราคา {data.totals.unpriced} งาน ยอดรวมยังไม่รวมงานเหล่านี้ ตั้งราคาได้ที่ <Link href="/admin/rates">ค่าบริการ</Link></p>
+            <p className="notice">มีงานที่ส่งสำเร็จแต่ทั้งโซนและตำบลยังไม่ได้ตั้งราคา {data.totals.unpriced} งาน ยอดรวมยังไม่รวมงานเหล่านี้ ตั้งราคาได้ที่ <Link href="/admin/rates">ค่าบริการ</Link></p>
+          )}
+          {data.totals.backfilled > 0 && (
+            <p className="muted">{data.totals.backfilled} งานยืนยันก่อนตั้งราคา จึงคิดตามราคาโซนหรือราคาตำบลที่ตั้งไว้ภายหลัง (ระบุไว้ในไฟล์ CSV)</p>
           )}
           {data.byRider.length === 0 ? <NoActivity /> : (
             <ReportSection title="สรุปตามไรเดอร์">

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   });
 
   const response = isFormPost ? redirectTo(next ?? roleHome(user.role)) : NextResponse.json({ redirectTo: roleHome(user.role) });
-  response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.expiresAt));
+  response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.expiresAt, user.role));
   return response;
 }
 

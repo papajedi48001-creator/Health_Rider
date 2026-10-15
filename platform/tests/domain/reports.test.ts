@@ -71,12 +71,12 @@ test('fee summary totals delivered jobs at the rate fixed on each request', () =
     { id: 'ATTEMPT00003', deliveredAt: new Date('2026-10-02T06:00:00Z'), rider: riderTwo, deliveryRequest: { rateSatang: null, deliveryZone: zoneB } },
   ]);
 
-  expect(summary.totals).toEqual({ deliveries: 3, totalSatang: 7500, unpriced: 1 });
+  expect(summary.totals).toEqual({ deliveries: 3, totalSatang: 7500, unpriced: 1, backfilled: 0 });
   expect(summary.byRider).toEqual([
     { riderId: 'R1', displayName: 'ไรเดอร์หนึ่ง', riderCode: 'R-01', employmentCategory: 'internal', deliveries: 2, totalSatang: 7500, unpriced: 0 },
     { riderId: 'R2', displayName: 'ไรเดอร์สอง', riderCode: 'R-02', employmentCategory: 'external', deliveries: 1, totalSatang: 0, unpriced: 1 },
   ]);
-  expect(summary.lines[0]).toEqual({ date: '2026-10-01', riderCode: 'R-01', displayName: 'ไรเดอร์หนึ่ง', packageCode: 'T00001', subdistrictCode: '440801', zone: 'หมู่ 1', rateSatang: 3000 });
+  expect(summary.lines[0]).toEqual({ date: '2026-10-01', riderCode: 'R-01', displayName: 'ไรเดอร์หนึ่ง', packageCode: 'T00001', subdistrictCode: '440801', zone: 'หมู่ 1', rateSatang: 3000, rateBackfilled: false });
 });
 
 test('CSV opens in Excel with Thai text and quoted commas', () => {

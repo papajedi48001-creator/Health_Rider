@@ -164,12 +164,13 @@ export function summarizeDeliveries(range: ReportRange, attempts: DeliveryInput)
   };
 }
 
-export type FeeInput = Array<{ id: string; deliveredAt: Date | null; rider: Rider | null; deliveryRequest: { rateSatang: number | null; deliveryZone: Zone } }>;
+export type FeeInput = Array<{ id: string; deliveredAt: Date | null; rider: Rider | null; deliveryRequest: { rateSatang: number | null; rateBackfilled?: boolean; deliveryZone: Zone } }>;
 
-// Admin's payout view: one fee per delivered job, at the rate fixed when pharmacy confirmed the request.
+// Admin's payout view: one fee per delivered job, at the rate fixed when pharmacy confirmed the request;
+// rateBackfilled marks a job priced afterwards from the rate table because none applied when it was confirmed.
 export function summarizeFees(attempts: FeeInput) {
   const riders = new Map<string, { rider: Rider; deliveries: number; totalSatang: number; unpriced: number }>();
-  const totals = { deliveries: 0, totalSatang: 0, unpriced: 0 };
+  const totals = { deliveries: 0, totalSatang: 0, unpriced: 0, backfilled: 0 };
   const delivered = attempts
     .filter((attempt): attempt is FeeInput[number] & { deliveredAt: Date; rider: Rider } => attempt.deliveredAt !== null && attempt.rider !== null)
     .sort((left, right) => left.deliveredAt.getTime() - right.deliveredAt.getTime());
@@ -186,6 +187,7 @@ export function summarizeFees(attempts: FeeInput) {
     } else {
       row.totalSatang += fee;
       totals.totalSatang += fee;
+      if (attempt.deliveryRequest.rateBackfilled) totals.backfilled += 1;
     }
   }
 
@@ -210,6 +212,7 @@ export function summarizeFees(attempts: FeeInput) {
       subdistrictCode: attempt.deliveryRequest.deliveryZone.subdistrictCode,
       zone: attempt.deliveryRequest.deliveryZone.displayName,
       rateSatang: attempt.deliveryRequest.rateSatang,
+      rateBackfilled: attempt.deliveryRequest.rateBackfilled === true,
     })),
   };
 }

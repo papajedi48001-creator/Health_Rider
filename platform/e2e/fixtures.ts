@@ -53,3 +53,9 @@ function crc32(data: Buffer): number {
   }
   return (crc ^ 0xffffffff) >>> 0;
 }
+
+// Makes a user's open sessions look idle for the given number of minutes.
+export async function idleSessions(username: string, minutes: number) {
+  const user = await prisma.user.findUniqueOrThrow({ where: { username } });
+  await prisma.session.updateMany({ where: { userId: user.id, revokedAt: null }, data: { lastSeenAt: new Date(Date.now() - minutes * 60 * 1000) } });
+}
