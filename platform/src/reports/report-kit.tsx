@@ -6,6 +6,7 @@ import { failureReasonLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
 import { Icon, type IconName } from '@/brand/icons';
 import { EmptyState } from '@/brand/empty-state';
+import { withBasePath } from '@/lib/base-path';
 
 export type Range = { from: string; to: string };
 
@@ -42,7 +43,7 @@ export function useReport<T>(endpoint: string) {
 
   useEffect(() => { void load(); }, [load]);
 
-  return { range, setRange, data, message, csvHref: `${endpoint}?${new URLSearchParams({ ...range, format: 'csv' })}` };
+  return { range, setRange, data, message, csvHref: withBasePath(`${endpoint}?${new URLSearchParams({ ...range, format: 'csv' })}`) };
 }
 
 export function ReportFilters({ range, onChange, csvHref }: { range: Range; onChange: (range: Range) => void; csvHref: string }) {

@@ -6,6 +6,7 @@ import { callApi } from '@/lib/api-client';
 import { EmptyState } from '@/brand/empty-state';
 import { Icon } from '@/brand/icons';
 import { conflictReasonLabels, failureReasonLabels, formatThaiDateTime, recipientRelationLabels, shortCode, statusLabels } from '@/lib/labels';
+import { withBasePath } from '@/lib/base-path';
 
 type Exceptions = {
   returns: Array<{ id: string; failedAt: string | null; failureReason: string | null; rider: { displayName: string } | null; deliveryRequest: { hn: string; patientName: string } }>;
@@ -138,7 +139,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
                     {relation && <><dt>ผู้รับ</dt><dd>{recipientRelationLabels[relation] ?? relation}</dd></>}
                   </dl>
                   {typeof event.payload.photoPath === 'string' && canResolve && (
-                    <a className="btn btn-secondary btn-small" href={`/api/operations/events/${event.id}/photo`} target="_blank" rel="noreferrer"><Icon name="image" size={18} /> ดูรูปหลักฐาน</a>
+                    <a className="btn btn-secondary btn-small" href={withBasePath(`/api/operations/events/${event.id}/photo`)} target="_blank" rel="noreferrer"><Icon name="image" size={18} /> ดูรูปหลักฐาน</a>
                   )}
                   {canResolve && (
                     <form className="resolve-form" onSubmit={(formEvent) => void resolve(formEvent, conflict.id)} aria-label="บันทึกผลการตรวจสอบ">

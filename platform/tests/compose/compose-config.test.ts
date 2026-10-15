@@ -14,10 +14,10 @@ function hasDockerCompose(): boolean {
   }
 }
 
-function composeConfig(environment: Record<string, string>) {
+function composeConfig(environment: Record<string, string>, file = 'compose.yaml') {
   mkdirSync(dockerConfig, { recursive: true });
   return JSON.parse(
-    execFileSync('docker', ['--config', dockerConfig, 'compose', '-f', 'compose.yaml', 'config', '--format', 'json'], {
+    execFileSync('docker', ['--config', dockerConfig, 'compose', '-f', file, 'config', '--format', 'json'], {
       cwd: process.cwd(),
       encoding: 'utf8',
       env: { ...process.env, ...environment },
@@ -44,4 +44,18 @@ test.skipIf(!hasDockerCompose())('refuses default database passwords and keeps p
   const config = composeConfig(required);
   expect(config.services.web.ports[0].host_ip).toBe('127.0.0.1');
   expect(config.services.web.environment.DATABASE_URL).toBe(`mysql://health_rider:${'p'.repeat(20)}@db:3306/health_rider`);
+});
+
+const production = { AUTH_SECRET: 'a'.repeat(32), DATABASE_URL: `mysql://health_rider:${'p'.repeat(20)}@192.168.1.254:3306/health_rider`, WEB_PUBLISH: '', NEXT_PUBLIC_BASE_PATH: '' };
+
+test.skipIf(!hasDockerCompose())('production uses the hospital database server and serves under /health-rider', () => {
+  const config = composeConfig(production, 'compose.production.yaml');
+
+  expect(Object.keys(config.services).sort()).toEqual(['migrate', 'web']);
+  expect(config.services.web.environment.DATABASE_URL).toBe(production.DATABASE_URL);
+  expect(config.services.web.build.args.NEXT_PUBLIC_BASE_PATH).toBe('/health-rider');
+  expect(config.services.migrate.build.args.NEXT_PUBLIC_BASE_PATH).toBe('/health-rider');
+  expect(config.services.web.ports[0].host_ip).toBe('127.0.0.1');
+  expect(() => composeConfig({ ...production, DATABASE_URL: '' }, 'compose.production.yaml')).toThrow();
+  expect(() => composeConfig({ ...production, AUTH_SECRET: '' }, 'compose.production.yaml')).toThrow();
 });

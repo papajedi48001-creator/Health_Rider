@@ -1,5 +1,7 @@
 # คู่มือตั้งค่า Staging/Production
 
+ขั้นตอนขึ้นระบบจริงที่ `waritch-hosp.moph.go.th/health-rider` กับ MariaDB 192.168.1.254 อยู่ใน [production-waritch-hosp.md](production-waritch-hosp.md)
+
 ## Staging
 
 1. สร้าง host และ MariaDB แยกจาก production; จำกัด network ให้เฉพาะผู้ดูแล

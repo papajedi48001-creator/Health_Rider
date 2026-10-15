@@ -12,6 +12,7 @@ import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
 import { Icon } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
 import { statusTone } from '@/lib/status-tone';
+import { withBasePath } from '@/lib/base-path';
 
 type AttemptView = {
   id: string;
@@ -42,7 +43,7 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch(`/api/rider/attempts/${attemptId}`, { cache: 'no-store' });
+      const response = await fetch(withBasePath(`/api/rider/attempts/${attemptId}`), { cache: 'no-store' });
       if (!response.ok) {
         if (response.status === 404) await deleteAttemptView(attemptId).catch(() => undefined);
         setLoadError(response.status === 404 ? 'ไม่พบงานจัดส่งนี้ หรือไม่ใช่งานที่คุณรับไว้' : 'โหลดข้อมูลงานไม่สำเร็จ');

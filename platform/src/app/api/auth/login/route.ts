@@ -5,6 +5,7 @@ import { roleHome, safeNextPath } from '@/auth/role-home';
 import { sessionCookieName, startSession, verifyLoginPassword } from '@/auth/session';
 import { writeAuditEvent } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
+import { withBasePath } from '@/lib/base-path';
 import { db } from '@/lib/db';
 import { getAuthSecret } from '@/lib/env';
 import { readJsonBody } from '@/lib/http';
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
 }
 
 function redirectTo(location: string) {
-  return new NextResponse(null, { status: 303, headers: { location } });
+  // Paths here are the app's own routes; the browser needs them under the base path.
+  return new NextResponse(null, { status: 303, headers: { location: withBasePath(location) } });
 }
 

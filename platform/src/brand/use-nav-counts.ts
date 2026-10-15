@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { withBasePath } from '@/lib/base-path';
 
 const refreshMs = 60_000;
 
@@ -14,7 +15,7 @@ export function useNavCounts(): Record<string, number> {
     let current = true;
     const load = () => {
       if (!navigator.onLine) return;
-      void fetch('/api/nav-counts', { cache: 'no-store' })
+      void fetch(withBasePath('/api/nav-counts'), { cache: 'no-store' })
         .then((response) => (response.ok ? response.json() : null))
         .then((body: { counts: Record<string, number> } | null) => { if (current && body) setCounts(body.counts); })
         .catch(() => undefined);

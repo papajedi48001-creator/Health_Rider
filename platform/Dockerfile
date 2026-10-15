@@ -11,6 +11,9 @@ RUN npm ci
 FROM base AS build
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
+# Path the app is served under, such as /health-rider; empty serves it at the root. Fixed at build time.
+ARG NEXT_PUBLIC_BASE_PATH=""
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 RUN npx prisma generate && npm run build
 
 # One-shot image that applies migrations (and optionally seeds UAT data) before the web service starts.

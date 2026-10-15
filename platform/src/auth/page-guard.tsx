@@ -9,6 +9,7 @@ import { roleLabels } from '@/lib/labels';
 import { Brand } from '@/brand/logo';
 import { Icon, type IconName } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
+import { withBasePath } from '@/lib/base-path';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
@@ -61,7 +62,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
             <span className="avatar avatar-small" aria-hidden="true">{session.displayName.trim().charAt(0)}</span>
             <span className="user-text"><strong>{session.displayName}</strong><small>{roleLabels[session.role]}</small></span>
           </Link>
-          <form action="/api/auth/logout" method="post">
+          <form action={withBasePath('/api/auth/logout')} method="post">
             <button type="submit" className="icon-button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><Icon name="logout" size={20} /></button>
           </form>
         </div>
