@@ -499,3 +499,4 @@ tr.row-quiet td { color: var(--muted); }
 @media (max-width: 720px) {
   .report-section td, .report-section th { white-space: nowrap; }
 }
+.filter-bar .check-label { align-self: end; min-height: 44px; }

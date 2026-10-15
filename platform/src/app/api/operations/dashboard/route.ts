@@ -9,7 +9,10 @@ import { bangkokDateString, startOfBangkokDay } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 
-// Attempts prepared on one Thai day, optionally narrowed by status or zone.
+// Jobs still moving, matching the menu count, so work from an earlier day is not lost from view.
+const openStatuses: DeliveryAttemptStatus[] = ['prepared', 'claimed', 'in_transit', 'sync_review', 'return_required'];
+
+// Attempts prepared on one Thai day, plus any still open from other days when includeOpen=1, optionally narrowed by status or zone.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'coordinator', 'admin', 'auditor');
@@ -20,8 +23,9 @@ export async function GET(request: NextRequest) {
     const dayStart = startOfBangkokDay(date);
     if (!dayStart || (status && !deliveryAttemptStatuses.includes(status as DeliveryAttemptStatus))) return invalidInput('ตัวกรองไม่ถูกต้อง');
 
+    const onDay = { createdAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) } };
     const where: Prisma.DeliveryAttemptWhereInput = {
-      createdAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) },
+      ...(params.get('includeOpen') === '1' ? { OR: [onDay, { status: { in: openStatuses } }] } : onDay),
       ...(status ? { status: status as DeliveryAttemptStatus } : {}),
       ...(zoneId ? { deliveryRequest: { deliveryZoneId: zoneId } } : {}),
     };
