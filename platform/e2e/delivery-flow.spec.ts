@@ -159,3 +159,25 @@ test('prints QR labels for the ticked patients in one go', async ({ browser }) =
   await expect(pharmacy.page.getByRole('listitem').filter({ hasText: names[0] })).toHaveCount(0);
   await pharmacy.context.close();
 });
+
+test('lets admin receive returned medication from the exceptions page, while coordinator only follows it', async ({ browser }) => {
+  const patientName = `ผู้ป่วยรับคืนจากหน้าตรวจสอบ ${Date.now()}`;
+  const { attemptId, pharmacy, rider } = await prepareAndClaim(browser, patientName);
+  await rider.page.getByLabel('เหตุผล').selectOption('recipient_unavailable');
+  await rider.page.getByRole('button', { name: 'บันทึกส่งไม่สำเร็จ' }).click();
+  await expect(rider.page.getByText('นำยากลับมาคืนเภสัชกรรมภายในวันนี้')).toBeVisible();
+
+  const coordinator = await signedIn(browser, 'coordinator.uat');
+  await coordinator.page.goto('/operations/exceptions');
+  const returns = coordinator.page.getByRole('region', { name: 'รอรับยาคืน' });
+  await expect(returns.getByRole('row').filter({ hasText: patientName })).toBeVisible();
+  await expect(returns).toContainText('เภสัชกรรมเป็นผู้กดยืนยันรับยาคืนที่เมนู “รอรับยาคืน”');
+  await expect(returns.getByRole('button', { name: 'ยืนยันรับยาคืน' })).toHaveCount(0);
+
+  const admin = await signedIn(browser, 'admin.uat');
+  await admin.page.goto('/operations/exceptions');
+  await admin.page.getByRole('row').filter({ hasText: patientName }).getByRole('button', { name: 'ยืนยันรับยาคืน' }).click();
+  await expect(admin.page.getByText('รับยาคืนแล้ว เภสัชกรรมเตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง')).toBeVisible();
+  expect(await attemptStatus(attemptId)).toBe('returned');
+  await Promise.all([pharmacy, rider, coordinator, admin].map((session) => session.context.close()));
+});

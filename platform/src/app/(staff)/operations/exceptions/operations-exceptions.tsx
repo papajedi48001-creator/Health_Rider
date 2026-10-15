@@ -18,9 +18,10 @@ type Exceptions = {
 
 const eventLabels: Record<string, string> = { picked_up: 'รับยา', delivered: 'ส่งยาสำเร็จ', delivery_failed: 'ส่งไม่สำเร็จ' };
 
-export function OperationsExceptions({ canResolve }: { canResolve: boolean }) {
+export function OperationsExceptions({ canResolve, canReceiveReturn }: { canResolve: boolean; canReceiveReturn: boolean }) {
   const [data, setData] = useState<Exceptions | null>(null);
   const [message, setMessage] = useState('กำลังโหลด');
+  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const result = await callApi<Exceptions>('/api/operations/exceptions');
@@ -40,6 +41,16 @@ export function OperationsExceptions({ canResolve }: { canResolve: boolean }) {
     if (!result.ok) return setMessage(result.message);
     await load();
     setMessage('บันทึกผลการตรวจสอบแล้ว หลักฐานเดิมยังเก็บไว้ครบ');
+  }
+
+  async function receiveReturn(attemptId: string) {
+    setBusy(attemptId);
+    const result = await callApi(`/api/pharmacy/attempts/${attemptId}/return`, { json: {} });
+    setBusy(null);
+    if (!result.ok) return setMessage(result.message);
+    await load();
+    window.dispatchEvent(new Event('health-rider:counts'));
+    setMessage('รับยาคืนแล้ว เภสัชกรรมเตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง');
   }
 
   const returns = data?.returns ?? [];
@@ -65,11 +76,14 @@ export function OperationsExceptions({ canResolve }: { canResolve: boolean }) {
           <div>
             <h2>รอรับยาคืน <span className="count-chip">{returns.length}</span></h2>
             <p className="muted">ส่งไม่สำเร็จแล้ว ต้องนำยากลับมาให้เภสัชกรรมยืนยันรับคืนในวันเดียวกัน ก่อนสร้าง QR ใหม่</p>
+            {!canReceiveReturn && returns.length > 0 && (
+              <p className="notice">หน้านี้ใช้ติดตาม เภสัชกรรมเป็นผู้กดยืนยันรับยาคืนที่เมนู “รอรับยาคืน” เมื่อได้รับยากลับมาแล้ว</p>
+            )}
           </div>
         </header>
         {data && returns.length === 0 ? <EmptyState text="ไม่มียาที่รอรับคืน" /> : (
           <table>
-            <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>ไรเดอร์</th><th>สาเหตุ</th><th>ส่งไม่สำเร็จเมื่อ</th></tr></thead>
+            <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>ไรเดอร์</th><th>สาเหตุ</th><th>ส่งไม่สำเร็จเมื่อ</th>{canReceiveReturn && <th />}</tr></thead>
             <tbody>
               {returns.map((item) => (
                 <tr key={item.id}>
@@ -78,6 +92,13 @@ export function OperationsExceptions({ canResolve }: { canResolve: boolean }) {
                   <td>{item.rider?.displayName ?? '-'}</td>
                   <td><span className="chip chip-danger">{failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? '-'}</span></td>
                   <td>{formatThaiDateTime(item.failedAt)}</td>
+                  {canReceiveReturn && (
+                    <td>
+                      <button type="button" className="btn btn-primary btn-small" disabled={busy === item.id} onClick={() => void receiveReturn(item.id)}>
+                        {busy === item.id ? 'กำลังบันทึก' : 'ยืนยันรับยาคืน'}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
