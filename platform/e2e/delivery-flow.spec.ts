@@ -33,7 +33,7 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await row.getByRole('button', { name: 'เตรียมพัสดุและออก QR' }).click();
   const prepared = await (await preparedResponse).json();
   await expect(pharmacy.page.getByRole('img', { name: /QR พัสดุ/ })).toBeVisible();
-  await expect(pharmacy.page.getByLabel('ฉลาก QR พัสดุ')).not.toContainText(patientName);
+  await expect(pharmacy.page.getByLabel('ฉลาก QR พัสดุ')).toContainText(patientName);
 
   const rider = await signedIn(browser, 'rider.internal.uat');
   await rider.page.goto('/rider/scan');
@@ -140,4 +140,22 @@ test('opens a claimed job without signal and records pickup and delivery to send
   await expect(rider.page.getByRole('status')).toContainText('ส่งข้อมูลที่ค้างไว้แล้ว 2 รายการ');
   await expect(rider.page.getByText('สถานะ: ส่งสำเร็จ')).toBeVisible();
   expect(await attemptStatus(attemptId)).toBe('delivered');
+});
+
+test('prints QR labels for the ticked patients in one go', async ({ browser }) => {
+  const names = [`ผู้ป่วยพิมพ์รวม ก ${Date.now()}`, `ผู้ป่วยพิมพ์รวม ข ${Date.now()}`];
+  for (const name of names) await createDeliveryRequest(name);
+
+  const pharmacy = await signedIn(browser, 'pharmacy.uat');
+  await pharmacy.page.goto('/pharmacy/packages');
+  for (const name of names) await pharmacy.page.getByLabel(`เลือกพิมพ์ ${name}`).check();
+  await pharmacy.page.getByRole('button', { name: 'เตรียมพัสดุและพิมพ์ QR ที่เลือก (2)' }).click();
+
+  const sheet = pharmacy.page.getByLabel('ฉลาก QR พัสดุ');
+  await expect(sheet.getByRole('heading', { name: 'ฉลาก QR พัสดุ 2 ชิ้น' })).toBeVisible();
+  await expect(sheet.getByRole('article')).toHaveCount(2);
+  for (const name of names) await expect(sheet.getByRole('article').filter({ hasText: name }).getByRole('img', { name: /QR พัสดุ/ })).toBeVisible();
+  await expect(sheet).toContainText('หากไม่มีผู้รับกรุณานำส่งคืน รพ.วาริชภูมิ');
+  await expect(pharmacy.page.getByRole('listitem').filter({ hasText: names[0] })).toHaveCount(0);
+  await pharmacy.context.close();
 });

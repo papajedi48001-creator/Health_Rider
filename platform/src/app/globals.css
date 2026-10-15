@@ -291,12 +291,47 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .celebrate .mascot img { width: 160px; height: auto; }
 .celebrate strong { color: var(--success); font-size: 1.1rem; }
 
+/* Pharmacy queues: tick people one by one or a whole zone, then issue and print their labels together. */
+.select-bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 10px; border-radius: var(--radius-control); background: #f5f8fa; }
+.select-bar label { font-weight: 600; }
+.pick-list li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 14px; }
+.pick-list li > p { margin: 0; grid-column: 2; }
+.pick-list li > button { grid-column: 3; grid-row: 1 / span 2; }
+.pick-list .pick { grid-row: 1 / span 2; font-size: 0.85rem; color: var(--muted); }
+@media (max-width: 640px) {
+  .pick-list li { grid-template-columns: auto 1fr; }
+  .pick-list li > button { grid-column: 1 / -1; grid-row: auto; }
+}
+
+/* Shipping labels: dashed cut lines, recipient on the left, QR and visit number on the right. */
+.label-sheet { display: grid; gap: 12px; margin: 12px 0 20px; }
+.label-toolbar { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
+.label-toolbar h2 { margin: 0; }
+.label-toolbar p { margin: 0; flex: 1 1 260px; color: var(--muted); }
+.label-actions { display: flex; gap: 8px; }
+.label-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.parcel-label { display: grid; gap: 8px; padding: 12px 14px; border: 1.5px dashed #9aa4b2; border-radius: 6px; background: #fff; color: #111; break-inside: avoid; }
+.parcel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.parcel-head > strong { text-decoration: underline; }
+.parcel-code { padding: 2px 8px; border: 1px solid #cbd2db; border-radius: 4px; background: #f6f7f9; font-weight: 700; color: #111; }
+.parcel-body { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+.parcel-to { display: grid; gap: 4px; min-width: 0; }
+.parcel-name { font-size: 1.3rem; line-height: 1.3; }
+.parcel-address { font-size: 1.05rem; line-height: 1.45; overflow-wrap: anywhere; }
+.parcel-qr { display: grid; justify-items: center; gap: 2px; }
+.parcel-qr img { width: 112px; height: 112px; }
+.parcel-qr strong { font-size: 0.9rem; letter-spacing: 0.02em; }
+.parcel-foot { padding-top: 6px; border-top: 1px solid #d5dae1; text-align: center; font-size: 0.78rem; font-weight: 700; }
+.parcel-label .qr-token { font-size: 0.62rem; color: #555; text-align: center; }
+
 @media print {
-  header, button, p { display: none; }
-  p.qr-token { display: block; }
-  .staff-app { display: block; }
-  section[aria-label='ฉลาก QR พัสดุ'] { border: 0; box-shadow: none; }
-  main > *:not(div), main > div > *:not(section[aria-label='ฉลาก QR พัสดุ']) { display: none; }
+  @page { size: A4; margin: 10mm; }
+  body * { visibility: hidden; }
+  .label-sheet, .label-sheet * { visibility: visible; }
+  .label-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; background: none; }
+  .label-toolbar { display: none; }
+  .label-grid { grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .parcel-label { border-color: #555; }
 }
 .outcome-delivered { color: var(--success); font-weight: 700; }
 .outcome-failed { color: var(--danger); font-weight: 700; }
