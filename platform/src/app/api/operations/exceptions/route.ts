@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin', 'auditor');
+    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
     const [returns, conflicts] = await Promise.all([
       db.deliveryAttempt.findMany({
         where: { status: 'return_required' },

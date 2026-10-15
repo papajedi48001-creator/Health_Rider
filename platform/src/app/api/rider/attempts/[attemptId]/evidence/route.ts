@@ -20,6 +20,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ att
       return NextResponse.json({ message: 'ไม่พบรูปหลักฐาน' }, { status: 404 });
     }
     const photo = await readEvidencePhoto(evidence.photoPath);
+    if (!photo) return NextResponse.json({ message: 'ไม่พบรูปหลักฐาน' }, { status: 404 });
     return new NextResponse(new Uint8Array(photo), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'no-store, private' } });
   });
 }

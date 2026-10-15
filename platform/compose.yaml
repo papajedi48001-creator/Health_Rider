@@ -5,8 +5,8 @@ services:
     environment:
       MARIADB_DATABASE: ${MARIADB_DATABASE:-health_rider}
       MARIADB_USER: ${MARIADB_USER:-health_rider}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-health_rider-development-only}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-health-rider-root-development-only}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?Set MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD}
     volumes:
       - health-rider-db:/var/lib/mysql
     healthcheck:
@@ -26,7 +26,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:-mysql://health_rider:health_rider-development-only@db:3306/health_rider}
+      DATABASE_URL: ${DATABASE_URL:-mysql://${MARIADB_USER:-health_rider}:${MARIADB_PASSWORD:?Set MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-health_rider}}
       SEED_UAT_PASSWORD: ${SEED_UAT_PASSWORD:-}
       SEED_ZONES_FILE: ${SEED_ZONES_FILE:-}
 
@@ -42,14 +42,16 @@ services:
         condition: service_completed_successfully
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-mysql://health_rider:health_rider-development-only@db:3306/health_rider}
+      DATABASE_URL: ${DATABASE_URL:-mysql://${MARIADB_USER:-health_rider}:${MARIADB_PASSWORD:?Set MARIADB_PASSWORD}@db:3306/${MARIADB_DATABASE:-health_rider}}
       HOS_DATABASE_URL: ${HOS_DATABASE_URL:-}
       HOS_ELIGIBLE_ITEM_CODES: ${HOS_ELIGIBLE_ITEM_CODES:-}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET to a random value of at least 32 characters}
       EVIDENCE_STORAGE_PATH: /app/data/evidence
       SESSION_COOKIE_INSECURE: ${SESSION_COOKIE_INSECURE:-}
     ports:
-      - "3000:3000"
+      # Only this machine reaches the app over plain HTTP; phones and other PCs go through the https service.
+      # For a short HTTP-only LAN test set WEB_PUBLISH=3000 (with SESSION_COOKIE_INSECURE=true); never in production.
+      - "${WEB_PUBLISH:-127.0.0.1:3000}:3000"
     volumes:
       - health-rider-evidence:/app/data/evidence
 

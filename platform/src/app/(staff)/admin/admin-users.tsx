@@ -6,7 +6,10 @@ import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
 import { roleLabels } from '@/lib/labels';
 
-type User = { id: string; username: string; displayName: string; role: UserRole; active: boolean; riderProfile: { riderCode: string; employmentCategory: string } | null };
+type User = {
+  id: string; username: string; displayName: string; phone: string | null; role: UserRole; active: boolean; pendingApproval: boolean; createdAt: string;
+  riderProfile: { riderCode: string; employmentCategory: string } | null;
+};
 
 
 export function AdminUsers() {
@@ -41,6 +44,22 @@ export function AdminUsers() {
     setMessage(done);
   }
 
+  async function decide(user: User, json: Record<string, unknown>, done: string) {
+    const result = await callApi(`/api/admin/users/${user.id}/approval`, { json });
+    if (!result.ok) return setMessage(result.message);
+    await load();
+    setMessage(done);
+  }
+
+  function reject(user: User) {
+    if (window.confirm(`ไม่อนุมัติคำขอของ ${user.displayName} (${user.username})?`)) {
+      void decide(user, { decision: 'reject' }, `ไม่อนุมัติ ${user.username} แล้ว`);
+    }
+  }
+
+  const pending = users.filter((user) => user.pendingApproval);
+  const accounts = users.filter((user) => !user.pendingApproval);
+
   function resetPassword(user: User) {
     const password = window.prompt(`รหัสผ่านใหม่ของ ${user.username} (อย่างน้อย ${minimumPasswordLength} ตัวอักษร)`);
     if (password) void update(user, { password }, `ตั้งรหัสผ่านใหม่ให้ ${user.username} แล้ว และออกจากระบบทุกเครื่อง`);
@@ -50,6 +69,13 @@ export function AdminUsers() {
     <section aria-labelledby="admin-users">
       <h2 id="admin-users">บัญชีผู้ใช้</h2>
       <p aria-live="polite">{message}</p>
+      {pending.length > 0 && (
+        <section aria-labelledby="pending-registrations">
+          <h3 id="pending-registrations">คำขอสมัครรออนุมัติ ({pending.length})</h3>
+          <p>ตรวจสอบตัวตนทางโทรศัพท์ก่อนอนุมัติ เลือกบทบาทที่จะให้ใช้งานได้ ไรเดอร์ต้องกำหนดรหัสไรเดอร์และประเภท</p>
+          {pending.map((user) => <PendingRegistration key={user.id} user={user} onApprove={(json) => void decide(user, { decision: 'approve', ...json }, `อนุมัติ ${user.username} แล้ว`)} onReject={() => reject(user)} />)}
+        </section>
+      )}
       <form onSubmit={(event) => void create(event)} aria-label="สร้างบัญชี">
         <label>ชื่อผู้ใช้ <input name="username" required pattern="[a-z0-9._\-]{3,100}" /></label>
         <label>ชื่อที่แสดง <input name="displayName" required /></label>
@@ -77,7 +103,7 @@ export function AdminUsers() {
       <table>
         <thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>บทบาท</th><th>ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
         <tbody>
-          {users.map((user) => (
+          {accounts.map((user) => (
             <tr key={user.id}>
               <td><code>{user.username}</code></td>
               <td>{user.displayName}</td>
@@ -95,5 +121,43 @@ export function AdminUsers() {
         </tbody>
       </table>
     </section>
+  );
+}
+
+function PendingRegistration({ user, onApprove, onReject }: { user: User; onApprove: (json: Record<string, unknown>) => void; onReject: () => void }) {
+  const [role, setRole] = useState<UserRole>(user.role);
+
+  function approve(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onApprove(Object.fromEntries(new FormData(event.currentTarget)));
+  }
+
+  return (
+    <form onSubmit={approve} aria-label={`คำขอของ ${user.username}`}>
+      <p>
+        <strong>{user.displayName}</strong> <code>{user.username}</code> โทร {user.phone ?? '-'} · ขอใช้งานเป็น {roleLabels[user.role]}
+        {' '}· สมัครเมื่อ {new Date(user.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+      </p>
+      <label>
+        บทบาทที่อนุมัติ
+        <select name="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
+          {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
+        </select>
+      </label>
+      {role === 'rider' && (
+        <>
+          <label>รหัสไรเดอร์ <input name="riderCode" required /></label>
+          <label>
+            ประเภทไรเดอร์
+            <select name="employmentCategory" defaultValue="internal">
+              <option value="internal">เจ้าหน้าที่โรงพยาบาล</option>
+              <option value="external">ผู้รับจ้างภายนอก</option>
+            </select>
+          </label>
+        </>
+      )}
+      <button type="submit">อนุมัติ</button>
+      <button type="button" onClick={onReject}>ไม่อนุมัติ</button>
+    </form>
   );
 }

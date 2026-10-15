@@ -5,7 +5,7 @@ import { requireRole } from '@/auth/require-role';
 import { audit } from '@/domain/audit/write-audit-event';
 import { parseOfflineEventDetails } from '@/domain/delivery/offline-event-rules';
 import { newPublicId, type DeliveryAttemptStatus } from '@/domain/delivery/status';
-import { syncOfflineEvent } from '@/domain/delivery/sync-offline-event';
+import { closedAttemptStatuses, syncOfflineEvent } from '@/domain/delivery/sync-offline-event';
 import { InvalidEvidencePhotoError, saveEvidencePhoto } from '@/evidence/photo-storage';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
@@ -24,11 +24,14 @@ export async function POST(request: NextRequest) {
     const deviceCapturedAt = new Date(event.deviceCapturedAt);
     if (!details || Number.isNaN(deviceCapturedAt.getTime())) return invalidInput('ข้อมูลการบันทึกออฟไลน์ไม่ถูกต้อง');
 
-    const owned = await db.deliveryAttempt.findFirst({ where: { id: event.attemptId, riderId: rider.id }, select: { id: true } });
+    const owned = await db.deliveryAttempt.findFirst({ where: { id: event.attemptId, riderId: rider.id }, select: { id: true, status: true } });
     if (!owned) return NextResponse.json({ message: 'ไม่พบงานจัดส่ง' }, { status: 404 });
+    // A resend of an acknowledged event, or any event for a finished job, stores no new photo.
+    const alreadyRecorded = await db.offlineDeliveryEvent.findUnique({ where: { eventUuid_riderId: { eventUuid: event.eventUuid, riderId: rider.id } }, select: { id: true } });
+    const acceptsPhoto = !alreadyRecorded && !closedAttemptStatuses.includes(owned.status);
 
     let photoPath: string | null = null;
-    if (details.eventType === 'delivered') {
+    if (details.eventType === 'delivered' && acceptsPhoto) {
       if (typeof event.payload.photo !== 'string') return invalidInput('ต้องมีรูปหลักฐานการส่ง');
       try {
         photoPath = await saveEvidencePhoto(event.attemptId, event.eventUuid, event.payload.photo);
@@ -38,8 +41,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // The photo is kept on the evidence volume, never inside the event row.
-    const { photo: _photo, ...storedPayload } = event.payload;
+    // Only the fields the event type defines are kept; the photo stays on the evidence volume.
+    const { eventType: _eventType, ...storedPayload } = details;
     const outcome = await db.$transaction(async (tx) => syncOfflineEvent(
       { eventUuid: event.eventUuid, attemptId: event.attemptId, deliveryVersion: event.deliveryVersion, deviceCapturedAt, details, photoPath },
       rider,

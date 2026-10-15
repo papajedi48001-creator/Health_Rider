@@ -12,6 +12,11 @@
 {$HTTPS_HOST:localhost} {
 	tls internal
 	encode gzip
+	header {
+		# Phones that have opened the site over HTTPS keep using HTTPS. Kept to 30 days because the
+		# certificate comes from Caddy's own CA on a LAN host.
+		Strict-Transport-Security "max-age=2592000"
+	}
 	request_body {
 		# Delivered-attempt syncs carry an evidence photo.
 		max_size 10MB

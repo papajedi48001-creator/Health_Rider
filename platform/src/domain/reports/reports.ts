@@ -217,9 +217,11 @@ export function summarizeFees(attempts: FeeInput) {
   };
 }
 
+// Text that a spreadsheet would read as a formula (=, +, -, @, tab, CR) gets a leading apostrophe,
+// because names such as a rider's display name are typed by users. Numbers are written as they are.
 function csvCell(value: string | number | null): string {
   if (value === null) return '';
-  const text = String(value);
+  const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 

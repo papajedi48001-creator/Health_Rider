@@ -15,7 +15,7 @@ const openStatuses: DeliveryAttemptStatus[] = ['prepared', 'claimed', 'in_transi
 // Attempts prepared on one Thai day, plus any still open from other days when includeOpen=1, optionally narrowed by status or zone.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin', 'auditor');
+    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
     const params = request.nextUrl.searchParams;
     const status = params.get('status');
     const zoneId = params.get('zoneId');

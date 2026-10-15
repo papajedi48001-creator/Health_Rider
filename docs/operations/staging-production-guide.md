@@ -8,8 +8,9 @@
 4. บัญชี HOSxP ต้องมี `SELECT` เท่านั้นและจำกัด network source
 5. รัน `docker compose up -d --build`; service `migrate` จะรัน `prisma migrate deploy` ให้เสร็จก่อน `web` เริ่มทำงาน
 6. สร้างบัญชีและโซน UAT ด้วย `docker compose run --rm -e SEED_UAT_PASSWORD -e SEED_ZONES_FILE migrate npm run db:seed` แล้วทำ UAT ตาม checklist
-7. Cookie ของ session ตั้งค่า `Secure` ใน production จึงต้องเข้าผ่าน HTTPS (reverse proxy; สำหรับ staging ใช้ `docker compose --profile https` ตาม [https-staging.md](https-staging.md)) ยกเว้นการทดสอบบน `localhost`; ถ้าจำเป็นต้องลองผ่าน HTTP ด้วย IP ในวง LAN ชั่วคราว ตั้ง `SESSION_COOKIE_INSECURE=true` (กล้องสแกน QR และโหมดออฟไลน์ของ rider ยังต้องใช้ HTTPS)
-8. Reverse proxy ต้องรับ request body ได้อย่างน้อย 5 MB (เช่น nginx `client_max_body_size 5m;`) เพราะการ sync ส่งยาสำเร็จแนบรูปหลักฐานมาด้วย
+7. Cookie ของ session ตั้งค่า `Secure` ใน production จึงต้องเข้าผ่าน HTTPS (reverse proxy; สำหรับ staging ใช้ `docker compose --profile https` ตาม [https-staging.md](https-staging.md)) ยกเว้นการทดสอบบน `localhost`; ถ้าจำเป็นต้องลองผ่าน HTTP ด้วย IP ในวง LAN ชั่วคราว ตั้ง `WEB_PUBLISH=3000` และ `SESSION_COOKIE_INSECURE=true` (กล้องสแกน QR และโหมดออฟไลน์ของ rider ยังต้องใช้ HTTPS) ค่าเริ่มต้นของพอร์ต 3000 เปิดเฉพาะเครื่องนี้ (`127.0.0.1`) เพื่อไม่ให้ใครในวง LAN ส่งรหัสผ่านผ่าน HTTP ข้าม HTTPS ได้ **ห้ามใช้สองค่านี้ใน production** และต้องตั้ง `MARIADB_PASSWORD`/`MARIADB_ROOT_PASSWORD` เป็นค่าสุ่มยาว (compose จะไม่ยอมเริ่มถ้าไม่ได้ตั้ง)
+8. ก่อนเปิดใช้งานจริง ให้ปิดหรือเปลี่ยนรหัสผ่านบัญชี `*.uat` ทั้งหมด เพราะ seed ตั้งรหัสเดียวกันทุกบัญชีรวมถึง admin
+9. Reverse proxy ต้องรับ request body ได้อย่างน้อย 5 MB (เช่น nginx `client_max_body_size 5m;`) เพราะการ sync ส่งยาสำเร็จแนบรูปหลักฐานมาด้วย
 
 ## Production gate
 

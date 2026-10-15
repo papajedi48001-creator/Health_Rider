@@ -12,7 +12,7 @@ export type OfflineDeliveryEventInput = {
   photoPath: string | null;
 };
 
-export type SyncOutcome = { kind: 'duplicate' } | { kind: 'applied'; status: DeliveryAttemptStatus } | { kind: 'conflict'; reason: ConflictReason };
+export type SyncOutcome = { kind: 'duplicate' } | { kind: 'rejected' } | { kind: 'applied'; status: DeliveryAttemptStatus } | { kind: 'conflict'; reason: ConflictReason };
 
 // All calls run inside one database transaction that has locked the attempt row.
 export type OfflineEventStore = {
@@ -31,12 +31,23 @@ export class AttemptNotFoundError extends DomainError {
   }
 }
 
+// A delivered or returned attempt is finished: later events cannot reopen it or replace its evidence.
+export const closedAttemptStatuses: readonly DeliveryAttemptStatus[] = ['delivered', 'returned'];
+
 export async function syncOfflineEvent(event: OfflineDeliveryEventInput, rider: SessionUser | null, store: OfflineEventStore): Promise<SyncOutcome> {
   const actor = requireRole(rider, 'rider');
-  if (event.details.eventType === 'delivered' && !event.photoPath) throw new DomainError('ต้องมีรูปหลักฐานการส่ง');
   const attempt = await store.lockRiderAttempt(event.attemptId, actor.id);
   if (!attempt) throw new AttemptNotFoundError();
   if (await store.findByUuid(event.eventUuid, actor.id)) return { kind: 'duplicate' };
+  if (closedAttemptStatuses.includes(attempt.status)) {
+    // Acknowledged so the phone stops resending it, and kept in the audit trail for review.
+    await store.createAudit({
+      actorId: actor.id, action: 'delivery_attempt.event_rejected', auditableId: attempt.id,
+      oldValues: { status: attempt.status }, newValues: { status: attempt.status, eventUuid: event.eventUuid, eventType: event.details.eventType },
+    });
+    return { kind: 'rejected' };
+  }
+  if (event.details.eventType === 'delivered' && !event.photoPath) throw new DomainError('ต้องมีรูปหลักฐานการส่ง');
 
   const created = await store.createEvent({ ...event, riderId: actor.id, serverReceivedAt: new Date() });
   const decision = decideOfflineEvent(attempt, attempt.deliveryVersion, event);

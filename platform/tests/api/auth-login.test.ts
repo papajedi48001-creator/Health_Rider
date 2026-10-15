@@ -13,9 +13,9 @@ vi.mock('@/lib/db', () => ({
   },
 }));
 
-function login(body: unknown) {
+function login(body: unknown, headers: Record<string, string> = {}) {
   return new NextRequest('http://localhost/api/auth/login', {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: typeof body === 'string' ? body : JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body),
   });
 }
 
@@ -73,4 +73,47 @@ test('a plain form post signs in with a redirect and never needs credentials in 
 
   const failure = await POST(form('wrong-password'));
   expect(failure.headers.get('location')).toBe('/login?error=401&next=%2Frider%2Fattempts%2Fa1');
+});
+
+test('looks usernames up in lower case so changing letter case does not get extra guesses', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  findUser.mockResolvedValue(null);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const username = attempt % 2 === 0 ? 'Case.Test' : 'CASE.TEST';
+    expect((await POST(login({ username, password: 'wrong-password-123' }))).status).toBe(401);
+  }
+
+  expect(findUser).toHaveBeenCalledWith(expect.objectContaining({ where: { username: 'case.test' } }));
+  expect((await POST(login({ username: 'case.test', password: 'wrong-password-123' }))).status).toBe(429);
+}, 30_000);
+
+test('limits failures from one client address across usernames', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  findUser.mockResolvedValue(null);
+  const from = { 'x-forwarded-for': '192.0.2.77' };
+
+  for (let attempt = 0; attempt < 50; attempt += 1) await POST(login({ username: `spray${attempt}`, password: 'wrong-password-123' }, from));
+
+  expect((await POST(login({ username: 'fresh.user', password: 'wrong-password-123' }, from))).status).toBe(429);
+  expect((await POST(login({ username: 'fresh.user', password: 'wrong-password-123' }, { 'x-forwarded-for': '192.0.2.78' }))).status).toBe(401);
+}, 60_000);
+
+test('refuses a sign-in posted from another website', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  expect((await POST(login({ username: 'x.user', password: 'whatever-password' }, { 'sec-fetch-site': 'cross-site' }))).status).toBe(403);
+  expect(findUser).not.toHaveBeenCalled();
+});
+
+test('tells someone with the right password that their application is still waiting', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  const passwordHash = await hashPassword('correct-password');
+
+  findUser.mockResolvedValue({ id: 'new-1', role: 'rider', active: false, pendingApproval: true, passwordHash });
+  const waiting = await POST(login({ username: 'new.rider', password: 'correct-password' }));
+  expect(waiting.status).toBe(403);
+  await expect(waiting.json()).resolves.toEqual({ message: expect.stringContaining('รอผู้ดูแลระบบอนุมัติ') });
+
+  expect((await POST(login({ username: 'new.rider2', password: 'wrong-password' }))).status).toBe(401);
+  expect(createSession).not.toHaveBeenCalled();
 });

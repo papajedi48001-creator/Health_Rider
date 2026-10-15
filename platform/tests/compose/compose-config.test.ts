@@ -26,12 +26,22 @@ function composeConfig(environment: Record<string, string>) {
   );
 }
 
+const required = { AUTH_SECRET: 'a'.repeat(32), MARIADB_PASSWORD: 'p'.repeat(20), MARIADB_ROOT_PASSWORD: 'r'.repeat(20), WEB_PUBLISH: '' };
+
 test.skipIf(!hasDockerCompose())('runs migrations before the web service and requires an auth secret', () => {
-  const config = composeConfig({ AUTH_SECRET: 'a'.repeat(32) });
+  const config = composeConfig(required);
 
   expect(Object.keys(config.services).sort()).toEqual(['db', 'migrate', 'web']);
   expect(config.services.db.healthcheck).toBeDefined();
   expect(config.services.web.depends_on.migrate.condition).toBe('service_completed_successfully');
   expect(config.services.web.environment.HOS_ELIGIBLE_ITEM_CODES).toBeDefined();
-  expect(() => composeConfig({ AUTH_SECRET: '' })).toThrow();
+  expect(() => composeConfig({ ...required, AUTH_SECRET: '' })).toThrow();
+});
+
+test.skipIf(!hasDockerCompose())('refuses default database passwords and keeps plain HTTP on this machine', () => {
+  expect(() => composeConfig({ ...required, MARIADB_PASSWORD: '' })).toThrow();
+  expect(() => composeConfig({ ...required, MARIADB_ROOT_PASSWORD: '' })).toThrow();
+  const config = composeConfig(required);
+  expect(config.services.web.ports[0].host_ip).toBe('127.0.0.1');
+  expect(config.services.web.environment.DATABASE_URL).toBe(`mysql://health_rider:${'p'.repeat(20)}@db:3306/health_rider`);
 });
