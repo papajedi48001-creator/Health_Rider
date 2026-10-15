@@ -28,13 +28,14 @@ export function OperationsDashboard() {
   const [message, setMessage] = useState('กำลังโหลด');
   const [editing, setEditing] = useState<string | null>(null);
 
+  // Status is filtered here rather than on the server, so every status tile keeps its count while one is picked.
+  const serverQuery = new URLSearchParams(Object.entries(filters).filter(([key, value]) => value && key !== 'status')).toString();
   const load = useCallback(async () => {
-    const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
-    const result = await callApi<Dashboard>(`/api/operations/dashboard?${query}`);
+    const result = await callApi<Dashboard>(`/api/operations/dashboard?${serverQuery}`);
     if (!result.ok) return setMessage(result.message);
     setData(result.data);
     setMessage(result.data.attempts.length === 0 ? 'ไม่มีงานตามตัวกรองนี้' : '');
-  }, [filters]);
+  }, [serverQuery]);
 
   useEffect(() => {
     void load();
@@ -56,6 +57,7 @@ export function OperationsDashboard() {
   }
 
   const counts = data?.attempts.reduce<Record<string, number>>((total, attempt) => ({ ...total, [attempt.status]: (total[attempt.status] ?? 0) + 1 }), {}) ?? {};
+  const shown = (data?.attempts ?? []).filter((attempt) => !filters.status || attempt.status === filters.status);
 
   return (
     <div>
@@ -83,18 +85,30 @@ export function OperationsDashboard() {
       <p aria-live="polite">{message}</p>
       {data && data.attempts.length > 0 && (
         <>
-          <div className="stat-row">
+          <div className="stat-row" role="group" aria-label="กรองตามสถานะ">
             {Object.entries(counts).map(([status, count]) => (
-              <span key={status} className={`stat ${statusTone(status as DeliveryAttemptStatus)}`}>
+              <button
+                key={status}
+                type="button"
+                className={`stat stat-button ${statusTone(status as DeliveryAttemptStatus)}`}
+                aria-pressed={filters.status === status}
+                onClick={() => setFilters({ ...filters, status: filters.status === status ? '' : status })}
+              >
                 <span className="stat-icon"><Icon name={statusIcons[status as DeliveryAttemptStatus]} size={22} /></span>
                 <span className="stat-body"><strong>{count}</strong>{statusLabels[status as DeliveryAttemptStatus]}</span>
-              </span>
+              </button>
             ))}
           </div>
+          {filters.status && (
+            <p className="filter-note">
+              แสดงเฉพาะ “{statusLabels[filters.status as DeliveryAttemptStatus]}” {shown.length} งาน{' '}
+              <button type="button" className="link-button" onClick={() => setFilters({ ...filters, status: '' })}>แสดงทุกสถานะ</button>
+            </p>
+          )}
           <table>
             <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>โซน</th><th>ไรเดอร์</th><th>สถานะ</th><th>เวลาล่าสุด</th><th /></tr></thead>
             <tbody>
-              {data.attempts.map((attempt) => (
+              {shown.map((attempt) => (
                 <tr key={attempt.id}>
                   <td><code>{shortCode(attempt.id)}</code></td>
                   <td>{attempt.deliveryRequest.patientName}<br /><code>{attempt.deliveryRequest.hn}</code></td>

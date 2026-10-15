@@ -67,3 +67,22 @@ export async function findRateInEffect(client: RateReader, zone: { id: string; s
   });
   return resolveRate(rates, zone, today);
 }
+
+// A job confirmed before any rate covered its zone: the rate in effect that day if there is one (zone first, then the
+// whole subdistrict), otherwise the first rate admin set for it, so a late price setting still pays earlier jobs.
+export function rateForUnpricedJob(
+  rates: readonly ServiceRateRecord[],
+  zone: { id: string; subdistrictCode: string },
+  confirmedOn: Date,
+): AppliedRate | null {
+  const inEffect = resolveRate(rates, zone, confirmedOn);
+  if (inEffect) return inEffect;
+  const earliest = (candidates: ServiceRateRecord[]) => candidates.reduce<ServiceRateRecord | null>((best, rate) => {
+    if (!best) return rate;
+    const byStart = rate.effectiveFrom.getTime() - best.effectiveFrom.getTime();
+    return byStart < 0 || (byStart === 0 && (rate.createdAt?.getTime() ?? 0) > (best.createdAt?.getTime() ?? 0)) ? rate : best;
+  }, null);
+  const chosen = earliest(rates.filter((rate) => rate.deliveryZoneId === zone.id))
+    ?? earliest(rates.filter((rate) => rate.deliveryZoneId === null && rate.subdistrictCode === zone.subdistrictCode));
+  return chosen && { rateSatang: chosen.rateSatang, rateEffectiveFrom: chosen.effectiveFrom };
+}

@@ -31,3 +31,17 @@ test('a rate added later for the same start date replaces the earlier one', () =
   expect(resolveRate(rates, zone, calendarDate('2026-10-14'))?.rateSatang).toBe(2000);
   expect(resolveRate([...rates].reverse(), zone, calendarDate('2026-10-14'))?.rateSatang).toBe(2000);
 });
+
+test('a job confirmed before its zone had a price takes the subdistrict rate, even one set later', async () => {
+  const { rateForUnpricedJob } = await import('@/domain/delivery/service-rate');
+  const zone = { id: 'zone-6', subdistrictCode: '470602' };
+  const subdistrictOnly = [
+    { subdistrictCode: '470602', deliveryZoneId: null, rateSatang: 4000, effectiveFrom: calendarDate('2026-10-15') },
+    { subdistrictCode: '470602', deliveryZoneId: null, rateSatang: 4500, effectiveFrom: calendarDate('2026-11-01') },
+  ];
+  expect(rateForUnpricedJob(subdistrictOnly, zone, calendarDate('2026-10-14'))?.rateSatang).toBe(4000);
+  expect(rateForUnpricedJob(subdistrictOnly, zone, calendarDate('2026-11-02'))?.rateSatang).toBe(4500);
+  const withZone = [...subdistrictOnly, { subdistrictCode: '470602', deliveryZoneId: 'zone-6', rateSatang: 5000, effectiveFrom: calendarDate('2026-10-20') }];
+  expect(rateForUnpricedJob(withZone, zone, calendarDate('2026-10-14'))?.rateSatang).toBe(5000);
+  expect(rateForUnpricedJob(withZone, { id: 'other', subdistrictCode: '470699' }, calendarDate('2026-10-14'))).toBeNull();
+});

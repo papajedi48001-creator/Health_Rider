@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { employmentLabels } from '@/lib/labels';
+import { RiderJobsPanel } from '@/app/(staff)/reports/delivery/rider-jobs';
 import { FailureReasons, minutes, NoActivity, percent, ReportFilters, ReportSection, StatTile, useReport } from '@/reports/report-kit';
 
 type DeliveryReportData = {
@@ -12,6 +14,7 @@ type DeliveryReportData = {
 
 export function DeliveryReport() {
   const { range, setRange, data, message, csvHref } = useReport<DeliveryReportData>('/api/reports/delivery');
+  const [riderId, setRiderId] = useState<string | null>(null);
 
   return (
     <div>
@@ -34,7 +37,12 @@ export function DeliveryReport() {
                   <tbody>
                     {data.byRider.map((row) => (
                       <tr key={row.riderId}>
-                        <td>{row.displayName}{row.riderCode && <><br /><code>{row.riderCode}</code></>}</td>
+                        <td>
+                          <button type="button" className="link-button" aria-pressed={riderId === row.riderId} onClick={() => setRiderId(riderId === row.riderId ? null : row.riderId)}>
+                            {row.displayName}
+                          </button>
+                          {row.riderCode && <><br /><code>{row.riderCode}</code></>}
+                        </td>
                         <td>{row.employmentCategory ? employmentLabels[row.employmentCategory] : '-'}</td>
                         <td className="num">{row.claimed}</td>
                         <td className={`num${row.delivered ? " outcome-delivered" : ""}`}>{row.delivered}</td>
@@ -45,7 +53,9 @@ export function DeliveryReport() {
                     ))}
                   </tbody>
                 </table>
+                <p className="muted">กดชื่อไรเดอร์เพื่อดูรายการงานในช่วงวันที่นี้</p>
               </ReportSection>
+              {riderId && <RiderJobsPanel riderId={riderId} range={range} onClose={() => setRiderId(null)} />}
               <ReportSection title="แยกตามโซน">
                 {data.byZone.length === 0 ? <p className="muted">ยังไม่มีงานที่ส่งเสร็จในช่วงนี้</p> : (
                   <table>

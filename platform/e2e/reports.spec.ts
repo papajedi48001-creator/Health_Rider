@@ -9,6 +9,13 @@ test('each role sees only its own reports, and the admin downloads the fee CSV',
   await menu.getByRole('link', { name: 'รายงานการจัดส่ง' }).click();
   await expect(page.getByRole('heading', { name: 'รายงานการจัดส่ง' })).toBeVisible();
   await expect(page.getByText('อัตราส่งสำเร็จ')).toBeVisible();
+  const riders = page.getByRole('region', { name: 'ผลงานไรเดอร์' });
+  if (await riders.count()) {
+    await riders.getByRole('button').first().click();
+    await expect(page.getByRole('region', { name: /^งานของ / })).toBeVisible();
+    await page.getByRole('button', { name: 'ปิดรายการ' }).click();
+    await expect(page.getByRole('region', { name: /^งานของ / })).toHaveCount(0);
+  }
 
   await menu.getByRole('link', { name: 'ค่าบริการไรเดอร์' }).click();
   await expect(page.getByText('ค่าบริการรวม')).toBeVisible();
@@ -28,4 +35,18 @@ test('each role sees only its own reports, and the admin downloads the fee CSV',
   await pharmacy.goto('/reports/fees');
   await expect(pharmacy.getByRole('heading', { name: 'ไม่มีสิทธิ์เข้าหน้านี้' })).toBeVisible();
   await pharmacyContext.close();
+});
+
+test('a coordinator narrows the operations overview by tapping a status tile', async ({ page }) => {
+  await login(page, 'coordinator.uat');
+  await page.goto('/operations');
+  const tiles = page.getByRole('group', { name: 'กรองตามสถานะ' }).getByRole('button');
+  await expect(tiles.first()).toBeVisible();
+  const tileCount = await tiles.count();
+  await tiles.first().click();
+  await expect(tiles.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(tiles).toHaveCount(tileCount);
+  await expect(page.getByText(/^แสดงเฉพาะ/)).toBeVisible();
+  await page.getByRole('button', { name: 'แสดงทุกสถานะ' }).click();
+  await expect(tiles.first()).toHaveAttribute('aria-pressed', 'false');
 });

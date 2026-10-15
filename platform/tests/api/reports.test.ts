@@ -1,23 +1,24 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { attemptFindMany, requestFindMany, groupBy, currentSession } = vi.hoisted(() => ({
-  attemptFindMany: vi.fn(), requestFindMany: vi.fn(), groupBy: vi.fn(), currentSession: vi.fn(),
+const { attemptFindMany, requestFindMany, rateFindMany, groupBy, currentSession } = vi.hoisted(() => ({
+  attemptFindMany: vi.fn(), requestFindMany: vi.fn(), rateFindMany: vi.fn(), groupBy: vi.fn(), currentSession: vi.fn(),
 }));
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
-vi.mock('@/lib/db', () => ({ db: { deliveryAttempt: { findMany: attemptFindMany, groupBy }, deliveryRequest: { findMany: requestFindMany } } }));
+vi.mock('@/lib/db', () => ({ db: { deliveryAttempt: { findMany: attemptFindMany, groupBy }, deliveryRequest: { findMany: requestFindMany }, serviceRate: { findMany: rateFindMany } } }));
 
 const as = (role: string) => currentSession.mockResolvedValue({ id: `${role}-1`, role, displayName: role });
 const get = (path: string) => new NextRequest(`http://localhost${path}`);
-const zone = { subdistrictCode: '440801', subdistrictName: 'ตำบลเอ', displayName: 'หมู่ 1' };
+const zone = { id: 'Z1', subdistrictCode: '440801', subdistrictName: 'ตำบลเอ', displayName: 'หมู่ 1' };
 const rider = { id: 'R1', displayName: 'ไรเดอร์หนึ่ง', riderProfile: { riderCode: 'R-01', employmentCategory: 'external' } };
 
 beforeEach(() => {
   vi.clearAllMocks();
   requestFindMany.mockResolvedValue([{ createdAt: new Date('2026-10-01T03:00:00Z'), deliveryZone: zone }]);
+  rateFindMany.mockResolvedValue([]);
   groupBy.mockResolvedValue([{ status: 'prepared', _count: { _all: 4 } }]);
   attemptFindMany.mockResolvedValue([
-    { id: 'ATTEMPT0ABC12', claimedAt: new Date('2026-10-01T04:00:00Z'), pickedUpAt: new Date('2026-10-01T04:10:00Z'), deliveredAt: new Date('2026-10-01T04:40:00Z'), failedAt: null, returnedAt: null, failureReason: null, rider, deliveryRequest: { rateSatang: 3500, deliveryZone: zone } },
+    { id: 'ATTEMPT0ABC12', claimedAt: new Date('2026-10-01T04:00:00Z'), pickedUpAt: new Date('2026-10-01T04:10:00Z'), deliveredAt: new Date('2026-10-01T04:40:00Z'), failedAt: null, returnedAt: null, failureReason: null, rider, deliveryRequest: { createdAt: new Date('2026-10-01T02:00:00Z'), rateSatang: 3500, deliveryZone: zone } },
   ]);
 });
 
@@ -60,4 +61,37 @@ test('a bad range is rejected before reading the database', async () => {
   const { GET } = await import('@/app/api/reports/delivery/route');
   expect((await GET(get('/api/reports/delivery?from=2026-10-09&to=2026-10-01'))).status).toBe(422);
   expect(attemptFindMany).not.toHaveBeenCalled();
+});
+
+test('a delivered job with no price yet takes its subdistrict rate', async () => {
+  as('admin');
+  attemptFindMany.mockResolvedValueOnce([
+    { id: 'ATTEMPT0XYZ99', deliveredAt: new Date('2026-10-14T04:40:00Z'), rider, deliveryRequest: { createdAt: new Date('2026-10-14T02:00:00Z'), rateSatang: null, deliveryZone: zone } },
+  ]);
+  rateFindMany.mockResolvedValueOnce([{ subdistrictCode: '440801', deliveryZoneId: null, rateSatang: 4000, effectiveFrom: new Date('2026-10-15T00:00:00Z'), createdAt: new Date() }]);
+  const { GET } = await import('@/app/api/reports/fees/route');
+  const body = await (await GET(get('/api/reports/fees?from=2026-10-01&to=2026-10-31'))).json();
+  expect(body.totals).toEqual({ deliveries: 1, totalSatang: 4000, unpriced: 0, backfilled: 1 });
+});
+
+test('a coordinator opens one rider’s jobs in the range, latest first, twenty per page', async () => {
+  as('coordinator');
+  const { db } = await import('@/lib/db');
+  (db as unknown as { user: { findUnique: ReturnType<typeof vi.fn> } }).user = { findUnique: vi.fn().mockResolvedValue({ id: 'R1', displayName: 'ไรเดอร์หนึ่ง', riderProfile: { riderCode: 'R-01' } }) };
+  const job = (id: string, deliveredAt: string | null, failedAt: string | null) => ({
+    id, status: deliveredAt ? 'delivered' : 'return_required', claimedAt: new Date('2026-10-01T01:00:00Z'), pickedUpAt: new Date('2026-10-01T01:10:00Z'),
+    deliveredAt: deliveredAt && new Date(deliveredAt), failedAt: failedAt && new Date(failedAt), failureReason: failedAt ? 'recipient_unavailable' : null,
+    evidence: deliveredAt ? { id: 'E' } : null, deliveryRequest: { hn: 'HN', patientName: 'ผู้ป่วย', deliveryZone: { displayName: 'หมู่ 1' } },
+  });
+  attemptFindMany.mockResolvedValueOnce([job('ATTEMPT0000A1', '2026-10-01T01:40:00Z', null), job('ATTEMPT0000B2', null, '2026-10-02T03:00:00Z')]);
+  const { GET } = await import('@/app/api/reports/delivery/rider/route');
+  const body = await (await GET(get('/api/reports/delivery/rider?riderId=R1&from=2026-10-01&to=2026-10-02'))).json();
+
+  expect(attemptFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ riderId: 'R1' }) }));
+  expect(body).toMatchObject({ rider: { id: 'R1', riderCode: 'R-01' }, page: 1, pages: 1, total: 2 });
+  expect(body.items.map((item: { packageCode: string }) => item.packageCode)).toEqual(['0000B2', '0000A1']);
+  expect(body.items[1]).toMatchObject({ minutes: 30, hasEvidence: true });
+
+  as('pharmacy');
+  expect((await GET(get('/api/reports/delivery/rider?riderId=R1'))).status).toBe(403);
 });
