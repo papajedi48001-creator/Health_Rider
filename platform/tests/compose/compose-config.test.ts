@@ -26,7 +26,7 @@ function composeConfig(environment: Record<string, string>) {
   );
 }
 
-const required = { AUTH_SECRET: 'a'.repeat(32), MARIADB_PASSWORD: 'p'.repeat(20), MARIADB_ROOT_PASSWORD: 'r'.repeat(20), WEB_PUBLISH: '' };
+const required = { AUTH_SECRET: 'a'.repeat(32), MARIADB_PASSWORD: 'p'.repeat(20), MARIADB_ROOT_PASSWORD: 'r'.repeat(20), WEB_PUBLISH: '', DATABASE_URL: '' };
 
 test.skipIf(!hasDockerCompose())('runs migrations before the web service and requires an auth secret', () => {
   const config = composeConfig(required);
