@@ -9,7 +9,8 @@ import { handleRoute } from '@/lib/route';
 
 export async function POST(request: NextRequest, context: { params: Promise<{ attemptId: string }> }) {
   return handleRoute(async () => {
-    const pharmacist = requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');
+    // Pharmacy confirms from its return queue; the coordinator can confirm from the exceptions page when the rider hands the medication back there.
+    const pharmacist = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const { attemptId } = await context.params;
     const returned = await db.$transaction(async (tx) => {
       await receiveMedicationReturn(attemptId, pharmacist, {

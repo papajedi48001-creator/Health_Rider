@@ -21,3 +21,9 @@ test('rejects a return after the Thai calendar day of the failed attempt has end
     findReturnRequiredAttempt: async () => ({ id: 'attempt-1', status: 'return_required', failedAt: yesterdayInThailand }), update: async (record) => record,
   })).rejects.toThrow('ต้องรับยาคืนภายในวันเดียวกัน');
 });
+
+test('lets the coordinator confirm a return but not the rider', async () => {
+  const store = { findReturnRequiredAttempt: async () => ({ id: 'attempt-1', status: 'return_required', failedAt: new Date() }), update: async (record: unknown) => record };
+  await expect(receiveMedicationReturn('attempt-1', { id: 'coordinator-1', role: 'coordinator', displayName: 'Coordinator' }, store)).resolves.toMatchObject({ status: 'returned' });
+  await expect(receiveMedicationReturn('attempt-1', { id: 'rider-1', role: 'rider', displayName: 'Rider' }, store)).rejects.toThrow();
+});

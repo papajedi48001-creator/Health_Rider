@@ -9,8 +9,7 @@ export default async function OperationsExceptionsPage() {
       <p>ตรวจรับยาคืนในวันเดียวกัน และพิจารณาหลักฐานออฟไลน์ที่ขัดแย้งก่อนดำเนินการต่อ</p>
       <OperationsExceptions
         canResolve={session?.role === 'coordinator' || session?.role === 'admin'}
-        // Receiving medication back is pharmacy's step; admin, who also holds that role's rights, can do it from here.
-        canReceiveReturn={session?.role === 'admin'}
+        canReceiveReturn={session?.role === 'coordinator' || session?.role === 'admin'}
       />
     </main>
   );

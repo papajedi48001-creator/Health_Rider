@@ -77,7 +77,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
             <h2>รอรับยาคืน <span className="count-chip">{returns.length}</span></h2>
             <p className="muted">ส่งไม่สำเร็จแล้ว ต้องนำยากลับมาให้เภสัชกรรมยืนยันรับคืนในวันเดียวกัน ก่อนสร้าง QR ใหม่</p>
             {!canReceiveReturn && returns.length > 0 && (
-              <p className="notice">หน้านี้ใช้ติดตาม เภสัชกรรมเป็นผู้กดยืนยันรับยาคืนที่เมนู “รอรับยาคืน” เมื่อได้รับยากลับมาแล้ว</p>
+              <p className="notice">หน้านี้ใช้ติดตาม ผู้ประสานงานหรือเภสัชกรรมเป็นผู้กดยืนยันรับยาคืนเมื่อได้รับยากลับมาแล้ว</p>
             )}
           </div>
         </header>
