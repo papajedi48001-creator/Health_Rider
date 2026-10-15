@@ -484,3 +484,18 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 section .empty-state { border: 0; background: none; padding: 8px 0 0; }
 .no-access { display: grid; justify-items: center; text-align: center; gap: 6px; padding-top: 32px; }
 .no-access .mascot img { width: 180px; height: auto; }
+
+/* Reports: a date range with quick presets and a CSV download, then tiles and tables. */
+.report-filters { align-items: end; }
+.preset-row { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 1 / -1; }
+.btn-small { min-height: 36px; padding: 6px 12px; font-size: 0.9rem; gap: 6px; }
+.btn.is-active { background: var(--primary-soft); border-color: var(--primary); }
+.preset-row .btn-primary { margin-left: auto; }
+.report-section { margin: 0 0 20px; }
+.report-section h2 { font-size: 1.05rem; margin: 0 0 8px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tfoot th { background: #f5f8fa; color: var(--ink); border-top: 2px solid var(--line); }
+tr.row-quiet td { color: var(--muted); }
+@media (max-width: 720px) {
+  .report-section td, .report-section th { white-space: nowrap; }
+}
