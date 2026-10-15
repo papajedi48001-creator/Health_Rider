@@ -6,6 +6,10 @@ export async function callApi<T>(input: string, init?: RequestInit & { json?: un
       ...rest, method: rest.method ?? 'POST', headers: { 'content-type': 'application/json', ...rest.headers }, body: JSON.stringify(json),
     });
     const body = await response.json().catch(() => ({})) as T & { message?: string };
+    // The session ended while the page was open: go back to login and return here afterwards.
+    if (response.status === 401 && !input.startsWith('/api/auth/')) {
+      window.location.assign(`/login?reason=expired&next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
     return response.ok ? { ok: true, data: body } : { ok: false, message: body.message ?? 'ทำรายการไม่สำเร็จ', status: response.status };
   } catch {
     return { ok: false, message: 'เชื่อมต่อระบบไม่ได้ โปรดตรวจสอบสัญญาณแล้วลองใหม่', status: 0 };

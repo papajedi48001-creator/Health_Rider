@@ -13,7 +13,7 @@ const errorMessages: Record<string, string> = {
   '429': 'เข้าสู่ระบบผิดหลายครั้ง โปรดรอ 15 นาทีแล้วลองใหม่',
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; reason?: string }> }) {
   const session = await getSessionFromCookies();
   const params = await searchParams;
   const next = safeNextPath(params.next);
@@ -31,7 +31,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="brand"><Brand size={40} /></div>
           <h1>เข้าสู่ระบบ</h1>
           <p className="login-tagline">ระบบส่งยาถึงบ้าน ปลอดภัย ตรวจสอบได้ทุกขั้นตอน</p>
-          <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? ''} />
+          <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? (params.reason === 'expired' ? 'หมดเวลาใช้งานหรือออกจากระบบแล้ว กรุณาเข้าสู่ระบบใหม่' : '')} />
         </div>
       </div>
     </main>

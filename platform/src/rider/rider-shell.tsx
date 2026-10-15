@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getSessionFromCookies } from '@/auth/current-session';
+import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
 import { Icon } from '@/brand/icons';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
 import { LogoMark } from '@/brand/logo';
@@ -10,7 +10,7 @@ import { Mascot } from '@/brand/mascot';
 // The rider app frame: a slim top bar, a single mobile column and bottom tabs.
 export async function RiderShell({ children }: { children: ReactNode }) {
   const session = await getSessionFromCookies();
-  if (!session) redirect('/login');
+  if (!session) redirect(await loginRedirectPath());
 
   return (
     <div className="rider-app">
