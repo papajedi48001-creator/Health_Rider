@@ -2,13 +2,15 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { hashPassword } from '@/auth/session';
 
-const { findUser, createSession, createAudit } = vi.hoisted(() => ({ findUser: vi.fn(), createSession: vi.fn(), createAudit: vi.fn() }));
+const { findUser, createSession, createAudit, deleteSessions } = vi.hoisted(() => ({
+  findUser: vi.fn(), createSession: vi.fn(), createAudit: vi.fn(), deleteSessions: vi.fn(),
+}));
 const tx = { session: { create: createSession }, auditEvent: { create: createAudit } };
 
 vi.mock('@/lib/db', () => ({
   db: {
     user: { findUnique: findUser },
-    session: { create: createSession, findUnique: vi.fn(), updateMany: vi.fn() },
+    session: { create: createSession, findUnique: vi.fn(), updateMany: vi.fn(), deleteMany: deleteSessions },
     $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx),
   },
 }));
@@ -24,6 +26,7 @@ beforeEach(() => {
   findUser.mockReset();
   createSession.mockReset();
   createAudit.mockReset();
+  deleteSessions.mockReset().mockResolvedValue({ count: 0 });
 });
 
 test('signs in an active user with an HttpOnly session cookie and audits it', async () => {
@@ -37,6 +40,9 @@ test('signs in an active user with an HttpOnly session cookie and audits it', as
   expect(response.headers.get('set-cookie')).toMatch(/health_rider_session=.+HttpOnly/i);
   expect(createSession).toHaveBeenCalledTimes(1);
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.logged_in' }) }));
+  // Sessions that ended more than 30 days ago are removed so the table stays small.
+  const where = deleteSessions.mock.calls[0][0].where;
+  expect(where.OR[0].expiresAt.lt.getTime()).toBeLessThan(Date.now() - 29 * 24 * 60 * 60 * 1000);
 });
 
 test('rejects a wrong password or a deactivated account without creating a session', async () => {
