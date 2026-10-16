@@ -98,6 +98,35 @@ LimitRequestBody 5242880
 ถ้า proxy อยู่คนละเครื่อง เปลี่ยน `127.0.0.1` เป็น IP เครื่องแอป
 
 - ระบบจำกัดการเดารหัสผ่านตาม IP ผู้ใช้จากค่า `X-Forwarded-For` ตัวสุดท้าย proxy จึงต้องต่อท้าย IP จริงของผู้ใช้ (ค่าข้างบนทำแล้ว) ถ้ามี proxy ซ้อนสองชั้น ชั้นที่ติดกับแอปต้องส่ง IP ที่ได้จากชั้นนอกมาเป็นตัวสุดท้าย
+- **โดเมนที่ผ่าน Cloudflare** IP ที่ nginx เห็นคือ IP ของ Cloudflare ไม่ใช่ผู้ใช้ ถ้าไม่แก้ ผู้ใช้หลายคนจะใช้โควตาเดารหัสผิดร่วมกัน (50 ครั้งต่อ 15 นาที) และอาจถูกล็อกพร้อมกัน ให้เพิ่มใน `http {}` ของ nginx เพื่อคืน IP จริงจาก `CF-Connecting-IP` เฉพาะคำขอที่มาจาก Cloudflare จริง (รายการ IP ล่าสุดอยู่ที่ https://www.cloudflare.com/ips/):
+
+  ```nginx
+  set_real_ip_from 173.245.48.0/20;
+  set_real_ip_from 103.21.244.0/22;
+  set_real_ip_from 103.22.200.0/22;
+  set_real_ip_from 103.31.4.0/22;
+  set_real_ip_from 141.101.64.0/18;
+  set_real_ip_from 108.162.192.0/18;
+  set_real_ip_from 190.93.240.0/20;
+  set_real_ip_from 188.114.96.0/20;
+  set_real_ip_from 197.234.240.0/22;
+  set_real_ip_from 198.41.128.0/17;
+  set_real_ip_from 162.158.0.0/15;
+  set_real_ip_from 104.16.0.0/13;
+  set_real_ip_from 104.24.0.0/14;
+  set_real_ip_from 172.64.0.0/13;
+  set_real_ip_from 131.0.72.0/22;
+  set_real_ip_from 2400:cb00::/32;
+  set_real_ip_from 2606:4700::/32;
+  set_real_ip_from 2803:f800::/32;
+  set_real_ip_from 2405:b500::/32;
+  set_real_ip_from 2405:8100::/32;
+  set_real_ip_from 2a06:98c0::/29;
+  set_real_ip_from 2c0f:f248::/32;
+  real_ip_header CF-Connecting-IP;
+  ```
+
+  เมื่อตั้งแล้ว `$proxy_add_x_forwarded_for` ในบล็อกข้างบนจะต่อท้ายด้วย IP จริงของผู้ใช้เอง ไม่ต้องแก้แอป ตรวจได้จาก log ของ nginx ว่าคอลัมน์ IP เป็น IP ผู้ใช้ ไม่ใช่ 172.64.x / 104.x
 - Cookie ของระบบผูกกับ path `/health-rider` จึงไม่ปนกับระบบอื่นในโดเมนเดียวกัน
 - ทดสอบ: เปิด `https://waritch-hosp.moph.go.th/health-rider` ต้องเด้งไปหน้าเข้าสู่ระบบ และรูปมาสคอตต้องแสดง
 

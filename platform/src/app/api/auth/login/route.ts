@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sessionCookieOptions, sessionStore } from '@/auth/current-session';
 import { LoginThrottle } from '@/auth/login-throttle';
 import { roleHome, safeNextPath } from '@/auth/role-home';
-import { sessionCookieName, startSession, verifyLoginPassword } from '@/auth/session';
+import { sessionCookieName, endedSessionCutoff, startSession, verifyLoginPassword } from '@/auth/session';
 import { writeAuditEvent } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
 import { withBasePath } from '@/lib/base-path';
@@ -67,6 +67,10 @@ export async function POST(request: NextRequest) {
     });
     return started;
   });
+
+  const cutoff = endedSessionCutoff(now);
+  await db.session.deleteMany({ where: { OR: [{ expiresAt: { lt: cutoff } }, { revokedAt: { lt: cutoff } }] } })
+    .catch((error: unknown) => console.error('Could not delete old sessions', error));
 
   const response = isFormPost ? redirectTo(next ?? roleHome(user.role)) : NextResponse.json({ redirectTo: roleHome(user.role) });
   response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.expiresAt, user.role));

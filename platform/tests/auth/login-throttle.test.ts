@@ -33,3 +33,11 @@ test('counts failures per key with its own limit', () => {
   throttle.reset('10.0.0.5');
   expect(throttle.isBlocked('10.0.0.5', 1)).toBe(false);
 });
+
+test('keeps memory bounded when many different keys fail', () => {
+  const throttle = new LoginThrottle();
+  for (let key = 0; key < 10_500; key += 1) throttle.recordFailure(`user-${key}`, 0);
+
+  expect(throttle.trackedKeys).toBeLessThanOrEqual(10_000);
+  expect(throttle.isBlocked('user-10499', 1_000)).toBe(false);
+});

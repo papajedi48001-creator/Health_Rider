@@ -50,6 +50,13 @@ export function hashSessionToken(token: string, secret: string): string {
   return createHmac('sha256', secret).update(token).digest('hex');
 }
 
+// Ended sessions are kept this long for investigation, then deleted so the table does not grow forever.
+const endedSessionRetentionMs = 30 * 24 * 60 * 60 * 1000;
+
+export function endedSessionCutoff(now: Date): Date {
+  return new Date(now.getTime() - endedSessionRetentionMs);
+}
+
 export async function startSession(userId: string, now: Date, secret: string, store: SessionStore): Promise<{ token: string; expiresAt: Date }> {
   const token = randomBytes(32).toString('base64url');
   const expiresAt = new Date(now.getTime() + sessionLifetimeMs);
