@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/adapter-mariadb": "^6.19.3",
     "@prisma/client": "^6.7.0",
     "bcryptjs": "^3.0.2",
     "jsqr": "1.4.0",

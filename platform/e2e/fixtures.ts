@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import { ulid } from 'ulidx';
 import { randomBytes } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
+import { createPrismaClient } from '../src/lib/prisma-client.mjs';
 
 // Browser tests create Delivery Requests directly because HOSxP is not available in test environments.
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 export async function createDeliveryRequest(patientName: string) {
   const [pharmacist, zone] = await Promise.all([
