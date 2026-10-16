@@ -34,6 +34,9 @@ test('ends a staff session when the browser closes or after 30 idle minutes', as
   await login(page, 'coordinator.uat');
   const staffCookie = (await context.cookies()).find((cookie) => cookie.name === 'health_rider_session');
   expect(staffCookie?.expires).toBe(-1);
+  // Let the home page finish its own API calls first: one answered 401 after the idle change would
+  // send the page to login by itself and abort the navigation below.
+  await page.waitForLoadState('networkidle');
 
   await idleSessions('coordinator.uat', 31);
   await page.goto('/');
