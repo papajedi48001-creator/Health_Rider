@@ -42,15 +42,25 @@ export function DeveloperCredit() {
           <ul className="dev-contacts">
             <li title="โทร"><Icon name="phone" size={18} /><span><span className="sr-only">โทร </span><a href={`tel:${developer.phone}`}>085-228-7387</a></span></li>
             <li title="Facebook"><Icon name="facebook" size={18} /><span><span className="sr-only">Facebook </span><a href={developer.facebook} target="_blank" rel="noreferrer">jacky.hokk</a></span></li>
-            <li title="LINE ID"><Icon name="chat" size={18} /><span><span className="sr-only">LINE ID </span>{developer.line}</span></li>
+            <li title="LINE ID"><LineLogo /><span><span className="sr-only">LINE ID </span>{developer.line}</span></li>
             <li title="อีเมล"><Icon name="mail" size={18} /><span><span className="sr-only">อีเมล </span><a href={`mailto:${developer.email}`}>{developer.email}</a></span></li>
           </ul>
         </div>
       )}
       <button type="button" className="dev-credit-button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- a small static photo served from public/ */}
-        <img className="dev-photo dev-photo-small" src={withBasePath('/developer.jpg')} alt="" width={20} height={20} /> พัฒนาโดย {developer.name}
+        <Icon name="info" size={16} /> พัฒนาโดย {developer.name}
       </button>
     </div>
+  );
+}
+
+// The LINE logo: a white speech bubble reading LINE on the brand's green square.
+function LineLogo() {
+  return (
+    <svg className="line-logo" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect width="24" height="24" rx="5.5" fill="#06C755" />
+      <path fill="#fff" d="M12 4.6c-4.6 0-8.3 3-8.3 6.7 0 3.3 2.9 6.1 6.9 6.6.3.1.6.2.7.4.1.2.1.5 0 .7l-.1.7c0 .2-.2.8.7.4.9-.4 4.8-2.8 6.5-4.8 1.2-1.3 1.8-2.6 1.8-4 0-3.7-3.7-6.7-8.2-6.7z" />
+      <path fill="#06C755" d="M6.6 9.4v3.9h2.2v-.8H7.4V9.4zM9.4 9.4h.8v3.9h-.8zM11 9.4v3.9h.8v-2.4l1.7 2.4h.8V9.4h-.8v2.4l-1.7-2.4zM15.1 9.4v3.9h2.4v-.8h-1.6v-.8h1.6v-.8h-1.6v-.7h1.6v-.8z" />
+    </svg>
   );
 }

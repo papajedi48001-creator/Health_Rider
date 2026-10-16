@@ -647,4 +647,3 @@ body:has(.rider-tabbar) .dev-credit { bottom: calc(64px + 8px + env(safe-area-in
 .dev-contacts svg { color: var(--primary); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .dev-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
-.dev-photo-small { width: 20px; height: 20px; }
