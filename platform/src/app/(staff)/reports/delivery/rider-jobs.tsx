@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { UserAvatar } from '@/account/user-avatar';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { Icon } from '@/brand/icons';
 import { callApi } from '@/lib/api-client';
-import { failureReasonLabels, formatThaiDateTime, statusLabels } from '@/lib/labels';
+import { employmentLabels, failureReasonLabels, formatThaiDateTime, statusLabels } from '@/lib/labels';
 import { statusTone } from '@/lib/status-tone';
-import { minutes, ReportSection, type Range } from '@/reports/report-kit';
+import { minutes, type Range } from '@/reports/report-kit';
 import { withBasePath } from '@/lib/base-path';
 
 type RiderJobs = {
-  rider: { id: string; displayName: string; riderCode: string | null };
+  rider: { id: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; riderCode: string | null; employmentCategory: string | null };
   page: number; pages: number; total: number;
   items: Array<{
     id: string; packageCode: string; status: DeliveryAttemptStatus; hn: string; patientName: string; zone: string;
@@ -18,12 +19,11 @@ type RiderJobs = {
   }>;
 };
 
-// The jobs behind one rider's row in the delivery report, for the same date range.
+// The pop-up behind a rider's name in the delivery report: who the rider is, and their jobs in the same date range.
 export function RiderJobsPanel({ riderId, range, onClose }: { riderId: string; range: Range; onClose: () => void }) {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<RiderJobs | null>(null);
   const [message, setMessage] = useState('กำลังโหลดรายการงาน');
-  const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setPage(1); }, [riderId, range]);
   useEffect(() => {
@@ -36,16 +36,33 @@ export function RiderJobsPanel({ riderId, range, onClose }: { riderId: string; r
     });
     return () => { current = false; };
   }, [riderId, range, page]);
-  useEffect(() => { panel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [riderId]);
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
 
-  const title = data ? `งานของ ${data.rider.displayName}${data.rider.riderCode ? ` (${data.rider.riderCode})` : ''}` : 'งานของไรเดอร์';
+  const rider = data?.rider;
+  const title = rider ? `งานของ ${rider.displayName}${rider.riderCode ? ` (${rider.riderCode})` : ''}` : 'งานของไรเดอร์';
   return (
-    <div ref={panel}>
-      <ReportSection title={title}>
-        <div className="panel-head">
-          <span className="muted">{data ? `${data.total} งาน` : ''}</span>
-          <button type="button" className="btn btn-secondary btn-small" onClick={onClose}><Icon name="close" size={18} /> ปิดรายการ</button>
+    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <div className="photo-viewer-body detail-dialog rider-dialog" onClick={(event) => event.stopPropagation()}>
+        <div className="photo-viewer-head">
+          <strong>{title}</strong>
+          <button type="button" className="icon-button" aria-label="ปิดรายการ" onClick={onClose} autoFocus><Icon name="close" /></button>
         </div>
+        {rider && (
+          <div className="rider-card">
+            <UserAvatar userId={rider.id} name={rider.displayName} version={rider.avatarUpdatedAt ? Date.parse(rider.avatarUpdatedAt) : null} />
+            <dl className="detail-list">
+              <dt>ชื่อ</dt><dd>{rider.displayName}</dd>
+              {rider.riderCode && <><dt>รหัสไรเดอร์</dt><dd><code>{rider.riderCode}</code></dd></>}
+              {rider.employmentCategory && <><dt>ประเภท</dt><dd>{employmentLabels[rider.employmentCategory] ?? rider.employmentCategory}</dd></>}
+              <dt>โทรศัพท์</dt><dd>{rider.phone ? <a href={`tel:${rider.phone}`}>{rider.phone}</a> : '-'}</dd>
+              <dt>งานในช่วงนี้</dt><dd>{data.total} งาน</dd>
+            </dl>
+          </div>
+        )}
         {message && <p aria-live="polite">{message}</p>}
         {data && data.items.length > 0 && (
           <>
@@ -78,7 +95,7 @@ export function RiderJobsPanel({ riderId, range, onClose }: { riderId: string; r
             )}
           </>
         )}
-      </ReportSection>
+      </div>
     </div>
   );
 }

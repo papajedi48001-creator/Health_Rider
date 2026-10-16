@@ -7,13 +7,14 @@ import { EmptyState } from '@/brand/empty-state';
 import { Icon } from '@/brand/icons';
 import { conflictReasonLabels, failureReasonLabels, formatThaiDateTime, recipientRelationLabels, shortCode, statusLabels } from '@/lib/labels';
 import { withBasePath } from '@/lib/base-path';
+import { PersonName } from '@/account/person-name';
 
 type Exceptions = {
-  returns: Array<{ id: string; failedAt: string | null; failureReason: string | null; rider: { displayName: string } | null; deliveryRequest: { hn: string; patientName: string } }>;
+  returns: Array<{ id: string; failedAt: string | null; failureReason: string | null; rider: { id: string; displayName: string; avatarUpdatedAt: string | null } | null; deliveryRequest: { hn: string; patientName: string } }>;
   conflicts: Array<{
     id: string; reason: string; previousStatus: DeliveryAttemptStatus; createdAt: string; deliveryAttemptId: string;
     offlineDeliveryEvent: { id: string; eventType: string; deliveryVersion: number; deviceCapturedAt: string; serverReceivedAt: string; payload: Record<string, unknown> };
-    deliveryAttempt: { rider: { displayName: string } | null; deliveryRequest: { hn: string; patientName: string; deliveryAddress: string; telephone: string | null; deliveryVersion: number } };
+    deliveryAttempt: { rider: { id: string; displayName: string; avatarUpdatedAt: string | null } | null; deliveryRequest: { hn: string; patientName: string; deliveryAddress: string; telephone: string | null; deliveryVersion: number } };
   }>;
 };
 
@@ -90,7 +91,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
                 <tr key={item.id}>
                   <td><code>{shortCode(item.id)}</code></td>
                   <td>{item.deliveryRequest.patientName}<br /><code>{item.deliveryRequest.hn}</code></td>
-                  <td>{item.rider?.displayName ?? '-'}</td>
+                  <td>{item.rider ? <PersonName person={item.rider} /> : '-'}</td>
                   <td><span className="chip chip-danger">{failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? '-'}</span></td>
                   <td>{formatThaiDateTime(item.failedAt)}</td>
                   {canReceiveReturn && (
@@ -131,7 +132,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
                     <span className="chip chip-warning">{conflictReasonLabels[conflict.reason] ?? conflict.reason}</span>
                   </p>
                   <dl className="conflict-facts">
-                    <dt>ไรเดอร์</dt><dd>{conflict.deliveryAttempt.rider?.displayName ?? '-'}</dd>
+                    <dt>ไรเดอร์</dt><dd>{conflict.deliveryAttempt.rider ? <PersonName person={conflict.deliveryAttempt.rider} /> : '-'}</dd>
                     <dt>บันทึกในเครื่อง</dt><dd>{formatThaiDateTime(event.deviceCapturedAt)}</dd>
                     <dt>ถึงระบบ</dt><dd>{formatThaiDateTime(event.serverReceivedAt)}</dd>
                     <dt>ข้อมูลจัดส่ง</dt><dd>ฉบับที่ {event.deliveryVersion} (ปัจจุบันฉบับที่ {conflict.deliveryAttempt.deliveryRequest.deliveryVersion})</dd>

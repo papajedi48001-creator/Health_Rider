@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { PersonName } from '@/account/person-name';
 import { employmentLabels } from '@/lib/labels';
 import { baht, NoActivity, ReportFilters, ReportSection, StatTile, useReport } from '@/reports/report-kit';
 
 type FeeReportData = {
   totals: { deliveries: number; totalSatang: number; unpriced: number; backfilled: number };
-  byRider: Array<{ riderId: string; displayName: string; riderCode: string | null; employmentCategory: string | null; deliveries: number; totalSatang: number; unpriced: number }>;
+  byRider: Array<{ riderId: string; displayName: string; avatarUpdatedAt: string | null; riderCode: string | null; employmentCategory: string | null; deliveries: number; totalSatang: number; unpriced: number }>;
 };
 
 export function FeeReport() {
@@ -36,7 +37,11 @@ export function FeeReport() {
                 <tbody>
                   {data.byRider.map((row) => (
                     <tr key={row.riderId}>
-                      <td>{row.displayName}{row.riderCode && <><br /><code>{row.riderCode}</code></>}</td>
+                      <td>
+                        <PersonName person={{ id: row.riderId, displayName: row.displayName, avatarUpdatedAt: row.avatarUpdatedAt }}>
+                          {row.riderCode && <><br /><code>{row.riderCode}</code></>}
+                        </PersonName>
+                      </td>
                       <td>{row.employmentCategory ? employmentLabels[row.employmentCategory] : '-'}</td>
                       <td className="num">{row.deliveries}</td>
                       <td className="num"><strong>{baht(row.totalSatang)}</strong></td>

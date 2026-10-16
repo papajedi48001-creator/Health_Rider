@@ -4,11 +4,12 @@ import { login } from './login';
 test('a new pharmacist applies on the login page and signs in once an admin approves', async ({ page, browser }) => {
   const username = `apply.e2e.${Date.now().toString().slice(-6)}`;
   const password = 'e2e-applicant-password';
+  const displayName = `ผู้สมัคร E2E ${username.slice(-6)}`;
 
   await page.goto('/login');
   await page.getByRole('link', { name: 'สมัครเข้าใช้งาน' }).click();
   const form = page.getByRole('form', { name: 'สมัครเข้าใช้งาน' });
-  await form.getByLabel('ชื่อ-นามสกุล').fill('ผู้สมัคร E2E');
+  await form.getByLabel('ชื่อ-นามสกุล').fill(displayName);
   await form.getByLabel('เบอร์โทร').fill('0812345678');
   await form.getByLabel('หน้าที่ที่ต้องการใช้งาน').selectOption('pharmacy');
   await form.getByLabel('ชื่อผู้ใช้').fill(username);
@@ -27,10 +28,11 @@ test('a new pharmacist applies on the login page and signs in once an admin appr
   const admin = await adminContext.newPage();
   await login(admin, 'admin.uat');
   await admin.goto('/admin');
-  const application = admin.getByRole('form', { name: `คำขอของ ${username}` });
+  const application = admin.getByRole('form', { name: `คำขอของ ${displayName}` });
   await expect(application).toContainText('ขอใช้งานเป็น');
+  await expect(application).not.toContainText(username);
   await application.getByRole('button', { name: 'อนุมัติ', exact: true }).click();
-  await expect(admin.getByText(`อนุมัติ ${username} แล้ว`)).toBeVisible();
+  await expect(admin.getByText(`อนุมัติ ${displayName} แล้ว`)).toBeVisible();
   await adminContext.close();
 
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();

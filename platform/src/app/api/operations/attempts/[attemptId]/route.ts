@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ att
       where: { id: attemptId },
       select: {
         id: true, status: true, createdAt: true, claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true, returnedAt: true,
-        rider: { select: { displayName: true, phone: true, riderProfile: { select: { riderCode: true } } } },
+        rider: { select: { id: true, displayName: true, avatarUpdatedAt: true, phone: true, riderProfile: { select: { riderCode: true } } } },
         evidence: { select: { recipientRelation: true, deviceCapturedAt: true, serverReceivedAt: true } },
         deliveryRequest: {
           select: {

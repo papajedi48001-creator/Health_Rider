@@ -8,12 +8,13 @@ import { callApi } from '@/lib/api-client';
 import { withBasePath } from '@/lib/base-path';
 import { failureReasonLabels, formatThaiDateTime, recipientRelationLabels, shortCode, statusLabels } from '@/lib/labels';
 import { statusTone } from '@/lib/status-tone';
+import { PersonName } from '@/account/person-name';
 
 type Details = {
   id: string; status: DeliveryAttemptStatus; attemptNumber: number;
   createdAt: string; claimedAt: string | null; pickedUpAt: string | null; deliveredAt: string | null; failedAt: string | null; returnedAt: string | null;
   failureReason: string | null;
-  rider: { displayName: string; phone: string | null; riderProfile: { riderCode: string } | null } | null;
+  rider: { id: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; riderProfile: { riderCode: string } | null } | null;
   evidence: { recipientRelation: string; deviceCapturedAt: string; serverReceivedAt: string } | null;
   deliveryRequest: {
     hosVisitNumber: string | null; hn: string; patientName: string; patientAge: number | null; telephone: string | null; deliveryAddress: string;
@@ -113,8 +114,12 @@ export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onC
               <dl className="detail-list">
                 <dt>ไรเดอร์</dt>
                 <dd>
-                  {details.rider ? <>{details.rider.displayName}{details.rider.riderProfile && <> · <code>{details.rider.riderProfile.riderCode}</code></>}
-                    {details.rider.phone && <> · <a href={`tel:${details.rider.phone}`}>{details.rider.phone}</a></>}</> : 'ยังไม่มีไรเดอร์รับงาน'}
+                  {details.rider ? (
+                    <PersonName person={details.rider}>
+                      {details.rider.riderProfile && <> · <code>{details.rider.riderProfile.riderCode}</code></>}
+                      {details.rider.phone && <> · <a href={`tel:${details.rider.phone}`}>{details.rider.phone}</a></>}
+                    </PersonName>
+                  ) : 'ยังไม่มีไรเดอร์รับงาน'}
                 </dd>
                 {timeline.map(([label, at]) => <Fragment key={label}><dt>{label}</dt><dd>{formatThaiDateTime(at)}</dd></Fragment>)}
                 {details.failureReason && <><dt>เหตุที่ส่งไม่สำเร็จ</dt><dd>{failureReasonLabels[details.failureReason as FailedDeliveryReason] ?? details.failureReason}</dd></>}

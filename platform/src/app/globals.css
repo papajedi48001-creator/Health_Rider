@@ -608,6 +608,13 @@ a.stat-link:hover { border-color: var(--primary); }
 
 /* Profile photos in place of the name initial. */
 .avatar-photo { object-fit: cover; padding: 0; background: var(--primary-soft); }
+.avatar-inline { width: 30px; height: 30px; font-size: 0.95rem; flex: none; }
+.photo-viewer img.avatar { width: 52px; height: 52px; max-height: none; border-radius: 50%; object-fit: cover; }
+.photo-viewer img.avatar-inline { width: 30px; height: 30px; }
+.rider-dialog { width: min(100%, 1040px); }
+.rider-card { display: flex; align-items: center; gap: 16px; }
+.rider-dialog .rider-jobs { width: 100%; }
+.person { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; }
 .profile-head .avatar-edit .avatar { width: 88px; height: 88px; font-size: 2.2rem; }
 .avatar-edit { display: grid; justify-items: center; gap: 6px; }
 .avatar-edit .link-button { font-size: 0.9rem; }

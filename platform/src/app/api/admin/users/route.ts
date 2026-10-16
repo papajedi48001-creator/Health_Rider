@@ -12,7 +12,7 @@ import { handleRoute } from '@/lib/route';
 export const dynamic = 'force-dynamic';
 
 const userSelect = {
-  id: true, username: true, displayName: true, phone: true, role: true, active: true, pendingApproval: true, createdAt: true,
+  id: true, username: true, displayName: true, avatarUpdatedAt: true, phone: true, role: true, active: true, pendingApproval: true, createdAt: true,
   riderProfile: { select: { riderCode: true, employmentCategory: true } },
 } as const;
 

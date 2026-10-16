@@ -92,7 +92,7 @@ export function summarizePharmacy(range: ReportRange, input: PharmacyInput) {
   };
 }
 
-type Rider = { id: string; displayName: string; riderProfile: { riderCode: string; employmentCategory: string } | null };
+type Rider = { id: string; displayName: string; avatarUpdatedAt?: Date | null; riderProfile: { riderCode: string; employmentCategory: string } | null };
 
 export type DeliveryInput = Array<{
   claimedAt: Date | null; pickedUpAt: Date | null; deliveredAt: Date | null; failedAt: Date | null; failureReason: string | null;
@@ -147,6 +147,7 @@ export function summarizeDeliveries(range: ReportRange, attempts: DeliveryInput)
       .map((row) => ({
         riderId: row.rider.id,
         displayName: row.rider.displayName,
+        avatarUpdatedAt: row.rider.avatarUpdatedAt ?? null,
         riderCode: row.rider.riderProfile?.riderCode ?? null,
         employmentCategory: row.rider.riderProfile?.employmentCategory ?? null,
         claimed: row.claimed,
@@ -197,6 +198,7 @@ export function summarizeFees(attempts: FeeInput) {
       .map((row) => ({
         riderId: row.rider.id,
         displayName: row.rider.displayName,
+        avatarUpdatedAt: row.rider.avatarUpdatedAt ?? null,
         riderCode: row.rider.riderProfile?.riderCode ?? null,
         employmentCategory: row.rider.riderProfile?.employmentCategory ?? null,
         deliveries: row.deliveries,

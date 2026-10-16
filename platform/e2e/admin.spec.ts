@@ -23,7 +23,8 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await userForm.getByLabel('รหัสไรเดอร์').fill(`E2E-${suffix}`);
   await userForm.getByLabel('รหัสผ่านเริ่มต้น').fill('e2e-rider-password');
   await userForm.getByRole('button', { name: 'สร้างบัญชี' }).click();
-  const row = page.getByRole('row').filter({ hasText: username });
+  const row = page.getByRole('row').filter({ hasText: `ไรเดอร์ E2E ${suffix}` });
+  await expect(row).not.toContainText(username);
   await expect(row).toContainText(`E2E-${suffix} (ภายใน)`);
 
   const riderContext = await browser.newContext();

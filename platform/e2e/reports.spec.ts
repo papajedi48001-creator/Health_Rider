@@ -12,9 +12,11 @@ test('each role sees only its own reports, and the admin downloads the fee CSV',
   const riders = page.getByRole('region', { name: 'ผลงานไรเดอร์' });
   if (await riders.count()) {
     await riders.getByRole('button').first().click();
-    await expect(page.getByRole('region', { name: /^งานของ / })).toBeVisible();
-    await page.getByRole('button', { name: 'ปิดรายการ' }).click();
-    await expect(page.getByRole('region', { name: /^งานของ / })).toHaveCount(0);
+    const dialog = page.getByRole('dialog', { name: /^งานของ / });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('รหัสไรเดอร์')).toBeVisible();
+    await dialog.getByRole('button', { name: 'ปิดรายการ' }).click();
+    await expect(dialog).toHaveCount(0);
   }
 
   await menu.getByRole('link', { name: 'ค่าบริการไรเดอร์' }).click();

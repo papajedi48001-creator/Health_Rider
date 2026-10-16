@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       db.deliveryAttempt.findMany({
         where: { status: 'return_required' },
         orderBy: { failedAt: 'asc' },
-        select: { id: true, failedAt: true, failureReason: true, rider: { select: { displayName: true } }, deliveryRequest: { select: { hn: true, patientName: true } } },
+        select: { id: true, failedAt: true, failureReason: true, rider: { select: { id: true, displayName: true, avatarUpdatedAt: true } }, deliveryRequest: { select: { hn: true, patientName: true } } },
       }),
       db.syncConflict.findMany({
         where: { status: 'pending' },
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true, reason: true, previousStatus: true, createdAt: true, deliveryAttemptId: true,
           offlineDeliveryEvent: { select: { id: true, eventType: true, deliveryVersion: true, deviceCapturedAt: true, serverReceivedAt: true, payload: true } },
-          deliveryAttempt: { select: { rider: { select: { displayName: true } }, deliveryRequest: { select: { hn: true, patientName: true, deliveryAddress: true, telephone: true, deliveryVersion: true } } } },
+          deliveryAttempt: { select: { rider: { select: { id: true, displayName: true, avatarUpdatedAt: true } }, deliveryRequest: { select: { hn: true, patientName: true, deliveryAddress: true, telephone: true, deliveryVersion: true } } } },
         },
       }),
     ]);
