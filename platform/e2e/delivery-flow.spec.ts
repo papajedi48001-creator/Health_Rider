@@ -68,7 +68,17 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
 
   const coordinator = await signedIn(browser, 'coordinator.uat');
   await coordinator.page.goto('/operations');
-  await expect(coordinator.page.getByRole('row').filter({ hasText: patientName })).toContainText('ส่งสำเร็จ');
+  const deliveredRow = coordinator.page.getByRole('row').filter({ hasText: patientName });
+  await expect(deliveredRow).toContainText('ส่งสำเร็จ');
+
+  await deliveredRow.getByRole('button', { name: `ดูรายละเอียดการส่ง ${patientName}` }).click();
+  const details = coordinator.page.getByRole('dialog', { name: `รายละเอียดการส่ง ${patientName}` });
+  await expect(details.getByText('คู่สมรส')).toBeVisible();
+  await expect(details.getByText('UAT-INT-01')).toBeVisible();
+  const proof = details.getByRole('img', { name: /รูปหลักฐานการส่ง/ });
+  await expect.poll(() => proof.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await coordinator.page.keyboard.press('Escape');
+  await expect(coordinator.page.getByRole('dialog')).toHaveCount(0);
 });
 
 test('takes a failed delivery back to pharmacy and allows a new package', async ({ browser }) => {

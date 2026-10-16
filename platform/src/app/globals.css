@@ -591,3 +591,17 @@ a.stat-link:hover { border-color: var(--primary); }
 }
 .app-banner span { flex: 1 1 220px; }
 .app-banner .btn { padding: 8px 14px; }
+
+/* Delivery details pop-up on the operations overview. */
+.row-actions { white-space: nowrap; }
+.row-actions > * { vertical-align: middle; }
+.info-button { color: var(--primary); background: var(--primary-soft); }
+.detail-dialog { width: min(100%, 720px); gap: 14px; }
+.detail-dialog h3 { margin: 0 0 6px; font-size: 1rem; }
+.detail-dialog section { border-top: 1px solid var(--line); padding-top: 10px; }
+.detail-dialog img { max-height: 60vh; object-fit: contain; }
+.detail-list { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
+.detail-list dt { color: var(--muted); }
+.detail-list dd { margin: 0; overflow-wrap: anywhere; }
+.detail-history { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+@media (max-width: 520px) { .detail-list { grid-template-columns: 1fr; } .detail-list dd { margin-bottom: 6px; } }
