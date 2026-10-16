@@ -36,6 +36,10 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await expect(riderPage).toHaveURL(/\/rider\/scan$/);
 
   await row.getByRole('button', { name: 'ปิดใช้งาน' }).click();
+  // Deactivated accounts are hidden until the admin turns on the switch.
+  await expect(row).toBeHidden();
+  await page.getByText(/แสดงบัญชีที่ปิดใช้งาน/).click();
+  await expect(page.getByRole('switch', { name: /แสดงบัญชีที่ปิดใช้งาน/ })).toBeChecked();
   await expect(row.getByRole('button', { name: 'เปิดใช้งาน' })).toBeVisible();
   await riderPage.reload();
   await expect(riderPage).toHaveURL(/\/login/);

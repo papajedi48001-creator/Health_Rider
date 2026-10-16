@@ -17,6 +17,7 @@ export function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [message, setMessage] = useState('');
   const [role, setRole] = useState<UserRole>('rider');
+  const [showInactive, setShowInactive] = useState(false);
 
   const load = useCallback(async () => {
     const result = await callApi<{ users: User[] }>('/api/admin/users');
@@ -60,6 +61,8 @@ export function AdminUsers() {
 
   const pending = users.filter((user) => user.pendingApproval);
   const accounts = users.filter((user) => !user.pendingApproval);
+  const inactiveCount = accounts.filter((user) => !user.active).length;
+  const shownAccounts = showInactive ? accounts : accounts.filter((user) => user.active);
 
   function resetPassword(user: User) {
     const password = window.prompt(`รหัสผ่านใหม่ของ ${user.displayName} (อย่างน้อย ${minimumPasswordLength} ตัวอักษร)`);
@@ -101,10 +104,15 @@ export function AdminUsers() {
         <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
         <button type="submit">สร้างบัญชี</button>
       </form>
+      <label className="switch-toggle">
+        <input type="checkbox" role="switch" checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />
+        <span className="switch-track" aria-hidden="true" />
+        แสดงบัญชีที่ปิดใช้งาน ({inactiveCount})
+      </label>
       <table>
         <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
         <tbody>
-          {accounts.map((user) => (
+          {shownAccounts.map((user) => (
             <tr key={user.id}>
               <td><PersonName person={user} /></td>
               <td>{roleLabels[user.role]}</td>
