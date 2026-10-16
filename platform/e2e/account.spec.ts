@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { samplePhoto } from './fixtures';
 import { login } from './login';
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -28,4 +29,21 @@ test('the rider history filters fit a phone screen', async ({ page }) => {
   const overflow = await filters.evaluate((card) => [...card.querySelectorAll('input, select, .summary-tile')]
     .some((element) => element.getBoundingClientRect().right > card.getBoundingClientRect().right + 0.5));
   expect(overflow).toBe(false);
+});
+
+test('a staff member uploads a profile photo that shows beside their name, then removes it', async ({ page }) => {
+  await login(page, 'coordinator.uat');
+  await page.goto('/account');
+  await page.getByLabel('เลือกรูปโปรไฟล์').setInputFiles(samplePhoto);
+  await expect(page.getByRole('status')).toContainText('เปลี่ยนรูปโปรไฟล์แล้ว');
+
+  const sidebarPhoto = page.locator('.staff-user img.avatar-photo');
+  await expect(sidebarPhoto).toBeVisible();
+  await expect.poll(() => sidebarPhoto.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(320);
+  await expect(page.getByLabel('ประวัติการแก้ไขบัญชี').getByRole('listitem').first()).toContainText('เปลี่ยนรูปโปรไฟล์');
+
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'ลบรูป' }).click();
+  await expect(page.getByRole('status')).toContainText('ลบรูปโปรไฟล์แล้ว');
+  await expect(page.locator('.staff-user img.avatar-photo')).toHaveCount(0);
 });

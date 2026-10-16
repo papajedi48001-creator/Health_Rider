@@ -7,6 +7,7 @@ import { statusTone } from '@/lib/status-tone';
 import { callApi } from '@/lib/api-client';
 import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
+import { DeliveryDetails } from '@/app/(staff)/operations/delivery-details';
 
 const statusIcons: Record<DeliveryAttemptStatus, IconName> = {
   prepared: 'package', claimed: 'scooter', in_transit: 'truck', delivered: 'checkCircle',
@@ -27,6 +28,8 @@ export function OperationsDashboard() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [message, setMessage] = useState('กำลังโหลด');
   const [editing, setEditing] = useState<string | null>(null);
+  const [detailsOf, setDetailsOf] = useState<string | null>(null);
+  const closeDetails = useCallback(() => setDetailsOf(null), []);
 
   // Status is filtered here rather than on the server, so every status tile keeps its count while one is picked.
   const serverQuery = new URLSearchParams(Object.entries(filters).filter(([key, value]) => value && key !== 'status')).toString();
@@ -116,7 +119,10 @@ export function OperationsDashboard() {
                   <td>{attempt.rider?.displayName ?? '-'}</td>
                   <td><span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span></td>
                   <td>{formatThaiDateTime(attempt.deliveredAt ?? attempt.failedAt ?? attempt.createdAt)}</td>
-                  <td>
+                  <td className="row-actions">
+                    <button type="button" className="icon-button info-button" aria-label={`ดูรายละเอียดการส่ง ${attempt.deliveryRequest.patientName}`} title="ดูรายละเอียด" onClick={() => setDetailsOf(attempt.id)}>
+                      <Icon name="info" size={20} />
+                    </button>
                     {amendableStatuses.includes(attempt.status) && (editing === attempt.id ? (
                       <form onSubmit={(event) => void amend(event, attempt)} aria-label="แก้ไขข้อมูลระหว่างส่ง">
                         <label>ที่อยู่ <textarea name="deliveryAddress" defaultValue={attempt.deliveryRequest.deliveryAddress} /></label>
@@ -133,6 +139,7 @@ export function OperationsDashboard() {
           </table>
         </>
       )}
+      {detailsOf && <DeliveryDetails attemptId={detailsOf} onClose={closeDetails} />}
     </div>
   );
 }

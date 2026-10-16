@@ -11,7 +11,7 @@ import { handleRoute } from '@/lib/route';
 export const dynamic = 'force-dynamic';
 
 const profileFields = {
-  username: true, displayName: true, phone: true, role: true,
+  id: true, username: true, displayName: true, phone: true, role: true, avatarUpdatedAt: true,
   riderProfile: { select: { riderCode: true, employmentCategory: true } },
 } as const;
 
