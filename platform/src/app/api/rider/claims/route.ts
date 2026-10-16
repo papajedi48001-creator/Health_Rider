@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
             where: { id: attemptId, riderId: null, status: 'prepared' },
             data: { riderId, status: 'claimed', claimedAt },
           })).count === 1,
+          findHolder: (attemptId) => tx.deliveryAttempt.findUnique({
+            where: { id: attemptId },
+            select: { status: true, rider: { select: { id: true, displayName: true } } },
+          }).then((attempt) => attempt?.rider ? { riderId: attempt.rider.id, riderName: attempt.rider.displayName, status: attempt.status } : null),
           invalidateToken: async (attemptId) => {
             await tx.packageQrToken.updateMany({
               where: { deliveryAttemptId: attemptId, invalidatedAt: null },
@@ -45,6 +49,10 @@ export async function POST(request: NextRequest) {
 
     if (result.kind === 'invalid') return invalidInput('รหัส QR ไม่ถูกต้องหรือหมดอายุ');
     if (result.kind === 'conflict') return NextResponse.json({ message: 'พัสดุนี้ถูกรับงานแล้ว' }, { status: 409 });
+    if (result.kind === 'taken') return NextResponse.json({ message: `พัสดุนี้ ${result.riderName} รับงานไปแล้ว` }, { status: 409 });
+    if (result.kind === 'already_mine') {
+      return NextResponse.json({ attemptId: result.attemptId, alreadyMine: true, finished: result.finished }, { status: 200 });
+    }
     return NextResponse.json({ attemptId: result.attemptId }, { status: 200 });
   });
 }

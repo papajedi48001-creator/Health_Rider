@@ -34,10 +34,11 @@ export default function RiderScanPage() {
     if (claimingRef.current || !value.trim()) return;
     claimingRef.current = true;
     setMessage('กำลังรับงาน');
-    const result = await callApi<{ attemptId: string }>('/api/rider/claims', { json: { token: value.trim() } });
+    const result = await callApi<{ attemptId: string; alreadyMine?: boolean; finished?: boolean }>('/api/rider/claims', { json: { token: value.trim() } });
     claimingRef.current = false;
     if (!result.ok) return setMessage(result.message);
-    setMessage('รับงานสำเร็จ');
+    if (result.data.finished) return setMessage('คุณรับงานนี้ไปแล้ว และงานนี้จบแล้ว');
+    setMessage(result.data.alreadyMine ? 'คุณรับงานนี้ไปแล้ว กำลังเปิดงาน' : 'รับงานสำเร็จ');
     router.push(`/rider/attempts/${result.data.attemptId}`);
   }
 

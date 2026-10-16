@@ -52,7 +52,7 @@ export function RiderJobsPanel({ riderId, range, onClose }: { riderId: string; r
           <button type="button" className="icon-button" aria-label="ปิดรายการ" onClick={onClose} autoFocus><Icon name="close" /></button>
         </div>
         {rider && (
-          <div className="rider-card">
+          <div className="rider-summary">
             <UserAvatar userId={rider.id} name={rider.displayName} version={rider.avatarUpdatedAt ? Date.parse(rider.avatarUpdatedAt) : null} />
             <dl className="detail-list">
               <dt>ชื่อ</dt><dd>{rider.displayName}</dd>

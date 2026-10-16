@@ -28,12 +28,20 @@ test.skipIf(!databaseUrl)('MariaDB permits only one concurrent QR claim', async 
       findToken: (tokenHash) => tx.packageQrToken.findUnique({ where: { tokenHash } }).then((record) => record && ({ attemptId: record.deliveryAttemptId, expiresAt: record.expiresAt, invalidatedAt: record.invalidatedAt })),
       claimPreparedAttempt: async (attemptId, riderId, claimedAt) => (await tx.deliveryAttempt.updateMany({ where: { id: attemptId, riderId: null, status: 'prepared' }, data: { riderId, status: 'claimed', claimedAt } })).count === 1,
       invalidateToken: async (attemptId) => { await tx.packageQrToken.updateMany({ where: { deliveryAttemptId: attemptId, invalidatedAt: null }, data: { invalidatedAt: new Date() } }); },
+      findHolder: (attemptId) => tx.deliveryAttempt.findUnique({ where: { id: attemptId }, select: { status: true, rider: { select: { id: true, displayName: true } } } })
+        .then((attempt) => attempt?.rider ? { riderId: attempt.rider.id, riderName: attempt.rider.displayName, status: attempt.status } : null),
     }),
   }), { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
 
   const results = await Promise.all([claim(ids.riderA), claim(ids.riderB)]);
   expect(results.filter((result) => result.kind === 'claimed')).toHaveLength(1);
-  expect(results.filter((result) => result.kind === 'conflict')).toHaveLength(1);
+  // The loser learns who won when the winner has committed by then, otherwise it only hears the package is taken.
+  expect(results.filter((result) => result.kind === 'conflict' || result.kind === 'taken')).toHaveLength(1);
+
+  const winner = results[0].kind === 'claimed' ? ids.riderA : ids.riderB;
+  const loser = winner === ids.riderA ? ids.riderB : ids.riderA;
+  expect(await claim(winner)).toEqual({ kind: 'already_mine', attemptId: ids.attempt, finished: false });
+  expect(await claim(loser)).toEqual({ kind: 'taken', riderName: winner === ids.riderA ? 'Rider A' : 'Rider B' });
 });
 
 afterAll(async () => {
