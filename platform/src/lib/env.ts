@@ -16,16 +16,6 @@ export function getDatabaseUrl(environment: Environment): string {
   return databaseUrl;
 }
 
-export function getHosDatabaseUrl(environment: Environment): string {
-  const hosDatabaseUrl = environment.HOS_DATABASE_URL?.trim();
-
-  if (!hosDatabaseUrl) {
-    throw new Error('HOS_DATABASE_URL is required before reading HOSxP data');
-  }
-
-  return hosDatabaseUrl;
-}
-
 export function getAuthSecret(environment: Environment): string {
   const authSecret = environment.AUTH_SECRET?.trim();
 

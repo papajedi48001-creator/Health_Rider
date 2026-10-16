@@ -9,6 +9,9 @@ if (basePath && !/^\/[A-Za-z0-9._~-]+(\/[A-Za-z0-9._~-]+)*$/.test(basePath)) {
   throw new Error(`NEXT_PUBLIC_BASE_PATH must look like /health-rider (leading slash, no trailing slash), got "${basePath}"`);
 }
 
+// Identifies this build; open pages compare it with /api/version to offer a newer one.
+const appVersion = process.env.APP_VERSION?.trim() || new Date().toISOString();
+
 // Next.js hydrates with inline scripts and the app uses inline styles, so those stay allowed; everything
 // else, including framing by other sites, is limited to this origin. Images include data: and blob:
 // for QR labels and camera photos.
@@ -39,6 +42,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   basePath,
   poweredByHeader: false,
+  env: { NEXT_PUBLIC_APP_VERSION: appVersion },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

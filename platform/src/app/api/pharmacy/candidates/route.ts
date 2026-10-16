@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const on = requestedDate ? startOfBangkokDay(requestedDate) : new Date();
     if (!on) return invalidInput('วันที่ค้นหาไม่ถูกต้อง');
 
-    const candidates = await getHosCandidateRepository(process.env).eligibleFor(on);
+    const candidates = await (await getHosCandidateRepository()).eligibleFor(on);
     const confirmed = candidates.length === 0 ? [] : await db.deliveryRequest.findMany({
       where: { hosVisitNumber: { in: candidates.map((candidate) => candidate.visitNumber) } },
       select: { hosVisitNumber: true },

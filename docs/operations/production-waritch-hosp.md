@@ -26,7 +26,12 @@ GRANT ALL PRIVILEGES ON health_rider.* TO 'health_rider'@'192.168.1.50';
 - สร้างรหัสผ่านสุ่มด้วย `openssl rand -hex 24` เพื่อไม่ให้มีอักขระที่ต้อง encode ใน URL ถ้าใช้อักขระพิเศษ เช่น `@ : / #` ต้อง URL-encode ก่อนใส่ใน `DATABASE_URL`
 - ทดสอบจากเครื่องแอปด้วย `mariadb -h 192.168.1.254 -u health_rider -p health_rider -e 'SELECT 1'`
 
-บัญชีอ่าน HOSxP (`HOS_DATABASE_URL`) เป็นอีกบัญชีหนึ่ง ให้สิทธิ์ `SELECT` เท่านั้น
+บัญชีอ่าน HOSxP เป็นอีกบัญชีหนึ่ง ให้สิทธิ์ `SELECT` เท่านั้น (เปลี่ยน `hos` เป็นชื่อฐาน HOSxP จริง) แล้วกรอกที่เมนูตั้งค่าระบบ (ข้อ 6) หรือใส่ใน `HOS_DATABASE_URL`
+
+```sql
+CREATE USER 'hr_hos_read'@'192.168.1.50' IDENTIFIED BY 'รหัสผ่านสุ่มยาว';
+GRANT SELECT ON hos.* TO 'hr_hos_read'@'192.168.1.50';
+```
 
 ## 2. ตั้งค่าบนเครื่องแอป
 
@@ -44,7 +49,7 @@ chmod 600 .env.production
 | `DATABASE_URL` | `mysql://health_rider:<รหัสผ่าน>@192.168.1.254:3306/health_rider` |
 | `AUTH_SECRET` | ค่าสุ่มอย่างน้อย 32 ตัวอักษร: `openssl rand -base64 48` |
 | `NEXT_PUBLIC_BASE_PATH` | `/health-rider` (ค่าเริ่มต้นของไฟล์นี้อยู่แล้ว) |
-| `HOS_DATABASE_URL`, `HOS_ELIGIBLE_ITEM_CODES` | บัญชีอ่าน HOSxP และรหัสยาที่ส่งได้ |
+| `HOS_DATABASE_URL`, `HOS_ELIGIBLE_ITEM_CODES` | ไม่บังคับ ตั้งที่เมนูตั้งค่าระบบแทนได้ |
 | `WEB_PUBLISH` | เว้นว่างถ้า reverse proxy อยู่เครื่องเดียวกัน ถ้าอยู่คนละเครื่องใส่ `<IP เครื่องแอป>:3000` แล้วตั้ง firewall ให้พอร์ตนี้รับเฉพาะเครื่อง proxy |
 
 ไฟล์ `.env.production` ถูก gitignore และไม่ถูกคัดลอกเข้า image ห้ามส่งไฟล์นี้ผ่านแชทหรืออีเมล
@@ -105,18 +110,30 @@ LimitRequestBody 5242880
 2. เข้าด้วย `admin.uat` สร้างบัญชี admin จริงของโรงพยาบาล
 3. เข้าด้วย admin จริง แล้ว**ปิดบัญชี `*.uat` ทุกบัญชี** เพราะ seed ใช้รหัสเดียวกันทุกบัญชี
 4. เจ้าหน้าที่และไรเดอร์สมัครเองได้ที่หน้าเข้าสู่ระบบ แล้ว admin อนุมัติในหน้า "บัญชีผู้ใช้"
-5. ไรเดอร์เปิดลิงก์บนมือถือแล้ว "เพิ่มไปยังหน้าจอหลัก" ได้ แอปจะเปิดที่ `/health-rider/rider/scan`
+5. ติดตั้งเป็นแอปเพื่อเปิดแบบไม่มีแถบที่อยู่ แอปจะเปิดหน้าแรกตามบทบาทของผู้ใช้ (ไรเดอร์ไปหน้าสแกน)
+   - คอมพิวเตอร์ (Chrome/Edge): เปิด `https://waritch-hosp.moph.go.th/health-rider` แล้วกดไอคอน "ติดตั้งแอป" ท้ายแถบที่อยู่ หรือเมนู ⋮ > "ส่งแคสต์ บันทึก และแชร์" > "ติดตั้งหน้าเว็บเป็นแอป"
+   - Android (Chrome): เมนู ⋮ > "เพิ่มลงในหน้าจอหลัก" > "ติดตั้ง"
+   - iPhone (Safari): ปุ่มแชร์ > "เพิ่มไปยังหน้าจอโฮม"
 
-## 6. อัปเดตเวอร์ชัน
+## 6. ตั้งค่าระบบในหน้าเว็บ
+
+เมนู "ผู้ดูแลระบบ > ตั้งค่าระบบ" (`/health-rider/admin/settings`) ใช้ได้เฉพาะ admin
+
+- **การเชื่อมต่อ HOSxP**: host, port, ชื่อฐาน, บัญชีอ่านอย่างเดียว และรหัสยาที่ส่งถึงบ้านได้ (icode) กด "ทดสอบการเชื่อมต่อ" ก่อน "บันทึก" ได้ ค่าที่บันทึกมีผลทันทีและใช้แทน `HOS_DATABASE_URL` / `HOS_ELIGIBLE_ITEM_CODES` ใน `.env.production` ปุ่ม "กลับไปใช้ค่าจาก .env" ลบค่าที่บันทึกไว้
+- รหัสผ่าน HOSxP ถูกเข้ารหัสด้วยกุญแจที่ได้จาก `AUTH_SECRET` ถ้าเปลี่ยน `AUTH_SECRET` ต้องกรอกรหัสผ่าน HOSxP ใหม่
+- **ค่าตั้งของเซิร์ฟเวอร์** (ฐานข้อมูล, `AUTH_SECRET`, path ของเว็บ, cookie, ที่เก็บรูปหลักฐาน) แสดงสถานะอย่างเดียว ไม่แสดงรหัสผ่านหรือ secret ค่าเหล่านี้ยังแก้ใน `.env.production`
+- ทุกการบันทึกถูกเก็บในประวัติการตรวจสอบ (ไม่มีรหัสผ่าน)
+
+## 7. อัปเดตเวอร์ชัน
 
 ```bash
 git pull
 docker compose -f compose.production.yaml --env-file .env.production up -d --build
 ```
 
-สำรองฐานก่อนอัปเดตทุกครั้ง (ข้อ 7) เพราะ migration อาจแก้ตาราง
+สำรองฐานก่อนอัปเดตทุกครั้ง (ข้อ 8) เพราะ migration อาจแก้ตาราง
 
-## 7. สำรองข้อมูล
+## 8. สำรองข้อมูล
 
 - ฐานข้อมูล: `mariadb-dump --single-transaction -h 192.168.1.254 -u health_rider -p health_rider > health_rider-$(date +%F).sql`
 - รูปหลักฐานการส่ง: volume `health-rider-evidence` บนเครื่องแอป เช่น

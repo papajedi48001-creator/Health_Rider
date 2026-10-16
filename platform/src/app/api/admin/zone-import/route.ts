@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'admin');
     const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-    const villages = await getHosCandidateRepository(process.env).villagesSince(since);
+    const villages = await (await getHosCandidateRepository()).villagesSince(since);
     const zones = await db.deliveryZone.findMany({ select: { subdistrictCode: true, villageCode: true } });
     const existing = new Set(zones.map((zone) => `${zone.subdistrictCode}/${zone.villageCode}`));
     return NextResponse.json({
