@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/brand/icons';
+import { withBasePath } from '@/lib/base-path';
 
 const developer = {
   name: 'Jacky Hokk',
@@ -33,7 +34,8 @@ export function DeveloperCredit() {
       {open && (
         <div className="dev-balloon" role="dialog" aria-label="ติดต่อผู้พัฒนา">
           <div className="dev-balloon-head">
-            <span className="avatar avatar-inline" aria-hidden="true">J</span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a small static photo served from public/ */}
+            <img className="dev-photo" src={withBasePath('/developer.jpg')} alt="" width={44} height={44} />
             <span><strong>{developer.name}</strong><br /><small className="muted">ผู้พัฒนาระบบ Health Rider</small></span>
             <button type="button" className="icon-button" aria-label="ปิด" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
           </div>
@@ -46,7 +48,8 @@ export function DeveloperCredit() {
         </div>
       )}
       <button type="button" className="dev-credit-button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name="info" size={16} /> พัฒนาโดย {developer.name}
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static photo served from public/ */}
+        <img className="dev-photo dev-photo-small" src={withBasePath('/developer.jpg')} alt="" width={20} height={20} /> พัฒนาโดย {developer.name}
       </button>
     </div>
   );
