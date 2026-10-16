@@ -4,6 +4,8 @@ export type SessionUser = {
   id: string;
   role: UserRole;
   displayName: string;
+  // Present once the user has uploaded a profile photo; changes whenever they replace it.
+  avatarVersion?: number;
 };
 
 export class UnauthorizedError extends Error {

@@ -605,3 +605,9 @@ a.stat-link:hover { border-color: var(--primary); }
 .detail-list dd { margin: 0; overflow-wrap: anywhere; }
 .detail-history { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 @media (max-width: 520px) { .detail-list { grid-template-columns: 1fr; } .detail-list dd { margin-bottom: 6px; } }
+
+/* Profile photos in place of the name initial. */
+.avatar-photo { object-fit: cover; padding: 0; background: var(--primary-soft); }
+.profile-head .avatar-edit .avatar { width: 88px; height: 88px; font-size: 2.2rem; }
+.avatar-edit { display: grid; justify-items: center; gap: 6px; }
+.avatar-edit .link-button { font-size: 0.9rem; }

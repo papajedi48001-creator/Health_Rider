@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
+import { UserAvatar } from '@/account/user-avatar';
 import { RiderLogout } from '@/rider/rider-logout';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
 import { LogoMark } from '@/brand/logo';
@@ -17,7 +18,7 @@ export async function RiderShell({ children }: { children: ReactNode }) {
       <header className="rider-topbar">
         <span className="rider-brand"><LogoMark size={30} /> Health Rider</span>
         <Link href="/rider/profile" className="rider-user" aria-label={`ข้อมูลผู้ใช้ ${session.displayName}`}>
-          <span className="avatar avatar-small" aria-hidden="true">{session.displayName.trim().charAt(0)}</span>
+          <UserAvatar userId={session.id} name={session.displayName} version={session.avatarVersion} small />
           <span className="rider-user-name">{session.displayName}</span>
         </Link>
         <RiderLogout />

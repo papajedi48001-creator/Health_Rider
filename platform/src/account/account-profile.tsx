@@ -1,13 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { UserAvatar } from '@/account/user-avatar';
+import { toAvatarJpeg } from '@/account/avatar-image';
 import type { UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
 import { employmentLabels, formatThaiDateTime, roleLabels } from '@/lib/labels';
 
 type Profile = {
+  id: string;
+  avatarUpdatedAt: string | null;
   username: string;
   displayName: string;
   phone: string | null;
@@ -19,6 +23,7 @@ type Change = { id: string; action: string; at: string; byMe: boolean; oldValues
 
 const fieldLabels: Record<string, string> = { displayName: 'ชื่อที่แสดง', phone: 'เบอร์โทร', role: 'บทบาท', active: 'สถานะบัญชี' };
 const actionLabels: Record<string, string> = {
+  'user.avatar_updated': 'เปลี่ยนรูปโปรไฟล์', 'user.avatar_removed': 'ลบรูปโปรไฟล์',
   'user.created': 'สร้างบัญชี', 'user.updated': 'ผู้ดูแลระบบแก้ไขบัญชี', 'user.profile_updated': 'แก้ไขข้อมูลส่วนตัว', 'user.password_changed': 'เปลี่ยนรหัสผ่าน',
 };
 
@@ -38,6 +43,7 @@ export function AccountProfile() {
   const [message, setMessage] = useState('กำลังโหลดข้อมูลผู้ใช้');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [changes, setChanges] = useState<Change[]>([]);
+  const photoInput = useRef<HTMLInputElement>(null);
 
   const loadChanges = () => void callApi<{ changes: Change[] }>('/api/me/changes').then((result) => result.ok && setChanges(result.data.changes));
 
@@ -64,6 +70,40 @@ export function AccountProfile() {
     router.refresh();
   }
 
+  async function changePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !profile) return;
+    setSaving(true);
+    setMessage('กำลังอัปโหลดรูปโปรไฟล์');
+    let photo: string;
+    try {
+      photo = await toAvatarJpeg(file);
+    } catch {
+      setSaving(false);
+      return setMessage('เปิดไฟล์รูปนี้ไม่ได้ โปรดเลือกไฟล์รูปภาพ (JPG หรือ PNG)');
+    }
+    const result = await callApi<{ avatarVersion: number }>('/api/me/avatar', { method: 'PUT', json: { photo } });
+    setSaving(false);
+    if (!result.ok) return setMessage(result.message);
+    setProfile({ ...profile, avatarUpdatedAt: new Date(result.data.avatarVersion).toISOString() });
+    setMessage('เปลี่ยนรูปโปรไฟล์แล้ว');
+    loadChanges();
+    router.refresh();
+  }
+
+  async function removePhoto() {
+    if (!profile || !window.confirm('ลบรูปโปรไฟล์ใช่ไหม')) return;
+    setSaving(true);
+    const result = await callApi('/api/me/avatar', { method: 'DELETE' });
+    setSaving(false);
+    if (!result.ok) return setMessage(result.message);
+    setProfile({ ...profile, avatarUpdatedAt: null });
+    setMessage('ลบรูปโปรไฟล์แล้ว');
+    loadChanges();
+    router.refresh();
+  }
+
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const target = event.currentTarget;
@@ -85,7 +125,14 @@ export function AccountProfile() {
       {profile && (
         <>
           <section className="rider-card profile-head" aria-label="บัญชีของฉัน">
-            <span className="avatar" aria-hidden="true">{profile.displayName.trim().charAt(0)}</span>
+            <div className="avatar-edit">
+              <UserAvatar userId={profile.id} name={profile.displayName} version={profile.avatarUpdatedAt ? Date.parse(profile.avatarUpdatedAt) : null} />
+              <input ref={photoInput} type="file" accept="image/*" hidden aria-label="เลือกรูปโปรไฟล์" onChange={(event) => void changePhoto(event)} />
+              <button type="button" className="link-button" disabled={saving} onClick={() => photoInput.current?.click()}>
+                {profile.avatarUpdatedAt ? 'เปลี่ยนรูป' : 'เพิ่มรูป'}
+              </button>
+              {profile.avatarUpdatedAt && <button type="button" className="link-button" disabled={saving} onClick={() => void removePhoto()}>ลบรูป</button>}
+            </div>
             <div>
               <h2>{profile.displayName}</h2>
               <p className="muted">
