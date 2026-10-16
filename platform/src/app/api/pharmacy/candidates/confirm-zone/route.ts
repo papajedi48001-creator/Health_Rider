@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const zone = await db.deliveryZone.findFirst({ where: { id: body.zoneId, active: true } });
     if (!zone) return NextResponse.json({ message: 'ไม่พบโซนจัดส่งนี้' }, { status: 404 });
 
-    const inZone = (await getHosCandidateRepository(process.env).eligibleFor(on))
+    const inZone = (await (await getHosCandidateRepository()).eligibleFor(on))
       .filter((candidate) => candidate.subdistrictCode === zone.subdistrictCode && candidate.villageCode === zone.villageCode);
     const confirmed = inZone.length === 0 ? [] : await db.deliveryRequest.findMany({
       where: { hosVisitNumber: { in: inZone.map((candidate) => candidate.visitNumber) } }, select: { hosVisitNumber: true },

@@ -247,3 +247,13 @@ model AuditEvent {
   @@index([auditableType, auditableId, createdAt])
   @@map("audit_events")
 }
+
+// Settings an admin changes from the "ตั้งค่าระบบ" page; a stored value wins over the matching .env value.
+model SystemSetting {
+  key         String   @id @db.VarChar(100)
+  value       Json
+  updatedById String?  @db.Char(26)
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}

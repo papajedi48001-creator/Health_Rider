@@ -1,8 +1,9 @@
 // Seeds UAT accounts and delivery zones. Run with `npm run db:seed`; safe to run more than once.
 import { readFileSync } from 'node:fs';
 import bcrypt from 'bcryptjs';
-import { PrismaClient, type EmploymentCategory, type UserRole } from '@prisma/client';
+import type { EmploymentCategory, UserRole } from '@prisma/client';
 import { ulid } from 'ulidx';
+import { createPrismaClient } from '../src/lib/prisma-client.mjs';
 
 type SeedAccount = { username: string; displayName: string; role: UserRole; rider?: { riderCode: string; employmentCategory: EmploymentCategory } };
 
@@ -15,7 +16,7 @@ const uatAccounts: SeedAccount[] = [
   { username: 'auditor.uat', displayName: 'ผู้ตรวจสอบ UAT', role: 'auditor' },
 ];
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   const password = process.env.SEED_UAT_PASSWORD ?? '';

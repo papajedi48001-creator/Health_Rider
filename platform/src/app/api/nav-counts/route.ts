@@ -17,7 +17,7 @@ let candidateCache: { at: number; count: number } | null = null;
 async function pendingCandidates(): Promise<number | null> {
   if (candidateCache && Date.now() - candidateCache.at < candidateCacheMs) return candidateCache.count;
   try {
-    const candidates = await getHosCandidateRepository(process.env).eligibleFor(new Date());
+    const candidates = await (await getHosCandidateRepository()).eligibleFor(new Date());
     const confirmed = candidates.length === 0 ? 0 : await db.deliveryRequest.count({
       where: { hosVisitNumber: { in: candidates.map((candidate) => candidate.visitNumber) } },
     });

@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { withBasePath } from '@/lib/base-path';
+import { AppShell } from '@/pwa/app-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'ระบบจัดการ Health Rider',
   description: 'ระบบบริหารการส่งยาถึงบ้าน โรงพยาบาลวาริชภูมิ',
   manifest: withBasePath('/manifest.webmanifest'),
-  icons: { icon: withBasePath('/icon.svg') },
+  icons: { icon: withBasePath('/icon.svg'), apple: withBasePath('/icon-192.png') },
 };
 
 export const viewport: Viewport = {
@@ -19,7 +20,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="th">
-      <body>{children}</body>
+      <body>
+        <AppShell />
+        {children}
+      </body>
     </html>
   );
 }

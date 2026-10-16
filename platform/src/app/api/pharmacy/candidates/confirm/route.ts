@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (!body || typeof body.visitNumber !== 'string' || !on) return invalidInput('ข้อมูลผู้ป่วยสำหรับยืนยันไม่ถูกต้อง');
     const visitNumber = body.visitNumber;
 
-    const candidate = (await getHosCandidateRepository(process.env).eligibleFor(on)).find((item) => item.visitNumber === visitNumber);
+    const candidate = (await (await getHosCandidateRepository()).eligibleFor(on)).find((item) => item.visitNumber === visitNumber);
     if (!candidate) return NextResponse.json({ message: 'ไม่พบผู้ป่วยรายนี้ในรายการที่เข้าเกณฑ์จาก HOSxP' }, { status: 404 });
 
     const confirmed = await db.$transaction(async (tx) => {
