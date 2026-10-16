@@ -41,6 +41,18 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
   await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
 
+  // Scanning the same QR again names who has the package, or reopens the job for the rider who claimed it.
+  const otherRider = await signedIn(browser, 'rider.external.uat');
+  await otherRider.page.goto('/rider/scan');
+  await otherRider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
+  await otherRider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
+  await expect(otherRider.page.getByRole('status')).toHaveText('พัสดุนี้ ไรเดอร์ภายใน UAT รับงานไปแล้ว');
+  await otherRider.context.close();
+  await rider.page.goto('/rider/scan');
+  await rider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
+  await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
+  await expect(rider.page.getByRole('heading', { name: patientName })).toBeVisible();
+
   await rider.context.setOffline(true);
   await rider.page.getByRole('button', { name: 'บันทึกรับยา' }).click();
   await expect(rider.page.getByRole('status')).toContainText('บันทึกไว้ในเครื่อง รอส่งเมื่อออนไลน์');

@@ -9,6 +9,11 @@ test('a rider opens their account from their name, edits their phone and sees th
   await page.getByRole('link', { name: /ข้อมูลผู้ใช้/ }).click();
   await expect(page).toHaveURL(/\/rider\/profile$/);
   await expect(page.getByRole('heading', { name: 'ข้อมูลผู้ใช้' })).toBeVisible();
+  // The card stacks its heading, details and button; a row layout squeezes the name into one letter per line.
+  const card = page.getByLabel('ข้อมูลส่วนตัว');
+  const heading = await card.getByRole('heading', { name: 'ข้อมูลส่วนตัว' }).boundingBox();
+  const details = await card.locator('dl').boundingBox();
+  expect(details!.y).toBeGreaterThan(heading!.y + heading!.height - 1);
 
   const phone = `08${String(Date.now()).slice(-8)}`;
   await page.getByRole('button', { name: 'แก้ไขข้อมูล' }).click();
