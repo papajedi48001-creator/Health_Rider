@@ -37,5 +37,13 @@ services:
     volumes:
       - health-rider-evidence:/app/data/evidence
 
+# A fixed private range for this app's Docker network. Docker's automatic 172.x range can overlap the
+# hospital network, which cuts off SSH and other traffic to this server. Change it if 10.250.252.0/24 is in use.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-10.250.252.0/24}
+
 volumes:
   health-rider-evidence:

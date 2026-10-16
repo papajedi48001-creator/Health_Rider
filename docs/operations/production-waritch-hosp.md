@@ -51,6 +51,8 @@ chmod 600 .env.production
 
 `NEXT_PUBLIC_BASE_PATH` ถูกฝังตอน build ถ้าเปลี่ยนค่าต้อง build image ใหม่
 
+Docker network ของแอปใช้วง `10.250.252.0/24` (ตั้งได้ที่ `DOCKER_SUBNET`) เพราะวง `172.x` ที่ Docker เลือกเองอาจชนกับเครือข่ายโรงพยาบาล ทำให้ SSH เข้าเครื่องไม่ได้ ต้องไม่ซ้ำกับวงที่ใช้อยู่ (ตรวจด้วย `ip route` และ `docker network ls`)
+
 ## 3. Build และเริ่มระบบ
 
 ```bash
