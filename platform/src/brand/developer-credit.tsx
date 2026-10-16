@@ -37,12 +37,12 @@ export function DeveloperCredit() {
             <span><strong>{developer.name}</strong><br /><small className="muted">ผู้พัฒนาระบบ Health Rider</small></span>
             <button type="button" className="icon-button" aria-label="ปิด" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
           </div>
-          <dl className="detail-list">
-            <dt>โทร</dt><dd><a href={`tel:${developer.phone}`}>085-228-7387</a></dd>
-            <dt>Facebook</dt><dd><a href={developer.facebook} target="_blank" rel="noreferrer">jacky.hokk</a></dd>
-            <dt>LINE ID</dt><dd>{developer.line}</dd>
-            <dt>อีเมล</dt><dd><a href={`mailto:${developer.email}`}>{developer.email}</a></dd>
-          </dl>
+          <ul className="dev-contacts">
+            <li title="โทร"><Icon name="phone" size={18} /><span><span className="sr-only">โทร </span><a href={`tel:${developer.phone}`}>085-228-7387</a></span></li>
+            <li title="Facebook"><Icon name="facebook" size={18} /><span><span className="sr-only">Facebook </span><a href={developer.facebook} target="_blank" rel="noreferrer">jacky.hokk</a></span></li>
+            <li title="LINE ID"><Icon name="chat" size={18} /><span><span className="sr-only">LINE ID </span>{developer.line}</span></li>
+            <li title="อีเมล"><Icon name="mail" size={18} /><span><span className="sr-only">อีเมล </span><a href={`mailto:${developer.email}`}>{developer.email}</a></span></li>
+          </ul>
         </div>
       )}
       <button type="button" className="dev-credit-button" aria-expanded={open} onClick={() => setOpen(!open)}>
