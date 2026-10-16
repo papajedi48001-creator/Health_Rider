@@ -618,3 +618,27 @@ a.stat-link:hover { border-color: var(--primary); }
 .profile-head .avatar-edit .avatar { width: 88px; height: 88px; font-size: 2.2rem; }
 .avatar-edit { display: grid; justify-items: center; gap: 6px; }
 .avatar-edit .link-button { font-size: 0.9rem; }
+
+/* Developer credit, bottom-right on every page; above the rider tab bar on phones. */
+.dev-credit {
+  position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 20;
+  display: grid; justify-items: end; gap: 8px; pointer-events: none;
+}
+body:has(.rider-tabbar) .dev-credit { bottom: calc(64px + 8px + env(safe-area-inset-bottom)); }
+.dev-credit > * { pointer-events: auto; }
+.dev-credit-button {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 3px 10px; margin: 0;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted);
+  font-size: 0.75rem; font-weight: 600; opacity: 0.85; box-shadow: 0 2px 8px rgba(30, 42, 72, 0.08);
+}
+.dev-credit-button:hover, .dev-credit-button[aria-expanded="true"] { opacity: 1; color: var(--primary); }
+.dev-balloon {
+  position: relative; width: min(300px, calc(100vw - 24px)); display: grid; gap: 10px; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-surface);
+  box-shadow: 0 10px 30px rgba(30, 42, 72, 0.18); font-size: 0.9rem;
+}
+.dev-balloon::after {
+  content: ""; position: absolute; right: 22px; bottom: -7px; width: 12px; height: 12px;
+  background: var(--surface); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg);
+}
+.dev-balloon-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
