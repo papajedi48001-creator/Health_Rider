@@ -31,6 +31,9 @@ const paths: Record<string, ReactNode> = {
   image: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 16-5-5-9 9" /></>,
   chart: <><path d="M4 20V4M4 20h16" /><path d="M8 16v-4M12 16V8M16 16v-6M20 16v-9" /></>,
   download: <><path d="M12 4v11M7 10l5 5 5-5" /><path d="M5 20h14" /></>,
+  facebook: <><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M15.5 8H14a2 2 0 0 0-2 2v11M9.5 13h5" /></>,
+  chat: <path d="M12 4c5 0 9 3.1 9 7s-4 7-9 7c-.8 0-1.6-.1-2.3-.2L5 20l1-3.6C4.2 15.1 3 13.1 3 11c0-3.9 4-7 9-7z" />,
+  mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3.5 6.5 8.5 6.5 8.5-6.5" /></>,
   timer: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" /></>,
 };
 

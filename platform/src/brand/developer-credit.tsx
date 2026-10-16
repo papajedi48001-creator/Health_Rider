@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/brand/icons';
+import { withBasePath } from '@/lib/base-path';
 
 const developer = {
   name: 'Jacky Hokk',
@@ -33,20 +34,22 @@ export function DeveloperCredit() {
       {open && (
         <div className="dev-balloon" role="dialog" aria-label="ติดต่อผู้พัฒนา">
           <div className="dev-balloon-head">
-            <span className="avatar avatar-inline" aria-hidden="true">J</span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a small static photo served from public/ */}
+            <img className="dev-photo" src={withBasePath('/developer.jpg')} alt="" width={44} height={44} />
             <span><strong>{developer.name}</strong><br /><small className="muted">ผู้พัฒนาระบบ Health Rider</small></span>
             <button type="button" className="icon-button" aria-label="ปิด" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
           </div>
-          <dl className="detail-list">
-            <dt>โทร</dt><dd><a href={`tel:${developer.phone}`}>085-228-7387</a></dd>
-            <dt>Facebook</dt><dd><a href={developer.facebook} target="_blank" rel="noreferrer">jacky.hokk</a></dd>
-            <dt>LINE ID</dt><dd>{developer.line}</dd>
-            <dt>อีเมล</dt><dd><a href={`mailto:${developer.email}`}>{developer.email}</a></dd>
-          </dl>
+          <ul className="dev-contacts">
+            <li title="โทร"><Icon name="phone" size={18} /><span><span className="sr-only">โทร </span><a href={`tel:${developer.phone}`}>085-228-7387</a></span></li>
+            <li title="Facebook"><Icon name="facebook" size={18} /><span><span className="sr-only">Facebook </span><a href={developer.facebook} target="_blank" rel="noreferrer">jacky.hokk</a></span></li>
+            <li title="LINE ID"><Icon name="chat" size={18} /><span><span className="sr-only">LINE ID </span>{developer.line}</span></li>
+            <li title="อีเมล"><Icon name="mail" size={18} /><span><span className="sr-only">อีเมล </span><a href={`mailto:${developer.email}`}>{developer.email}</a></span></li>
+          </ul>
         </div>
       )}
       <button type="button" className="dev-credit-button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name="info" size={16} /> พัฒนาโดย {developer.name}
+        {/* eslint-disable-next-line @next/next/no-img-element -- a small static photo served from public/ */}
+        <img className="dev-photo dev-photo-small" src={withBasePath('/developer.jpg')} alt="" width={20} height={20} /> พัฒนาโดย {developer.name}
       </button>
     </div>
   );
