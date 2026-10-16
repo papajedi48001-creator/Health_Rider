@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { PersonName } from '@/account/person-name';
 import { employmentLabels } from '@/lib/labels';
 import { RiderJobsPanel } from '@/app/(staff)/reports/delivery/rider-jobs';
 import { FailureReasons, minutes, NoActivity, percent, ReportFilters, ReportSection, StatTile, useReport } from '@/reports/report-kit';
 
 type DeliveryReportData = {
   totals: { claimed: number; delivered: number; failed: number; successRate: number | null; averageMinutes: number | null };
-  byRider: Array<{ riderId: string; displayName: string; riderCode: string | null; employmentCategory: string | null; claimed: number; delivered: number; failed: number; successRate: number | null; averageMinutes: number | null }>;
+  byRider: Array<{ riderId: string; displayName: string; avatarUpdatedAt: string | null; riderCode: string | null; employmentCategory: string | null; claimed: number; delivered: number; failed: number; successRate: number | null; averageMinutes: number | null }>;
   byZone: Array<{ zone: string; subdistrictCode: string; delivered: number; failed: number; successRate: number | null }>;
   failureReasons: Array<{ reason: string; count: number }>;
 };
@@ -38,8 +39,8 @@ export function DeliveryReport() {
                     {data.byRider.map((row) => (
                       <tr key={row.riderId}>
                         <td>
-                          <button type="button" className="link-button" aria-pressed={riderId === row.riderId} onClick={() => setRiderId(riderId === row.riderId ? null : row.riderId)}>
-                            {row.displayName}
+                          <button type="button" className="link-button" aria-haspopup="dialog" onClick={() => setRiderId(row.riderId)}>
+                            <PersonName person={{ id: row.riderId, displayName: row.displayName, avatarUpdatedAt: row.avatarUpdatedAt }} />
                           </button>
                           {row.riderCode && <><br /><code>{row.riderCode}</code></>}
                         </td>
@@ -53,7 +54,7 @@ export function DeliveryReport() {
                     ))}
                   </tbody>
                 </table>
-                <p className="muted">กดชื่อไรเดอร์เพื่อดูรายการงานในช่วงวันที่นี้</p>
+                <p className="muted">กดชื่อไรเดอร์เพื่อดูข้อมูลไรเดอร์และรายการงานในช่วงวันที่นี้</p>
               </ReportSection>
               {riderId && <RiderJobsPanel riderId={riderId} range={range} onClose={() => setRiderId(null)} />}
               <ReportSection title="แยกตามโซน">

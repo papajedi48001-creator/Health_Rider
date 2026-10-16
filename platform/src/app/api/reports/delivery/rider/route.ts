@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const within = dateRangeFilter(range);
 
     const [rider, attempts] = await Promise.all([
-      db.user.findUnique({ where: { id: riderId }, select: { id: true, displayName: true, riderProfile: { select: { riderCode: true } } } }),
+      db.user.findUnique({ where: { id: riderId }, select: { id: true, displayName: true, avatarUpdatedAt: true, phone: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } }),
       db.deliveryAttempt.findMany({
         where: { riderId, OR: [{ claimedAt: within }, { deliveredAt: within }, { failedAt: within }] },
         select: {
@@ -39,7 +39,10 @@ export async function GET(request: NextRequest) {
     const sorted = [...attempts].sort((left, right) => latest(right) - latest(left));
     const pages = Math.max(1, Math.ceil(sorted.length / riderJobsPageSize));
     return NextResponse.json({
-      rider: { id: rider.id, displayName: rider.displayName, riderCode: rider.riderProfile?.riderCode ?? null },
+      rider: {
+        id: rider.id, displayName: rider.displayName, avatarUpdatedAt: rider.avatarUpdatedAt, phone: rider.phone,
+        riderCode: rider.riderProfile?.riderCode ?? null, employmentCategory: rider.riderProfile?.employmentCategory ?? null,
+      },
       page, pages, total: sorted.length,
       items: sorted.slice((page - 1) * riderJobsPageSize, page * riderJobsPageSize).map((attempt) => ({
         id: attempt.id,

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       where: { OR: [{ claimedAt: within }, { deliveredAt: within }, { failedAt: within }] },
       select: {
         claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true,
-        rider: { select: { id: true, displayName: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } },
+        rider: { select: { id: true, displayName: true, avatarUpdatedAt: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } },
         deliveryRequest: { select: { deliveryZone: { select: { subdistrictCode: true, subdistrictName: true, displayName: true } } } },
       },
     });

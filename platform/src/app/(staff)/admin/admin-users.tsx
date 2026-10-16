@@ -5,9 +5,10 @@ import { userRoles, type UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
 import { roleLabels } from '@/lib/labels';
+import { PersonName } from '@/account/person-name';
 
 type User = {
-  id: string; username: string; displayName: string; phone: string | null; role: UserRole; active: boolean; pendingApproval: boolean; createdAt: string;
+  id: string; username: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; role: UserRole; active: boolean; pendingApproval: boolean; createdAt: string;
   riderProfile: { riderCode: string; employmentCategory: string } | null;
 };
 
@@ -52,8 +53,8 @@ export function AdminUsers() {
   }
 
   function reject(user: User) {
-    if (window.confirm(`ไม่อนุมัติคำขอของ ${user.displayName} (${user.username})?`)) {
-      void decide(user, { decision: 'reject' }, `ไม่อนุมัติ ${user.username} แล้ว`);
+    if (window.confirm(`ไม่อนุมัติคำขอของ ${user.displayName}?`)) {
+      void decide(user, { decision: 'reject' }, `ไม่อนุมัติ ${user.displayName} แล้ว`);
     }
   }
 
@@ -61,8 +62,8 @@ export function AdminUsers() {
   const accounts = users.filter((user) => !user.pendingApproval);
 
   function resetPassword(user: User) {
-    const password = window.prompt(`รหัสผ่านใหม่ของ ${user.username} (อย่างน้อย ${minimumPasswordLength} ตัวอักษร)`);
-    if (password) void update(user, { password }, `ตั้งรหัสผ่านใหม่ให้ ${user.username} แล้ว และออกจากระบบทุกเครื่อง`);
+    const password = window.prompt(`รหัสผ่านใหม่ของ ${user.displayName} (อย่างน้อย ${minimumPasswordLength} ตัวอักษร)`);
+    if (password) void update(user, { password }, `ตั้งรหัสผ่านใหม่ให้ ${user.displayName} แล้ว และออกจากระบบทุกเครื่อง`);
   }
 
   return (
@@ -73,7 +74,7 @@ export function AdminUsers() {
         <section aria-labelledby="pending-registrations">
           <h3 id="pending-registrations">คำขอสมัครรออนุมัติ ({pending.length})</h3>
           <p>ตรวจสอบตัวตนทางโทรศัพท์ก่อนอนุมัติ เลือกบทบาทที่จะให้ใช้งานได้ ไรเดอร์ต้องกำหนดรหัสไรเดอร์และประเภท</p>
-          {pending.map((user) => <PendingRegistration key={user.id} user={user} onApprove={(json) => void decide(user, { decision: 'approve', ...json }, `อนุมัติ ${user.username} แล้ว`)} onReject={() => reject(user)} />)}
+          {pending.map((user) => <PendingRegistration key={user.id} user={user} onApprove={(json) => void decide(user, { decision: 'approve', ...json }, `อนุมัติ ${user.displayName} แล้ว`)} onReject={() => reject(user)} />)}
         </section>
       )}
       <form onSubmit={(event) => void create(event)} aria-label="สร้างบัญชี">
@@ -101,17 +102,16 @@ export function AdminUsers() {
         <button type="submit">สร้างบัญชี</button>
       </form>
       <table>
-        <thead><tr><th>ชื่อผู้ใช้</th><th>ชื่อ</th><th>บทบาท</th><th>ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
+        <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
         <tbody>
           {accounts.map((user) => (
             <tr key={user.id}>
-              <td><code>{user.username}</code></td>
-              <td>{user.displayName}</td>
+              <td><PersonName person={user} /></td>
               <td>{roleLabels[user.role]}</td>
               <td>{user.riderProfile ? `${user.riderProfile.riderCode} (${user.riderProfile.employmentCategory === 'external' ? 'ภายนอก' : 'ภายใน'})` : '-'}</td>
               <td>{user.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
               <td>
-                <button type="button" onClick={() => void update(user, { active: !user.active }, user.active ? `ปิดบัญชี ${user.username} แล้ว` : `เปิดบัญชี ${user.username} แล้ว`)}>
+                <button type="button" onClick={() => void update(user, { active: !user.active }, user.active ? `ปิดบัญชี ${user.displayName} แล้ว` : `เปิดบัญชี ${user.displayName} แล้ว`)}>
                   {user.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                 </button>
                 <button type="button" onClick={() => resetPassword(user)}>ตั้งรหัสผ่านใหม่</button>
@@ -133,9 +133,9 @@ function PendingRegistration({ user, onApprove, onReject }: { user: User; onAppr
   }
 
   return (
-    <form onSubmit={approve} aria-label={`คำขอของ ${user.username}`}>
+    <form onSubmit={approve} aria-label={`คำขอของ ${user.displayName}`}>
       <p>
-        <strong>{user.displayName}</strong> <code>{user.username}</code> โทร {user.phone ?? '-'} · ขอใช้งานเป็น {roleLabels[user.role]}
+        <strong><PersonName person={user} /></strong> โทร {user.phone ?? '-'} · ขอใช้งานเป็น {roleLabels[user.role]}
         {' '}· สมัครเมื่อ {new Date(user.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
       </p>
       <label>

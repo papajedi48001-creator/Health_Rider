@@ -8,6 +8,7 @@ import { callApi } from '@/lib/api-client';
 import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
 import { DeliveryDetails } from '@/app/(staff)/operations/delivery-details';
+import { PersonName } from '@/account/person-name';
 
 const statusIcons: Record<DeliveryAttemptStatus, IconName> = {
   prepared: 'package', claimed: 'scooter', in_transit: 'truck', delivered: 'checkCircle',
@@ -16,7 +17,7 @@ const statusIcons: Record<DeliveryAttemptStatus, IconName> = {
 
 type Attempt = {
   id: string; status: DeliveryAttemptStatus; createdAt: string; deliveredAt: string | null; failedAt: string | null;
-  rider: { displayName: string } | null;
+  rider: { id: string; displayName: string; avatarUpdatedAt: string | null } | null;
   deliveryRequest: { id: string; hn: string; patientName: string; telephone: string | null; deliveryAddress: string; deliveryVersion: number; deliveryZone: { displayName: string } };
 };
 type Dashboard = { attempts: Attempt[]; zones: Array<{ id: string; displayName: string }> };
@@ -116,7 +117,7 @@ export function OperationsDashboard() {
                   <td><code>{shortCode(attempt.id)}</code></td>
                   <td>{attempt.deliveryRequest.patientName}<br /><code>{attempt.deliveryRequest.hn}</code></td>
                   <td>{attempt.deliveryRequest.deliveryZone.displayName}</td>
-                  <td>{attempt.rider?.displayName ?? '-'}</td>
+                  <td>{attempt.rider ? <PersonName person={attempt.rider} /> : '-'}</td>
                   <td><span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span></td>
                   <td>{formatThaiDateTime(attempt.deliveredAt ?? attempt.failedAt ?? attempt.createdAt)}</td>
                   <td className="row-actions">

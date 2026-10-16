@@ -54,8 +54,8 @@ test('delivery summary ranks riders and measures pickup-to-delivery time', () =>
 
   expect(summary.totals).toEqual({ claimed: 4, delivered: 2, failed: 1, successRate: 67, averageMinutes: 50 });
   expect(summary.byRider).toEqual([
-    { riderId: 'R1', displayName: 'ไรเดอร์หนึ่ง', riderCode: 'R-01', employmentCategory: 'internal', claimed: 2, delivered: 2, failed: 0, successRate: 100, averageMinutes: 50 },
-    { riderId: 'R2', displayName: 'ไรเดอร์สอง', riderCode: 'R-02', employmentCategory: 'external', claimed: 2, delivered: 0, failed: 1, successRate: 0, averageMinutes: null },
+    { riderId: 'R1', displayName: 'ไรเดอร์หนึ่ง', avatarUpdatedAt: null, riderCode: 'R-01', employmentCategory: 'internal', claimed: 2, delivered: 2, failed: 0, successRate: 100, averageMinutes: 50 },
+    { riderId: 'R2', displayName: 'ไรเดอร์สอง', avatarUpdatedAt: null, riderCode: 'R-02', employmentCategory: 'external', claimed: 2, delivered: 0, failed: 1, successRate: 0, averageMinutes: null },
   ]);
   expect(summary.byZone).toEqual([
     { zone: 'หมู่ 1', subdistrictCode: '440801', delivered: 2, failed: 0, successRate: 100 },
@@ -73,8 +73,8 @@ test('fee summary totals delivered jobs at the rate fixed on each request', () =
 
   expect(summary.totals).toEqual({ deliveries: 3, totalSatang: 7500, unpriced: 1, backfilled: 0 });
   expect(summary.byRider).toEqual([
-    { riderId: 'R1', displayName: 'ไรเดอร์หนึ่ง', riderCode: 'R-01', employmentCategory: 'internal', deliveries: 2, totalSatang: 7500, unpriced: 0 },
-    { riderId: 'R2', displayName: 'ไรเดอร์สอง', riderCode: 'R-02', employmentCategory: 'external', deliveries: 1, totalSatang: 0, unpriced: 1 },
+    { riderId: 'R1', displayName: 'ไรเดอร์หนึ่ง', avatarUpdatedAt: null, riderCode: 'R-01', employmentCategory: 'internal', deliveries: 2, totalSatang: 7500, unpriced: 0 },
+    { riderId: 'R2', displayName: 'ไรเดอร์สอง', avatarUpdatedAt: null, riderCode: 'R-02', employmentCategory: 'external', deliveries: 1, totalSatang: 0, unpriced: 1 },
   ]);
   expect(summary.lines[0]).toEqual({ date: '2026-10-01', riderCode: 'R-01', displayName: 'ไรเดอร์หนึ่ง', packageCode: 'T00001', subdistrictCode: '440801', zone: 'หมู่ 1', rateSatang: 3000, rateBackfilled: false });
 });

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'asc' },
         select: {
           id: true, status: true, createdAt: true, claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true,
-          rider: { select: { displayName: true } },
+          rider: { select: { id: true, displayName: true, avatarUpdatedAt: true } },
           deliveryRequest: {
             select: { id: true, hn: true, patientName: true, telephone: true, deliveryAddress: true, deliveryVersion: true, deliveryZone: { select: { displayName: true } } },
           },

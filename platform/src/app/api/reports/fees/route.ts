@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         where: { deliveredAt: dateRangeFilter(range) },
         select: {
           id: true, deliveredAt: true,
-          rider: { select: { id: true, displayName: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } },
+          rider: { select: { id: true, displayName: true, avatarUpdatedAt: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } },
           deliveryRequest: {
             select: { createdAt: true, rateSatang: true, deliveryZone: { select: { id: true, subdistrictCode: true, subdistrictName: true, displayName: true } } },
           },
