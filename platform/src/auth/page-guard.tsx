@@ -22,6 +22,7 @@ const navigation: Array<{ group: string; href: string; label: string; icon: Icon
   { group: 'การจัดส่ง', href: '/audit', label: 'ประวัติการตรวจสอบ', icon: 'shield', roles: ['auditor', 'admin'] },
   { group: 'รายงาน', href: '/reports/pharmacy', label: 'รายงานเภสัชกรรม', icon: 'chart', roles: ['pharmacy', 'admin'] },
   { group: 'รายงาน', href: '/reports/delivery', label: 'รายงานการจัดส่ง', icon: 'chart', roles: ['coordinator', 'admin'] },
+  { group: 'รายงาน', href: '/reports/history', label: 'ค้นหาประวัติการส่ง', icon: 'history', roles: ['coordinator', 'admin'] },
   { group: 'รายงาน', href: '/reports/fees', label: 'ค่าบริการไรเดอร์', icon: 'coins', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin', label: 'บัญชีผู้ใช้', icon: 'users', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin/zones', label: 'โซนจัดส่ง', icon: 'map', roles: ['admin'] },

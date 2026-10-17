@@ -3,7 +3,7 @@ import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole } from '@/auth/require-role';
 import { userRoles } from '@/auth/roles';
 import { parseApproval } from '@/domain/admin/registration-rules';
-import { assignRiderCode } from '@/domain/admin/rider-code';
+import { suggestRiderCode } from '@/domain/admin/rider-code';
 import { audit } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
 import { DomainError } from '@/domain/errors';
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ us
       if (claimed.count !== 1) throw new DomainError('คำขอนี้ได้รับการพิจารณาไปแล้ว', 409);
       let riderCode: string | null = null;
       if (decision.decision === 'approve' && decision.rider) {
-        riderCode = await assignRiderCode(tx, decision.rider.riderCode, decision.rider.employmentCategory);
+        riderCode = await suggestRiderCode(tx, decision.rider.employmentCategory);
         await tx.riderProfile.create({ data: { id: newPublicId(), userId, riderCode, employmentCategory: decision.rider.employmentCategory } });
       }
       await audit(tx, {

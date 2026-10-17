@@ -70,23 +70,18 @@ test('only an admin approves, and a rider gets a profile with the approval', asy
 
   expect(response.status).toBe(200);
   expect(updateUsers).toHaveBeenCalledWith({ where: { id: 'user-9', pendingApproval: true }, data: { pendingApproval: false, active: true, role: 'rider' } });
-  expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'user-9', riderCode: 'R-1', employmentCategory: 'internal' }) });
+  expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'user-9', riderCode: 'INT-001', employmentCategory: 'internal' }) });
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.registration_approved' }) }));
 });
 
-test('approving a rider without a code gives the next code of that category, and a taken code is refused', async () => {
+test('approving a rider always gives the next code of that category, whatever code was sent', async () => {
   const { POST } = await import('@/app/api/admin/users/[userId]/approval/route');
   currentSession.mockResolvedValue({ id: 'admin-1', role: 'admin', displayName: 'แอดมิน' });
   findUser.mockResolvedValue({ role: 'rider', pendingApproval: true });
   findRiders.mockResolvedValue([{ riderCode: 'EXT-001' }, { riderCode: 'EXT-009' }, { riderCode: 'EXT-old' }]);
 
-  expect((await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: '', employmentCategory: 'external' }), params)).status).toBe(200);
+  expect((await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: 'MY-OWN', employmentCategory: 'external' }), params)).status).toBe(200);
   expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ riderCode: 'EXT-010', employmentCategory: 'external' }) });
-
-  findRider.mockResolvedValueOnce({ id: 'someone' });
-  const taken = await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: 'EXT-001', employmentCategory: 'external' }), params);
-  expect(taken.status).toBe(409);
-  await expect(taken.json()).resolves.toEqual({ message: 'รหัสไรเดอร์ EXT-001 มีผู้ใช้แล้ว' });
 });
 
 test('a decision already made by another admin is not applied twice', async () => {

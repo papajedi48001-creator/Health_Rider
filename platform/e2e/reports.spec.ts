@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { login } from './login';
+import { createDeliveryRequest } from './fixtures';
 
 test('each role sees only its own reports, and the admin downloads the fee CSV', async ({ page, browser }) => {
   await login(page, 'admin.uat');
@@ -51,4 +52,22 @@ test('a coordinator narrows the operations overview by tapping a status tile', a
   await expect(page.getByText(/^แสดงเฉพาะ/)).toBeVisible();
   await page.getByRole('button', { name: 'แสดงทุกสถานะ' }).click();
   await expect(tiles.first()).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('a coordinator finds a delivery by HN and opens its details from the info button', async ({ page }) => {
+  const patientName = `ผู้ป่วยค้นประวัติ ${Date.now()}`;
+  const request = await createDeliveryRequest(patientName);
+  await login(page, 'pharmacy.uat');
+  await page.request.post('/api/pharmacy/attempts/prepare', { data: { deliveryRequestId: request.id } });
+  await page.context().clearCookies();
+
+  await login(page, 'coordinator.uat');
+  await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'ค้นหาประวัติการส่ง' }).click();
+  const filters = page.getByRole('form', { name: 'ค้นหาประวัติการส่ง' });
+  await filters.getByLabel('HN ผู้ป่วย').fill(request.hn);
+  await filters.getByRole('button', { name: 'ค้นหา' }).click();
+  await expect(page.getByText('พบ 1 งาน')).toBeVisible();
+  const row = page.getByRole('row').filter({ hasText: patientName });
+  await row.getByRole('button', { name: `ดูรายละเอียดการส่ง ${patientName}` }).click();
+  await expect(page.getByRole('dialog', { name: `รายละเอียดการส่ง ${patientName}` })).toContainText(request.hn);
 });

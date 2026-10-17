@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { userRoles, type UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
@@ -197,18 +197,15 @@ function PendingRegistration({ user, refreshKey, onApprove, onReject, onClose }:
   );
 }
 
-// Shows the next free rider code for the chosen category; the admin may type another one instead.
+// Shows the code the server will give for the chosen category; it cannot be edited.
 function RiderFields({ refreshKey }: { refreshKey: number }) {
   const [category, setCategory] = useState<'internal' | 'external'>('internal');
   const [riderCode, setRiderCode] = useState('');
-  const typed = useRef(false);
 
   useEffect(() => {
     let current = true;
-    typed.current = false;
     void callApi<{ riderCode: string }>(`/api/admin/users/next-rider-code?category=${category}`).then((result) => {
-      // A suggestion that arrives after the admin started typing must not replace what they typed.
-      if (current && result.ok && !typed.current) setRiderCode(result.data.riderCode);
+      if (current && result.ok) setRiderCode(result.data.riderCode);
     });
     return () => { current = false; };
   }, [category, refreshKey]);
@@ -217,7 +214,7 @@ function RiderFields({ refreshKey }: { refreshKey: number }) {
     <>
       <label>
         รหัสไรเดอร์
-        <input name="riderCode" value={riderCode} onChange={(event) => { typed.current = true; setRiderCode(event.target.value); }} placeholder="สร้างอัตโนมัติ" />
+        <input value={riderCode} readOnly aria-readonly="true" className="readonly-field" title="ระบบออกรหัสให้อัตโนมัติ" />
       </label>
       <label>
         ประเภทไรเดอร์
