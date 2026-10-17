@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole } from '@/auth/require-role';
 import { hashPassword } from '@/auth/session';
+import { assignRiderCode } from '@/domain/admin/rider-code';
 import { parseNewUser } from '@/domain/admin/user-rules';
 import { audit } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
@@ -30,10 +31,11 @@ export async function POST(request: NextRequest) {
     const input = parseNewUser(await readJsonBody(request));
     const passwordHash = await hashPassword(input.password);
     const user = await db.$transaction(async (tx) => {
+      const rider = input.rider && { ...input.rider, riderCode: await assignRiderCode(tx, input.rider.riderCode, input.rider.employmentCategory) };
       const created = await tx.user.create({
         data: {
           id: newPublicId(), username: input.username, displayName: input.displayName, role: input.role, passwordHash,
-          ...(input.rider ? { riderProfile: { create: { id: newPublicId(), ...input.rider } } } : {}),
+          ...(rider ? { riderProfile: { create: { id: newPublicId(), ...rider } } } : {}),
         },
         select: userSelect,
       });

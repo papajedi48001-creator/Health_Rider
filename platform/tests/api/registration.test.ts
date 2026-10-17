@@ -1,12 +1,13 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { currentSession, countUsers, findUser, createUser, updateUsers, findUserOrThrow, createRider, createAudit } = vi.hoisted(() => ({
-  currentSession: vi.fn(), countUsers: vi.fn(), findUser: vi.fn(), createUser: vi.fn(), updateUsers: vi.fn(), findUserOrThrow: vi.fn(), createRider: vi.fn(), createAudit: vi.fn(),
+const { currentSession, countUsers, findUser, createUser, updateUsers, findUserOrThrow, createRider, findRider, findRiders, createAudit } = vi.hoisted(() => ({
+  currentSession: vi.fn(), countUsers: vi.fn(), findUser: vi.fn(), createUser: vi.fn(), updateUsers: vi.fn(), findUserOrThrow: vi.fn(), createRider: vi.fn(),
+  findRider: vi.fn(), findRiders: vi.fn(), createAudit: vi.fn(),
 }));
 const tx = {
   user: { count: countUsers, findUnique: findUser, create: createUser, updateMany: updateUsers, findUniqueOrThrow: findUserOrThrow },
-  riderProfile: { create: createRider },
+  riderProfile: { create: createRider, findUnique: findRider, findMany: findRiders },
   auditEvent: { create: createAudit },
 };
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
@@ -24,6 +25,8 @@ beforeEach(() => {
   findUser.mockResolvedValue(null);
   createUser.mockResolvedValue({ id: 'user-9' });
   updateUsers.mockResolvedValue({ count: 1 });
+  findRider.mockResolvedValue(null);
+  findRiders.mockResolvedValue([]);
   findUserOrThrow.mockResolvedValue({ id: 'user-9', username: 'new.pharmacist', role: 'pharmacy', active: true, pendingApproval: false });
 });
 
@@ -69,6 +72,21 @@ test('only an admin approves, and a rider gets a profile with the approval', asy
   expect(updateUsers).toHaveBeenCalledWith({ where: { id: 'user-9', pendingApproval: true }, data: { pendingApproval: false, active: true, role: 'rider' } });
   expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'user-9', riderCode: 'R-1', employmentCategory: 'internal' }) });
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.registration_approved' }) }));
+});
+
+test('approving a rider without a code gives the next code of that category, and a taken code is refused', async () => {
+  const { POST } = await import('@/app/api/admin/users/[userId]/approval/route');
+  currentSession.mockResolvedValue({ id: 'admin-1', role: 'admin', displayName: 'แอดมิน' });
+  findUser.mockResolvedValue({ role: 'rider', pendingApproval: true });
+  findRiders.mockResolvedValue([{ riderCode: 'EXT-001' }, { riderCode: 'EXT-009' }, { riderCode: 'EXT-old' }]);
+
+  expect((await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: '', employmentCategory: 'external' }), params)).status).toBe(200);
+  expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ riderCode: 'EXT-010', employmentCategory: 'external' }) });
+
+  findRider.mockResolvedValueOnce({ id: 'someone' });
+  const taken = await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: 'EXT-001', employmentCategory: 'external' }), params);
+  expect(taken.status).toBe(409);
+  await expect(taken.json()).resolves.toEqual({ message: 'รหัสไรเดอร์ EXT-001 มีผู้ใช้แล้ว' });
 });
 
 test('a decision already made by another admin is not applied twice', async () => {

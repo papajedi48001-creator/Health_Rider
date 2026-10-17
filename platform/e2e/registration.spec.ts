@@ -28,11 +28,16 @@ test('a new pharmacist applies on the login page and signs in once an admin appr
   const admin = await adminContext.newPage();
   await login(admin, 'admin.uat');
   await admin.goto('/admin');
-  const application = admin.getByRole('form', { name: `คำขอของ ${displayName}` });
-  await expect(application).toContainText('ขอใช้งานเป็น');
+  // Applications are listed one per line; the decision is made in a pop-up.
+  const listed = admin.getByRole('listitem').filter({ hasText: displayName });
+  await expect(listed).toContainText('ขอใช้งานเป็น');
+  await expect(listed).not.toContainText(username);
+  await listed.getByRole('button', { name: 'พิจารณา' }).click();
+  const application = admin.getByRole('dialog', { name: `คำขอของ ${displayName}` });
   await expect(application).not.toContainText(username);
   await application.getByRole('button', { name: 'อนุมัติ', exact: true }).click();
   await expect(admin.getByText(`อนุมัติ ${displayName} แล้ว`)).toBeVisible();
+  await expect(application).toBeHidden();
   await adminContext.close();
 
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
