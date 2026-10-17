@@ -16,6 +16,15 @@ test('each role sees only its own reports, and the admin downloads the fee CSV',
     const dialog = page.getByRole('dialog', { name: /^งานของ / });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('รหัสไรเดอร์')).toBeVisible();
+    const info = dialog.getByRole('button', { name: /^ดูรายละเอียดการส่ง / }).first();
+    if (await info.count()) {
+      await info.click();
+      const details = page.getByRole('dialog', { name: /^รายละเอียดการส่ง / });
+      await expect(details).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(details).toHaveCount(0);
+      await expect(dialog).toBeVisible();
+    }
     await dialog.getByRole('button', { name: 'ปิดรายการ' }).click();
     await expect(dialog).toHaveCount(0);
   }

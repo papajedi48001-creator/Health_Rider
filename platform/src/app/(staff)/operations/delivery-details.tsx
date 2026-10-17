@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import type { FailedDeliveryReason, RecipientRelation } from '@/domain/delivery/offline-event-rules';
 import { Icon } from '@/brand/icons';
@@ -39,7 +40,7 @@ const historyLabels: Record<string, string> = {
 
 const baht = (satang: number) => `${(satang / 100).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
 
-// The ⓘ pop-up on the operations overview: one delivery from HOSxP confirmation to proof of delivery.
+// The ⓘ pop-up behind every delivery record: one delivery from HOSxP confirmation to proof of delivery.
 export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onClose: () => void }) {
   const [details, setDetails] = useState<Details | null>(null);
   const [message, setMessage] = useState('กำลังโหลด');
@@ -55,10 +56,15 @@ export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onC
     return () => { current = false; };
   }, [attemptId]);
 
+  // Listens in the capture phase and stops there, so Escape closes only this pop-up when it opens over another one.
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape, true);
+    return () => window.removeEventListener('keydown', closeOnEscape, true);
   }, [onClose]);
 
   const request = details?.deliveryRequest;
@@ -71,7 +77,8 @@ export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onC
     ['รับยาคืน', details.returnedAt],
   ].filter((entry): entry is [string, string] => Boolean(entry[1])) : [];
 
-  return (
+  // Rendered under <body> so it also opens cleanly over another pop-up, such as a rider's job list.
+  return createPortal(
     <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={`รายละเอียดการส่ง ${request?.patientName ?? ''}`} onClick={onClose}>
       <div className="photo-viewer-body detail-dialog" onClick={(event) => event.stopPropagation()}>
         <div className="photo-viewer-head">
@@ -156,7 +163,22 @@ export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onC
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
+  );
+}
+
+// The ⓘ button that opens the details pop-up for one delivery; drop it into any list of delivery records.
+export function DeliveryInfoButton({ attemptId, patientName }: { attemptId: string; patientName: string }) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <button type="button" className="icon-button info-button" aria-label={`ดูรายละเอียดการส่ง ${patientName}`} title="ดูรายละเอียด" onClick={() => setOpen(true)}>
+        <Icon name="info" size={20} />
+      </button>
+      {open && <DeliveryDetails attemptId={attemptId} onClose={close} />}
+    </>
   );
 }
 

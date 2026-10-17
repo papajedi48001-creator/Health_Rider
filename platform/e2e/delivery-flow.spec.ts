@@ -40,6 +40,14 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await labelDialog.getByRole('button', { name: 'ปิด' }).click();
   await expect(labelDialog).toBeHidden();
 
+  // Pharmacy opens the same delivery details from the queue of packages waiting for a rider.
+  await pharmacy.page.goto('/pharmacy/awaiting-rider');
+  await pharmacy.page.getByRole('listitem').filter({ hasText: patientName }).getByRole('button', { name: `ดูรายละเอียดการส่ง ${patientName}` }).click();
+  const pharmacyDetails = pharmacy.page.getByRole('dialog', { name: `รายละเอียดการส่ง ${patientName}` });
+  await expect(pharmacyDetails).toContainText('เตรียมพัสดุ');
+  await pharmacyDetails.getByRole('button', { name: 'ปิดรายละเอียด' }).click();
+  await expect(pharmacyDetails).toHaveCount(0);
+
   // The rider's phone allows location, so the delivery photo is stamped with where it was taken.
   const rider = await signedIn(browser, 'rider.internal.uat', { permissions: ['geolocation'], geolocation: { latitude: 17.2501, longitude: 103.9502, accuracy: 15 } });
   await rider.page.goto('/rider/scan');

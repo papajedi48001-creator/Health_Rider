@@ -56,9 +56,11 @@ test('answers 404 for an unknown delivery', async () => {
   expect((await get('NOPE')).status).toBe(404);
 });
 
-test('only coordinators and admins can open delivery details', async () => {
-  currentSession.mockResolvedValue({ id: 'rider-1', role: 'rider', displayName: 'ไรเดอร์' });
-  expect((await get('ATTEMPT2')).status).toBe(403);
+test('only pharmacy, coordinators and admins can open delivery details', async () => {
+  for (const role of ['rider', 'auditor']) {
+    currentSession.mockResolvedValue({ id: `${role}-1`, role, displayName: role });
+    expect((await get('ATTEMPT2')).status).toBe(403);
+  }
   expect(findAttempt).not.toHaveBeenCalled();
 });
 
