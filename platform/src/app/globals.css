@@ -667,3 +667,9 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .dialog-actions button.secondary { background: var(--surface); color: var(--danger); border: 1px solid var(--danger); }
 @media (max-width: 520px) { .staff-content main .pending-list li { align-items: stretch; flex-direction: column; } }
 .dialog-actions button.secondary:hover:not(:disabled) { background: #fdecea; border-color: var(--danger); }
+
+/* Delivery history search: text boxes and dropdowns side by side, the buttons on their own row. */
+.history-filters { margin-bottom: 8px; }
+.history-filters .history-actions { display: flex; gap: 8px; align-items: end; }
+.history-filters .history-actions button { margin: 0; }
+.readonly-field { background: var(--canvas); color: var(--muted); cursor: not-allowed; }

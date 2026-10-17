@@ -20,8 +20,8 @@ test('approving a rider needs a category, and an empty rider code is generated l
   expect(parseApproval({ decision: 'approve', role: 'pharmacy' }, userRoles)).toEqual({ decision: 'approve', role: 'pharmacy' });
   expect(() => parseApproval({ decision: 'approve', role: 'rider' }, userRoles)).toThrow('ประเภทไรเดอร์');
   expect(parseApproval({ decision: 'approve', role: 'rider', riderCode: '', employmentCategory: 'internal' }, userRoles))
-    .toEqual({ decision: 'approve', role: 'rider', rider: { riderCode: null, employmentCategory: 'internal' } });
+    .toEqual({ decision: 'approve', role: 'rider', rider: { employmentCategory: 'internal' } });
   expect(parseApproval({ decision: 'approve', role: 'rider', riderCode: ' R-12 ', employmentCategory: 'external' }, userRoles))
-    .toEqual({ decision: 'approve', role: 'rider', rider: { riderCode: 'R-12', employmentCategory: 'external' } });
+    .toEqual({ decision: 'approve', role: 'rider', rider: { employmentCategory: 'external' } });
   expect(() => parseApproval({ decision: 'maybe' }, userRoles)).toThrow();
 });

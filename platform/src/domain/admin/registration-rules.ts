@@ -27,7 +27,7 @@ export function parseRegistration(value: unknown): Registration {
 }
 
 export type ApprovalDecision =
-  | { decision: 'approve'; role: UserRole; rider?: { riderCode: string | null; employmentCategory: EmploymentCategory } }
+  | { decision: 'approve'; role: UserRole; rider?: { employmentCategory: EmploymentCategory } }
   | { decision: 'reject' };
 
 // The admin confirms or changes the role asked for; a rider also needs a rider code and category.
@@ -38,9 +38,7 @@ export function parseApproval(value: unknown, roles: readonly UserRole[]): Appro
   if (!(roles as readonly unknown[]).includes(body.role)) throw new DomainError('บทบาทไม่ถูกต้อง');
   const role = body.role as UserRole;
   if (role !== 'rider') return { decision: 'approve', role };
-  // An empty rider code means "give the next code automatically".
-  const riderCode = typeof body.riderCode === 'string' && body.riderCode.trim() ? body.riderCode.trim() : null;
-  if (riderCode && riderCode.length > 100) throw new DomainError('รหัสไรเดอร์ยาวเกินไป');
+  // The rider code is always assigned by the server, so any code sent along is ignored.
   if (!(employmentCategories as readonly unknown[]).includes(body.employmentCategory)) throw new DomainError('ต้องเลือกประเภทไรเดอร์');
-  return { decision: 'approve', role, rider: { riderCode, employmentCategory: body.employmentCategory as EmploymentCategory } };
+  return { decision: 'approve', role, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
 }
