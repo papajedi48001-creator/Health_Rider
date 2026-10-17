@@ -33,7 +33,12 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await row.getByRole('button', { name: 'เตรียมพัสดุและออก QR' }).click();
   const prepared = await (await preparedResponse).json();
   await expect(pharmacy.page.getByRole('img', { name: /QR พัสดุ/ })).toBeVisible();
-  await expect(pharmacy.page.getByLabel('ฉลาก QR พัสดุ')).toContainText(patientName);
+  // The labels open in a pop-up with its own print button, and stay until pharmacy closes it.
+  const labelDialog = pharmacy.page.getByRole('dialog', { name: 'ฉลาก QR พัสดุ' });
+  await expect(labelDialog).toContainText(patientName);
+  await expect(labelDialog.getByRole('button', { name: 'พิมพ์ฉลาก' })).toBeFocused();
+  await labelDialog.getByRole('button', { name: 'ปิด' }).click();
+  await expect(labelDialog).toBeHidden();
 
   // The rider's phone allows location, so the delivery photo is stamped with where it was taken.
   const rider = await signedIn(browser, 'rider.internal.uat', { permissions: ['geolocation'], geolocation: { latitude: 17.2501, longitude: 103.9502, accuracy: 15 } });

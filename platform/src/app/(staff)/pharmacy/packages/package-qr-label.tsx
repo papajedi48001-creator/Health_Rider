@@ -40,20 +40,24 @@ function ParcelLabel({ label }: { label: PackageLabel }) {
   );
 }
 
+// Opens over the page so the labels can be printed straight away. It closes only from its own button,
+// because a QR is never shown again once this is closed.
 export function PackageQrSheet({ labels, onClose }: { labels: PackageLabel[]; onClose: () => void }) {
   return (
-    <section aria-label="ฉลาก QR พัสดุ" className="label-sheet">
-      <div className="label-toolbar">
-        <h2>ฉลาก QR พัสดุ {labels.length} ชิ้น</h2>
-        <p>พิมพ์ฉลากทันที ระบบจะไม่แสดง QR เดิมซ้ำ หากฉลากหายให้ออก QR ใหม่</p>
-        <div className="label-actions">
-          <button type="button" className="btn btn-primary" onClick={() => window.print()}>พิมพ์ฉลาก</button>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>ปิด</button>
+    <div className="photo-viewer label-dialog" role="dialog" aria-modal="true" aria-label="ฉลาก QR พัสดุ">
+      <section className="photo-viewer-body label-sheet">
+        <div className="label-toolbar">
+          <h2>ฉลาก QR พัสดุ {labels.length} ชิ้น</h2>
+          <p>พิมพ์ฉลากทันที ระบบจะไม่แสดง QR เดิมซ้ำ หากฉลากหายให้ออก QR ใหม่</p>
+          <div className="label-actions">
+            <button type="button" className="btn btn-primary" autoFocus onClick={() => window.print()}>พิมพ์ฉลาก</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>ปิด</button>
+          </div>
         </div>
-      </div>
-      <div className="label-grid">
-        {labels.map((label) => <ParcelLabel key={label.attemptId} label={label} />)}
-      </div>
-    </section>
+        <div className="label-grid">
+          {labels.map((label) => <ParcelLabel key={label.attemptId} label={label} />)}
+        </div>
+      </section>
+    </div>
   );
 }
