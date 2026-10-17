@@ -1,8 +1,10 @@
 import { expect, test } from 'vitest';
 import { parseNewUser, parseUserChanges, parseZone } from '@/domain/admin/user-rules';
 
-test('requires a rider code and category for a rider account and a long password for everyone', () => {
-  expect(() => parseNewUser({ username: 'rider.new', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password' })).toThrow('รหัสไรเดอร์');
+test('requires a category for a rider account, leaves an empty rider code to be generated, and a long password for everyone', () => {
+  expect(() => parseNewUser({ username: 'rider.new', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password' })).toThrow('ประเภทไรเดอร์');
+  expect(parseNewUser({ username: 'rider.new', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password', riderCode: ' ', employmentCategory: 'internal' }))
+    .toMatchObject({ rider: { riderCode: null, employmentCategory: 'internal' } });
   expect(() => parseNewUser({ username: 'pharm.new', displayName: 'เภสัช', role: 'pharmacy', password: 'short' })).toThrow('อย่างน้อย 12');
   expect(() => parseNewUser({ username: 'pharm.new', displayName: 'เภสัช', role: 'finance', password: 'long-enough-password' })).toThrow('บทบาทไม่ถูกต้อง');
   expect(parseNewUser({ username: 'rider.new', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password', riderCode: 'R-9', employmentCategory: 'external' }))

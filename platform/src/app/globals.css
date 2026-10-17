@@ -656,3 +656,14 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .switch-toggle input:checked + .switch-track { background: var(--primary); }
 .switch-toggle input:checked + .switch-track::after { transform: translateX(20px); }
 .switch-toggle input:focus-visible + .switch-track { outline: 2px solid var(--primary-soft); outline-offset: 2px; }
+
+/* Applications waiting for an admin, one line each; the decision happens in a pop-up. */
+.pending-list { margin: 0 0 16px; }
+.staff-content main .pending-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #fff8eb; }
+.pending-who { display: grid; gap: 2px; min-width: 0; }
+.pending-who .muted { font-size: 0.88rem; }
+.staff-content main .pending-list li > button { flex: none; margin: 0; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dialog-actions button.secondary { background: var(--surface); color: var(--danger); border: 1px solid var(--danger); }
+@media (max-width: 520px) { .staff-content main .pending-list li { align-items: stretch; flex-direction: column; } }
+.dialog-actions button.secondary:hover:not(:disabled) { background: #fdecea; border-color: var(--danger); }

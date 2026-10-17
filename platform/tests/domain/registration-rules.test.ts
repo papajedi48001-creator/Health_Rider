@@ -15,10 +15,12 @@ test('never lets an applicant ask for admin or auditor', () => {
   expect(() => parseRegistration({ ...application, role: 'auditor' })).toThrow('หน้าที่');
 });
 
-test('approving a rider needs a rider code and category', () => {
+test('approving a rider needs a category, and an empty rider code is generated later', () => {
   expect(parseApproval({ decision: 'reject' }, userRoles)).toEqual({ decision: 'reject' });
   expect(parseApproval({ decision: 'approve', role: 'pharmacy' }, userRoles)).toEqual({ decision: 'approve', role: 'pharmacy' });
-  expect(() => parseApproval({ decision: 'approve', role: 'rider' }, userRoles)).toThrow('รหัสไรเดอร์');
+  expect(() => parseApproval({ decision: 'approve', role: 'rider' }, userRoles)).toThrow('ประเภทไรเดอร์');
+  expect(parseApproval({ decision: 'approve', role: 'rider', riderCode: '', employmentCategory: 'internal' }, userRoles))
+    .toEqual({ decision: 'approve', role: 'rider', rider: { riderCode: null, employmentCategory: 'internal' } });
   expect(parseApproval({ decision: 'approve', role: 'rider', riderCode: ' R-12 ', employmentCategory: 'external' }, userRoles))
     .toEqual({ decision: 'approve', role: 'rider', rider: { riderCode: 'R-12', employmentCategory: 'external' } });
   expect(() => parseApproval({ decision: 'maybe' }, userRoles)).toThrow();

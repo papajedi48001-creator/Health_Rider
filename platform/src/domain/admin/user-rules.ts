@@ -10,7 +10,7 @@ export type NewUserInput = {
   displayName: string;
   role: UserRole;
   password: string;
-  rider?: { riderCode: string; employmentCategory: EmploymentCategory };
+  rider?: { riderCode: string | null; employmentCategory: EmploymentCategory };
 };
 
 export type UserChanges = { displayName?: string; role?: UserRole; active?: boolean; password?: string };
@@ -25,8 +25,9 @@ export function parseNewUser(value: unknown): NewUserInput {
   const password = parsePassword(body.password);
   if (role !== 'rider') return { username, displayName, role, password };
 
-  const riderCode = typeof body.riderCode === 'string' ? body.riderCode.trim() : '';
-  if (!riderCode) throw new DomainError('ไรเดอร์ต้องมีรหัสไรเดอร์');
+  // An empty rider code means "give the next code automatically".
+  const riderCode = typeof body.riderCode === 'string' && body.riderCode.trim() ? body.riderCode.trim() : null;
+  if (riderCode && riderCode.length > 100) throw new DomainError('รหัสไรเดอร์ยาวเกินไป');
   if (!(employmentCategories as readonly unknown[]).includes(body.employmentCategory)) throw new DomainError('ต้องเลือกประเภทไรเดอร์');
   return { username, displayName, role, password, rider: { riderCode, employmentCategory: body.employmentCategory as EmploymentCategory } };
 }

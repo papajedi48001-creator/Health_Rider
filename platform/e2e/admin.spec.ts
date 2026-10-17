@@ -20,6 +20,11 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await userForm.getByLabel('ชื่อผู้ใช้').fill(username);
   await userForm.getByLabel('ชื่อที่แสดง').fill(`ไรเดอร์ E2E ${suffix}`);
   await userForm.getByLabel('บทบาท').selectOption('rider');
+  // The next free code is filled in for the admin, and changes with the rider category.
+  await expect(userForm.getByLabel('รหัสไรเดอร์')).toHaveValue(/^INT-\d{3,}$/);
+  await userForm.getByLabel('ประเภทไรเดอร์').selectOption('external');
+  await expect(userForm.getByLabel('รหัสไรเดอร์')).toHaveValue(/^EXT-\d{3,}$/);
+  await userForm.getByLabel('ประเภทไรเดอร์').selectOption('internal');
   await userForm.getByLabel('รหัสไรเดอร์').fill(`E2E-${suffix}`);
   await userForm.getByLabel('รหัสผ่านเริ่มต้น').fill('e2e-rider-password');
   await userForm.getByRole('button', { name: 'สร้างบัญชี' }).click();

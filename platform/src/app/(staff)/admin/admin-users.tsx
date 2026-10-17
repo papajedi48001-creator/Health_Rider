@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { userRoles, type UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
 import { roleLabels } from '@/lib/labels';
 import { PersonName } from '@/account/person-name';
+import { Icon } from '@/brand/icons';
 
 type User = {
   id: string; username: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; role: UserRole; active: boolean; pendingApproval: boolean; createdAt: string;
@@ -18,11 +19,16 @@ export function AdminUsers() {
   const [message, setMessage] = useState('');
   const [role, setRole] = useState<UserRole>('rider');
   const [showInactive, setShowInactive] = useState(false);
+  const [reviewing, setReviewing] = useState<User | null>(null);
+  // Bumped after every reload so suggested rider codes skip codes that were just taken.
+  const [usersVersion, setUsersVersion] = useState(0);
 
   const load = useCallback(async () => {
     const result = await callApi<{ users: User[] }>('/api/admin/users');
-    if (result.ok) setUsers(result.data.users);
-    else setMessage(result.message);
+    if (result.ok) {
+      setUsers(result.data.users);
+      setUsersVersion((version) => version + 1);
+    } else setMessage(result.message);
   }, []);
 
   useEffect(() => {
@@ -49,6 +55,7 @@ export function AdminUsers() {
   async function decide(user: User, json: Record<string, unknown>, done: string) {
     const result = await callApi(`/api/admin/users/${user.id}/approval`, { json });
     if (!result.ok) return setMessage(result.message);
+    setReviewing(null);
     await load();
     setMessage(done);
   }
@@ -76,9 +83,25 @@ export function AdminUsers() {
       {pending.length > 0 && (
         <section aria-labelledby="pending-registrations">
           <h3 id="pending-registrations">คำขอสมัครรออนุมัติ ({pending.length})</h3>
-          <p>ตรวจสอบตัวตนทางโทรศัพท์ก่อนอนุมัติ เลือกบทบาทที่จะให้ใช้งานได้ ไรเดอร์ต้องกำหนดรหัสไรเดอร์และประเภท</p>
-          {pending.map((user) => <PendingRegistration key={user.id} user={user} onApprove={(json) => void decide(user, { decision: 'approve', ...json }, `อนุมัติ ${user.displayName} แล้ว`)} onReject={() => reject(user)} />)}
+          <ul className="pending-list">
+            {pending.map((user) => (
+              <li key={user.id}>
+                <span className="pending-who">
+                  <strong><PersonName person={user} /></strong>
+                  <span className="muted">ขอใช้งานเป็น {roleLabels[user.role]} · โทร {user.phone ?? '-'} · สมัครเมื่อ {formatApplied(user.createdAt)}</span>
+                </span>
+                <button type="button" onClick={() => setReviewing(user)}>พิจารณา</button>
+              </li>
+            ))}
+          </ul>
         </section>
+      )}
+      {reviewing && (
+        <PendingRegistration
+          user={reviewing} refreshKey={usersVersion} onClose={() => setReviewing(null)}
+          onApprove={(json) => void decide(reviewing, { decision: 'approve', ...json }, `อนุมัติ ${reviewing.displayName} แล้ว`)}
+          onReject={() => reject(reviewing)}
+        />
       )}
       <form onSubmit={(event) => void create(event)} aria-label="สร้างบัญชี">
         <label>ชื่อผู้ใช้ <input name="username" required pattern="[a-z0-9._\-]{3,100}" /></label>
@@ -89,18 +112,7 @@ export function AdminUsers() {
             {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
           </select>
         </label>
-        {role === 'rider' && (
-          <>
-            <label>รหัสไรเดอร์ <input name="riderCode" required /></label>
-            <label>
-              ประเภทไรเดอร์
-              <select name="employmentCategory" defaultValue="internal">
-                <option value="internal">เจ้าหน้าที่โรงพยาบาล</option>
-                <option value="external">ผู้รับจ้างภายนอก</option>
-              </select>
-            </label>
-          </>
-        )}
+        {role === 'rider' && <RiderFields key={usersVersion} refreshKey={usersVersion} />}
         <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
         <button type="submit">สร้างบัญชี</button>
       </form>
@@ -132,8 +144,21 @@ export function AdminUsers() {
   );
 }
 
-function PendingRegistration({ user, onApprove, onReject }: { user: User; onApprove: (json: Record<string, unknown>) => void; onReject: () => void }) {
+function formatApplied(createdAt: string) {
+  return new Date(createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+}
+
+// A pop-up where the admin checks one application and approves it with a role, or rejects it.
+function PendingRegistration({ user, refreshKey, onApprove, onReject, onClose }: {
+  user: User; refreshKey: number; onApprove: (json: Record<string, unknown>) => void; onReject: () => void; onClose: () => void;
+}) {
   const [role, setRole] = useState<UserRole>(user.role);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
 
   function approve(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,31 +166,66 @@ function PendingRegistration({ user, onApprove, onReject }: { user: User; onAppr
   }
 
   return (
-    <form onSubmit={approve} aria-label={`คำขอของ ${user.displayName}`}>
-      <p>
-        <strong><PersonName person={user} /></strong> โทร {user.phone ?? '-'} · ขอใช้งานเป็น {roleLabels[user.role]}
-        {' '}· สมัครเมื่อ {new Date(user.createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
-      </p>
-      <label>
-        บทบาทที่อนุมัติ
-        <select name="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
-          {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
-        </select>
-      </label>
-      {role === 'rider' && (
-        <>
-          <label>รหัสไรเดอร์ <input name="riderCode" required /></label>
+    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={`คำขอของ ${user.displayName}`} onClick={onClose}>
+      <div className="photo-viewer-body detail-dialog" onClick={(event) => event.stopPropagation()}>
+        <div className="photo-viewer-head">
+          <strong>พิจารณาคำขอสมัคร</strong>
+          <button type="button" className="icon-button" aria-label="ปิด" onClick={onClose}><Icon name="close" /></button>
+        </div>
+        <dl className="detail-list">
+          <dt>ชื่อ</dt><dd><PersonName person={user} /></dd>
+          <dt>โทร</dt><dd>{user.phone ?? '-'}</dd>
+          <dt>ขอใช้งานเป็น</dt><dd>{roleLabels[user.role]}</dd>
+          <dt>สมัครเมื่อ</dt><dd>{formatApplied(user.createdAt)}</dd>
+        </dl>
+        <p className="muted">ตรวจสอบตัวตนทางโทรศัพท์ก่อนอนุมัติ</p>
+        <form onSubmit={approve} aria-label={`อนุมัติ ${user.displayName}`}>
           <label>
-            ประเภทไรเดอร์
-            <select name="employmentCategory" defaultValue="internal">
-              <option value="internal">เจ้าหน้าที่โรงพยาบาล</option>
-              <option value="external">ผู้รับจ้างภายนอก</option>
+            บทบาทที่อนุมัติ
+            <select name="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)} autoFocus>
+              {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
             </select>
           </label>
-        </>
-      )}
-      <button type="submit">อนุมัติ</button>
-      <button type="button" onClick={onReject}>ไม่อนุมัติ</button>
-    </form>
+          {role === 'rider' && <RiderFields refreshKey={refreshKey} />}
+          <div className="dialog-actions">
+            <button type="submit">อนุมัติ</button>
+            <button type="button" className="secondary" onClick={onReject}>ไม่อนุมัติ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Shows the next free rider code for the chosen category; the admin may type another one instead.
+function RiderFields({ refreshKey }: { refreshKey: number }) {
+  const [category, setCategory] = useState<'internal' | 'external'>('internal');
+  const [riderCode, setRiderCode] = useState('');
+  const typed = useRef(false);
+
+  useEffect(() => {
+    let current = true;
+    typed.current = false;
+    void callApi<{ riderCode: string }>(`/api/admin/users/next-rider-code?category=${category}`).then((result) => {
+      // A suggestion that arrives after the admin started typing must not replace what they typed.
+      if (current && result.ok && !typed.current) setRiderCode(result.data.riderCode);
+    });
+    return () => { current = false; };
+  }, [category, refreshKey]);
+
+  return (
+    <>
+      <label>
+        รหัสไรเดอร์
+        <input name="riderCode" value={riderCode} onChange={(event) => { typed.current = true; setRiderCode(event.target.value); }} placeholder="สร้างอัตโนมัติ" />
+      </label>
+      <label>
+        ประเภทไรเดอร์
+        <select name="employmentCategory" value={category} onChange={(event) => setCategory(event.target.value as 'internal' | 'external')}>
+          <option value="internal">เจ้าหน้าที่โรงพยาบาล</option>
+          <option value="external">ผู้รับจ้างภายนอก</option>
+        </select>
+      </label>
+    </>
   );
 }
