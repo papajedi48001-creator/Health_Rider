@@ -55,6 +55,13 @@ test('finds a patient to prepare by HN or name, and select-all ticks only the ma
   fireEvent.click(screen.getByLabelText(/เลือกทั้งหมด/));
   expect(screen.getByRole('button', { name: 'เตรียมพัสดุและพิมพ์ QR ที่เลือก (1)' })).toBeInTheDocument();
 
+  // Typing offers the patients in the current filters as suggestions; picking one narrows to that patient.
+  expect(search).toHaveAttribute('list', 'package-patients');
+  const suggestions = [...document.querySelectorAll('#package-patients option')].map((option) => option.getAttribute('value'));
+  expect(suggestions).toEqual(['ศักดา สัดถาผล HN-450014298', 'ประเสริฐ จันทะฝ่าย HN-450003368', 'บำเพ็ญ เชิญชม HN-490039502']);
+  fireEvent.change(search, { target: { value: 'ประเสริฐ จันทะฝ่าย HN-450003368' } });
+  expect(screen.getByText('ต้องเตรียมพัสดุ (1)')).toBeInTheDocument();
+
   fireEvent.change(search, { target: { value: 'ไม่มีคนนี้' } });
   expect(screen.getByText('ไม่พบคนไข้ที่ตรงกับคำค้นหา')).toBeInTheDocument();
 });

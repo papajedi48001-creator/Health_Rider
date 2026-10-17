@@ -109,9 +109,8 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   }
   // Only the prepare queue has a search box: pharmacy looks up the patient whose medicine is in hand by HN or name words.
   const terms = view === 'prepare' ? query.trim().split(/\s+/).filter(Boolean) : [];
-  const matches = (row: Row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter)
-    && terms.every((term) => `${row.hn} ${row.patientName}`.includes(term));
-  const shown = allRows.filter(matches);
+  const inZone = allRows.filter((row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter));
+  const shown = inZone.filter((row) => terms.every((term) => `${row.hn} ${row.patientName}`.includes(term)));
   const ticked = shown.filter((row) => selected.has(row.id));
   const allTicked = shown.length > 0 && ticked.length === shown.length;
 
@@ -166,10 +165,16 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
           {view === 'prepare' && (
             <label>
               ค้นหา HN / ชื่อคนไข้
-              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+              <input type="search" list="package-patients" autoComplete="off" value={query} onChange={(event) => setQuery(event.target.value)} />
             </label>
           )}
         </div>
+      )}
+      {/* The browser suggests matching patients while typing; picking one fills "name HN", which narrows to that patient. */}
+      {view === 'prepare' && (
+        <datalist id="package-patients">
+          {inZone.map((row) => <option key={row.id} value={`${row.patientName} ${row.hn}`} />)}
+        </datalist>
       )}
       <p aria-live="polite">{message}</p>
       {labels && <PackageQrSheet labels={labels} onClose={() => setLabels(null)} />}
