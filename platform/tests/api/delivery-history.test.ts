@@ -31,7 +31,7 @@ test('combines HN, rider code or name, subdistrict and zone filters and pages th
 
   expect(response.status).toBe(200);
   const where = findMany.mock.calls[0][0].where;
-  expect(where.deliveryRequest).toEqual({ hn: { contains: '4700' }, deliveryZoneId: 'ZONE1', deliveryZone: { subdistrictCode: '440801' } });
+  expect(where.deliveryRequest).toEqual({ OR: [{ hn: { contains: '4700' } }, { patientName: { contains: '4700' } }], deliveryZoneId: 'ZONE1', deliveryZone: { subdistrictCode: '440801' } });
   expect(where.rider).toEqual({ OR: [{ displayName: { contains: 'INT-001' } }, { riderProfile: { riderCode: { contains: 'INT-001' } } }] });
   expect(findMany.mock.calls[0][0]).toMatchObject({ skip: 25, take: 25 });
   await expect(response.json()).resolves.toMatchObject({

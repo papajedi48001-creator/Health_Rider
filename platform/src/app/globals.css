@@ -673,13 +673,13 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .history-filters .history-actions { display: flex; gap: 8px; align-items: end; }
 .history-filters .history-actions button { margin: 0; }
 .readonly-field { background: var(--canvas); color: var(--muted); cursor: not-allowed; }
-.rider-picker { position: relative; }
-.rider-picker input { width: 100%; }
-.staff-content main .rider-suggestions {
+.suggest-box { position: relative; }
+.suggest-box input { width: 100%; }
+.staff-content main .suggestions {
   position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none;
   background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
   max-height: 280px; overflow-y: auto;
 }
-.staff-content main .rider-suggestions li { margin: 0; padding: 8px 10px; border: 0; box-shadow: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: 400; }
-.staff-content main .rider-suggestions li[aria-selected='true'] { background: var(--canvas); }
-.rider-suggestions code { margin-right: 6px; }
+.staff-content main .suggestions li { margin: 0; padding: 8px 10px; border: 0; box-shadow: none; background: transparent; border-radius: 8px; cursor: pointer; font-weight: 400; }
+.staff-content main .suggestions li[aria-selected='true'] { background: var(--canvas); }
+.suggestions code { margin-right: 6px; }

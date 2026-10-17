@@ -64,7 +64,11 @@ test('a coordinator finds a delivery by HN and opens its details from the info b
   await login(page, 'coordinator.uat');
   await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'ค้นหาประวัติการส่ง' }).click();
   const filters = page.getByRole('form', { name: 'ค้นหาประวัติการส่ง' });
-  await filters.getByLabel('HN ผู้ป่วย').fill(request.hn);
+  // Typing part of the name suggests the patient, and picking it fills in the HN.
+  const patientBox = filters.getByRole('combobox', { name: 'HN หรือชื่อผู้ป่วย' });
+  await patientBox.fill(patientName.slice(0, -3));
+  await page.getByRole('listbox', { name: 'ผู้ป่วยที่ตรงกัน' }).getByRole('option', { name: new RegExp(request.hn) }).click();
+  await expect(patientBox).toHaveValue(request.hn);
   await filters.getByRole('button', { name: 'ค้นหา' }).click();
   await expect(page.getByText('พบ 1 งาน')).toBeVisible();
   const row = page.getByRole('row').filter({ hasText: patientName });
