@@ -735,3 +735,7 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .paper-preview { display: block; }
 .paper-preview .paper-sheet { fill: #fff; stroke: #9aa4b2; stroke-width: 0.8; }
 .paper-preview .paper-label { fill: var(--primary-soft); stroke: var(--primary); stroke-width: 0.6; }
+
+/* A section title with its main action on the right, e.g. the accounts list and its create button. */
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.section-head h2 { margin: 0; }

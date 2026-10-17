@@ -17,7 +17,7 @@ type User = {
 export function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [message, setMessage] = useState('');
-  const [role, setRole] = useState<UserRole>('rider');
+  const [creating, setCreating] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
   const [reviewing, setReviewing] = useState<User | null>(null);
   // Bumped after every reload so suggested rider codes skip codes that were just taken. It only refetches the
@@ -36,14 +36,14 @@ export function AdminUsers() {
     void load();
   }, [load]);
 
-  async function create(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const result = await callApi('/api/admin/users', { json: Object.fromEntries(new FormData(formElement)) });
-    if (!result.ok) return setMessage(result.message);
-    formElement.reset();
+  // Returns the reason when the account could not be created, so the pop-up stays open to fix it.
+  async function create(json: Record<string, unknown>): Promise<string | null> {
+    const result = await callApi('/api/admin/users', { json });
+    if (!result.ok) return result.message;
+    setCreating(false);
     await load();
-    setMessage('สร้างบัญชีแล้ว');
+    setMessage(`สร้างบัญชี ${String(json.displayName)} แล้ว`);
+    return null;
   }
 
   async function update(user: User, changes: Record<string, unknown>, done: string) {
@@ -79,7 +79,10 @@ export function AdminUsers() {
 
   return (
     <section aria-labelledby="admin-users">
-      <h2 id="admin-users">บัญชีผู้ใช้</h2>
+      <div className="section-head">
+        <h2 id="admin-users">บัญชีผู้ใช้</h2>
+        <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}><Icon name="plus" size={18} /> สร้างบัญชี</button>
+      </div>
       <p aria-live="polite">{message}</p>
       {pending.length > 0 && (
         <section aria-labelledby="pending-registrations">
@@ -104,19 +107,7 @@ export function AdminUsers() {
           onReject={() => reject(reviewing)}
         />
       )}
-      <form onSubmit={(event) => void create(event)} aria-label="สร้างบัญชี">
-        <label>ชื่อผู้ใช้ <input name="username" required pattern="[a-z0-9._\-]{3,100}" /></label>
-        <label>ชื่อที่แสดง <input name="displayName" required /></label>
-        <label>
-          บทบาท
-          <select name="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
-            {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
-          </select>
-        </label>
-        {role === 'rider' && <RiderFields refreshKey={usersVersion} />}
-        <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
-        <button type="submit">สร้างบัญชี</button>
-      </form>
+      {creating && <CreateAccount refreshKey={usersVersion} onCreate={create} onClose={() => setCreating(false)} />}
       <label className="switch-toggle">
         <input type="checkbox" role="switch" checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />
         <span className="switch-track" aria-hidden="true" />
@@ -147,6 +138,57 @@ export function AdminUsers() {
 
 function formatApplied(createdAt: string) {
   return new Date(createdAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+}
+
+// A pop-up for adding an account; for a rider, the code is suggested by the server and locked.
+function CreateAccount({ refreshKey, onCreate, onClose }: {
+  refreshKey: number; onCreate: (json: Record<string, unknown>) => Promise<string | null>; onClose: () => void;
+}) {
+  const [role, setRole] = useState<UserRole>('rider');
+  const [problem, setProblem] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setProblem((await onCreate(Object.fromEntries(new FormData(event.currentTarget)))) ?? '');
+    setBusy(false);
+  }
+
+  // Closes only from its buttons or Escape, so a click outside does not throw away what was typed.
+  return (
+    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label="สร้างบัญชี">
+      <div className="photo-viewer-body detail-dialog">
+        <div className="photo-viewer-head">
+          <strong>สร้างบัญชีผู้ใช้</strong>
+          <button type="button" className="icon-button" aria-label="ปิด" onClick={onClose}><Icon name="close" /></button>
+        </div>
+        {problem && <p className="notice notice-danger" role="alert">{problem}</p>}
+        <form onSubmit={(event) => void submit(event)} aria-label="ข้อมูลบัญชีใหม่">
+          <label>ชื่อผู้ใช้ <input name="username" required pattern="[a-z0-9._\-]{3,100}" autoFocus /></label>
+          <label>ชื่อที่แสดง <input name="displayName" required /></label>
+          <label>
+            บทบาท
+            <select name="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
+              {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
+            </select>
+          </label>
+          {role === 'rider' && <RiderFields refreshKey={refreshKey} />}
+          <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
+          <div className="dialog-actions">
+            <button type="submit" disabled={busy}>{busy ? 'กำลังสร้าง' : 'สร้างบัญชี'}</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>ยกเลิก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 // A pop-up where the admin checks one application and approves it with a role, or rejects it.
