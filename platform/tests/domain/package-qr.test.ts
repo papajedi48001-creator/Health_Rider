@@ -12,7 +12,8 @@ test('issues an opaque QR token and stores only its hash', async () => {
     },
   });
 
-  expect(token).not.toContain('HN');
+  // The token is random; it must not carry the attempt id or anything else readable. (Checking for "HN" failed whenever the random text happened to contain those two letters.)
+  expect(token).not.toContain('attempt-1');
   expect(token).toMatch(/^[A-Za-z0-9_-]{40,}$/);
   expect(stored.tokenHash).toHaveLength(64);
   expect(stored.tokenHash).not.toBe(token);
