@@ -16,7 +16,12 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
 
   await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'บัญชีผู้ใช้' }).click();
   const username = `rider.e2e.${suffix}`;
-  const userForm = page.getByRole('form', { name: 'สร้างบัญชี' });
+  // The create form lives in a pop-up behind the "สร้างบัญชี" button, not on the page itself.
+  await expect(page.getByRole('form', { name: 'ข้อมูลบัญชีใหม่' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'สร้างบัญชี' }).click();
+  const createDialog = page.getByRole('dialog', { name: 'สร้างบัญชี' });
+  const userForm = createDialog.getByRole('form', { name: 'ข้อมูลบัญชีใหม่' });
+  await expect(userForm.getByLabel('ชื่อผู้ใช้')).toBeFocused();
   await userForm.getByLabel('ชื่อผู้ใช้').fill(username);
   await userForm.getByLabel('ชื่อที่แสดง').fill(`ไรเดอร์ E2E ${suffix}`);
   await userForm.getByLabel('บทบาท').selectOption('rider');
@@ -28,6 +33,8 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await expect(userForm.getByLabel('รหัสไรเดอร์')).not.toBeEditable();
   await userForm.getByLabel('รหัสผ่านเริ่มต้น').fill('e2e-rider-password');
   await userForm.getByRole('button', { name: 'สร้างบัญชี' }).click();
+  await expect(createDialog).toHaveCount(0);
+  await expect(page.getByText(`สร้างบัญชี ไรเดอร์ E2E ${suffix} แล้ว`)).toBeVisible();
   const row = page.getByRole('row').filter({ hasText: `ไรเดอร์ E2E ${suffix}` });
   await expect(row).not.toContainText(username);
   await expect(row).toContainText(/INT-\d{3,} \(ภายใน\)/);
