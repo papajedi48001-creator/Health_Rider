@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ZonedCandidate } from '@/hos/types';
 import { callApi } from '@/lib/api-client';
 import { bangkokDateString } from '@/lib/time';
+import { ServiceDatePicker } from './service-date-picker';
 
 const ALL_SUBDISTRICTS = '';
 const ALL_ZONES = '';
@@ -96,10 +97,7 @@ export function PharmacyCandidateList() {
   return (
     <section aria-live="polite">
       <div className="filter-bar">
-        <label>
-          วันที่รับบริการ
-          <input type="date" value={date} onChange={(event) => event.target.value && setDate(event.target.value)} />
-        </label>
+        <ServiceDatePicker value={date} onChange={setDate} />
         <label>
           ตำบล
           <select value={subdistrictFilter} onChange={(event) => { setSubdistrictFilter(event.target.value); setZoneFilter(ALL_ZONES); }}>

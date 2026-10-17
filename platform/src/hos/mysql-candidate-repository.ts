@@ -3,7 +3,7 @@ import { HosUnavailableError, loadHosConfig, type HosConnection } from '@/hos/ho
 import { db } from '@/lib/db';
 import { bangkokDateString } from '@/lib/time';
 import type { HosCandidateRepository } from '@/hos/candidate-repository';
-import type { HosCandidate, HosCandidateRow, HosVillage, HosVillageRow } from '@/hos/types';
+import type { HosCandidate, HosCandidateRow, HosVillage, HosVillageRow, HosVisitDay, HosVisitDayRow } from '@/hos/types';
 
 type ReadOnlyConnection = {
   execute(sql: string, values?: unknown): Promise<[unknown, ...unknown[]]>;
@@ -45,6 +45,18 @@ function villageQuery(itemCodeCount: number): string {
 `;
 }
 
+// The date comes back as text so the driver's time zone cannot shift it by a day.
+function visitDayQuery(itemCodeCount: number): string {
+  const itemCodePlaceholders = Array.from({ length: itemCodeCount }, () => '?').join(', ');
+  return `
+  SELECT DISTINCT
+    DATE_FORMAT(o.vstdate, '%Y-%m-%d') AS visit_date,
+    o.vn AS visit_number
+  FROM opitemrece AS o
+  WHERE o.icode IN (${itemCodePlaceholders}) AND o.vstdate BETWEEN ? AND ?
+`;
+}
+
 // One row per visit even when several eligible items were dispensed in it.
 export class MysqlHosCandidateRepository implements HosCandidateRepository {
   constructor(
@@ -63,6 +75,16 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
     ]);
 
     return (rows as HosCandidateRow[]).map(mapCandidate);
+  }
+
+  // Eligible visits between two Thai dates, inclusive.
+  async visitsBetween(from: string, to: string): Promise<HosVisitDay[]> {
+    if (this.eligibleItemCodes.length === 0) {
+      return [];
+    }
+
+    const [rows] = await this.connection.execute(visitDayQuery(this.eligibleItemCodes.length), [...this.eligibleItemCodes, from, to]);
+    return (rows as HosVisitDayRow[]).map((row) => ({ date: String(row.visit_date), visitNumber: String(row.visit_number) }));
   }
 
   // Villages are normalised the same way as candidates, so "6" and "06" fold into one zone.

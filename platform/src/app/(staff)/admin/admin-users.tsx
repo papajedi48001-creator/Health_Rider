@@ -20,7 +20,8 @@ export function AdminUsers() {
   const [role, setRole] = useState<UserRole>('rider');
   const [showInactive, setShowInactive] = useState(false);
   const [reviewing, setReviewing] = useState<User | null>(null);
-  // Bumped after every reload so suggested rider codes skip codes that were just taken.
+  // Bumped after every reload so suggested rider codes skip codes that were just taken. It only refetches the
+  // code: remounting the rider fields would throw away a category the admin picked while the list was loading.
   const [usersVersion, setUsersVersion] = useState(0);
 
   const load = useCallback(async () => {
@@ -112,7 +113,7 @@ export function AdminUsers() {
             {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
           </select>
         </label>
-        {role === 'rider' && <RiderFields key={usersVersion} refreshKey={usersVersion} />}
+        {role === 'rider' && <RiderFields refreshKey={usersVersion} />}
         <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
         <button type="submit">สร้างบัญชี</button>
       </form>
