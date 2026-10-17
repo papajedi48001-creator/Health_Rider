@@ -8,7 +8,7 @@ import { callApi } from '@/lib/api-client';
 import { employmentLabels, failureReasonLabels, formatThaiDateTime, statusLabels } from '@/lib/labels';
 import { statusTone } from '@/lib/status-tone';
 import { minutes, type Range } from '@/reports/report-kit';
-import { withBasePath } from '@/lib/base-path';
+import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
 
 type RiderJobs = {
   rider: { id: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; riderCode: string | null; employmentCategory: string | null };
@@ -81,7 +81,7 @@ export function RiderJobsPanel({ riderId, range, onClose }: { riderId: string; r
                       {item.failureReason && <><br /><small>{failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? item.failureReason}</small></>}
                     </td>
                     <td className="num">{minutes(item.minutes)}</td>
-                    <td>{item.hasEvidence && <a className="btn btn-secondary btn-small" href={withBasePath(`/api/rider/attempts/${item.id}/evidence`)} target="_blank" rel="noreferrer"><Icon name="image" size={18} /> ดูรูป</a>}</td>
+                    <td className="row-actions"><DeliveryInfoButton attemptId={item.id} patientName={item.patientName} /></td>
                   </tr>
                 ))}
               </tbody>

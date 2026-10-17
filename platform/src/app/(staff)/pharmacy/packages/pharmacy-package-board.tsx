@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
 import { PackageQrSheet, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
@@ -133,6 +134,9 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
     </label>
   );
 
+  // The latest package of a request, for the details pop-up; a request not yet prepared has none.
+  const info = (row: Row) => row.latestAttempt && <DeliveryInfoButton attemptId={row.latestAttempt.id} patientName={row.patientName} />;
+
   return (
     <div>
       {board && (
@@ -170,7 +174,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
                 <li key={row.id}>
                   {pick(row)}
                   <p><strong>{row.patientName}</strong> · HN {row.hn} · {row.zone.displayName}</p>
-                  {row.latestAttempt?.status === 'returned' && <p>ส่งใหม่หลังรับยาคืนแล้ว</p>}
+                  {row.latestAttempt?.status === 'returned' && <p>ส่งใหม่หลังรับยาคืนแล้ว {info(row)}</p>}
                   <button type="button" disabled={busy === row.id} onClick={() => void run(row.id, '/api/pharmacy/attempts/prepare', { deliveryRequestId: row.id }, 'เตรียมพัสดุแล้ว พิมพ์ฉลาก QR ติดพัสดุ', row)}>
                     {busy === row.id ? 'กำลังเตรียม' : 'เตรียมพัสดุและออก QR'}
                   </button>
@@ -191,7 +195,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   {pick(row)}
-                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
+                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName} {info(row)}</p>
                   <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
                     ออก QR ใหม่
                   </button>
@@ -209,7 +213,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
             <ul>
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
-                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)}</p>
+                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} {info(row)}</p>
                   <p>เหตุผล: {failureReasonLabels[row.latestAttempt.failureReason as keyof typeof failureReasonLabels] ?? '-'} · {formatThaiDateTime(row.latestAttempt.failedAt)}</p>
                   <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/return`, {}, 'รับยาคืนแล้ว เตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง')}>
                     ยืนยันรับยาคืน

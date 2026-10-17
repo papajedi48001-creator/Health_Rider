@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // A rider sees the evidence photo only for a delivery they made; coordinators and admins see any. Never cached.
 export async function GET(request: NextRequest, context: { params: Promise<{ attemptId: string }> }) {
   return handleRoute(async () => {
-    const session = requireRole(await getSessionFromRequest(request), 'rider', 'coordinator', 'admin');
+    const session = requireRole(await getSessionFromRequest(request), 'rider', 'pharmacy', 'coordinator', 'admin');
     const { attemptId } = await context.params;
     const evidence = await db.deliveryEvidence.findUnique({
       where: { deliveryAttemptId: attemptId },

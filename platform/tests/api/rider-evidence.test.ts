@@ -27,11 +27,11 @@ test('shows the delivering rider their evidence photo without caching it', async
   expect(readPhoto).toHaveBeenCalledWith('A1/event.jpg');
 });
 
-test('hides another rider’s photo and refuses pharmacy', async () => {
+test('hides another rider’s photo and refuses auditors', async () => {
   const { GET } = await import('@/app/api/rider/attempts/[attemptId]/evidence/route');
   currentSession.mockResolvedValueOnce({ id: 'rider-2', role: 'rider', displayName: 'ไรเดอร์อื่น' });
   expect((await GET(photo(), params)).status).toBe(404);
-  currentSession.mockResolvedValueOnce({ id: 'pharmacy-1', role: 'pharmacy', displayName: 'เภสัชกร' });
+  currentSession.mockResolvedValueOnce({ id: 'auditor-1', role: 'auditor', displayName: 'ผู้ตรวจสอบ' });
   expect((await GET(photo(), params)).status).toBe(403);
   expect(readPhoto).not.toHaveBeenCalled();
 });

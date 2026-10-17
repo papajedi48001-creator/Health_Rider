@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { EmptyState } from '@/brand/empty-state';
@@ -85,7 +86,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
         </header>
         {data && returns.length === 0 ? <EmptyState text="ไม่มียาที่รอรับคืน" /> : (
           <table>
-            <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>ไรเดอร์</th><th>สาเหตุ</th><th>ส่งไม่สำเร็จเมื่อ</th>{canReceiveReturn && <th />}</tr></thead>
+            <thead><tr><th>พัสดุ</th><th>ผู้ป่วย</th><th>ไรเดอร์</th><th>สาเหตุ</th><th>ส่งไม่สำเร็จเมื่อ</th><th /></tr></thead>
             <tbody>
               {returns.map((item) => (
                 <tr key={item.id}>
@@ -94,13 +95,14 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
                   <td>{item.rider ? <PersonName person={item.rider} /> : '-'}</td>
                   <td><span className="chip chip-danger">{failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? '-'}</span></td>
                   <td>{formatThaiDateTime(item.failedAt)}</td>
-                  {canReceiveReturn && (
-                    <td>
+                  <td className="row-actions">
+                    <DeliveryInfoButton attemptId={item.id} patientName={item.deliveryRequest.patientName} />
+                    {canReceiveReturn && (
                       <button type="button" className="btn btn-primary btn-small" disabled={busy === item.id} onClick={() => void receiveReturn(item.id)}>
                         {busy === item.id ? 'กำลังบันทึก' : 'ยืนยันรับยาคืน'}
                       </button>
-                    </td>
-                  )}
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -126,6 +128,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
                   <div className="conflict-title">
                     <h3>{conflict.deliveryAttempt.deliveryRequest.patientName}</h3>
                     <code>พัสดุ {shortCode(conflict.deliveryAttemptId)}</code>
+                    <DeliveryInfoButton attemptId={conflict.deliveryAttemptId} patientName={conflict.deliveryAttempt.deliveryRequest.patientName} />
                   </div>
                   <p className="chip-row">
                     <span className="chip chip-info">{eventLabels[event.eventType] ?? event.eventType}</span>
