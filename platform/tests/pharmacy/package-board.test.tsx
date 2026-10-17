@@ -33,3 +33,35 @@ test('narrows the package board by subdistrict, then by zone within it', async (
   expect(screen.getByText('ผู้ป่วยสอง')).toBeInTheDocument();
   expect(screen.queryByText('ผู้ป่วยหนึ่ง')).not.toBeInTheDocument();
 });
+
+test('finds a patient to prepare by HN or name, and select-all ticks only the matches', async () => {
+  const plaLo6 = zone('z-6', 'ปลาโหล ม.6', '470603', 'ต.ปลาโหล');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    toPrepare: [row('450014298', 'ศักดา สัดถาผล', plaLo6), row('450003368', 'ประเสริฐ จันทะฝ่าย', plaLo6), row('490039502', 'บำเพ็ญ เชิญชม', plaLo6)],
+    awaitingRider: [], returnRequired: [],
+  }), { status: 200 })));
+
+  render(<PharmacyPackageBoard view="prepare" />);
+
+  expect(await screen.findByText('ต้องเตรียมพัสดุ (3)')).toBeInTheDocument();
+  const search = screen.getByLabelText('ค้นหา HN / ชื่อคนไข้');
+  fireEvent.change(search, { target: { value: '0003368' } });
+  expect(screen.getByText('ต้องเตรียมพัสดุ (1)')).toBeInTheDocument();
+  expect(screen.getByText('ประเสริฐ จันทะฝ่าย')).toBeInTheDocument();
+
+  fireEvent.change(search, { target: { value: 'เชิญ' } });
+  expect(screen.getByText('บำเพ็ญ เชิญชม')).toBeInTheDocument();
+  expect(screen.queryByText('ศักดา สัดถาผล')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText(/เลือกทั้งหมด/));
+  expect(screen.getByRole('button', { name: 'เตรียมพัสดุและพิมพ์ QR ที่เลือก (1)' })).toBeInTheDocument();
+
+  fireEvent.change(search, { target: { value: 'ไม่มีคนนี้' } });
+  expect(screen.getByText('ไม่พบคนไข้ที่ตรงกับคำค้นหา')).toBeInTheDocument();
+});
+
+test('the search box only appears on the packages-to-prepare queue', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ toPrepare: [], awaitingRider: [], returnRequired: [] }), { status: 200 })));
+  render(<PharmacyPackageBoard view="awaiting" />);
+  expect(await screen.findByText('รอไรเดอร์รับงาน (0)')).toBeInTheDocument();
+  expect(screen.queryByLabelText('ค้นหา HN / ชื่อคนไข้')).not.toBeInTheDocument();
+});

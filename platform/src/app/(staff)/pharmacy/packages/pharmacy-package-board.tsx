@@ -43,6 +43,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [subdistrictFilter, setSubdistrictFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     const result = await callApi<Board>('/api/pharmacy/requests');
@@ -106,7 +107,10 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   for (const row of allRows) {
     if (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) zones.set(row.zone.id, row.zone.displayName);
   }
-  const matches = (row: Row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter);
+  // Only the prepare queue has a search box: pharmacy looks up the patient whose medicine is in hand by HN or name words.
+  const terms = view === 'prepare' ? query.trim().split(/\s+/).filter(Boolean) : [];
+  const matches = (row: Row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter)
+    && terms.every((term) => `${row.hn} ${row.patientName}`.includes(term));
   const shown = allRows.filter(matches);
   const ticked = shown.filter((row) => selected.has(row.id));
   const allTicked = shown.length > 0 && ticked.length === shown.length;
@@ -120,7 +124,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
           checked={allTicked}
           onChange={() => setSelected(allTicked ? new Set() : new Set(shown.map((row) => row.id)))}
         />
-        เลือกทั้งหมด{zoneFilter ? 'ในโซนนี้' : subdistrictFilter ? 'ในตำบลนี้' : ''} ({shown.length})
+        เลือกทั้งหมด{terms.length > 0 ? 'ที่ค้นพบ' : zoneFilter ? 'ในโซนนี้' : subdistrictFilter ? 'ในตำบลนี้' : ''} ({shown.length})
       </label>
       <button type="button" className="btn btn-primary btn-small" disabled={ticked.length === 0 || busy !== null} onClick={() => void printSelected(ticked)}>
         {busy === 'batch' ? 'กำลังออก QR' : `${action} (${ticked.length})`}
@@ -159,6 +163,12 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
               ))}
             </select>
           </label>
+          {view === 'prepare' && (
+            <label>
+              ค้นหา HN / ชื่อคนไข้
+              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+            </label>
+          )}
         </div>
       )}
       <p aria-live="polite">{message}</p>
@@ -166,7 +176,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
       {board && view === 'prepare' && (
         <section>
           <h2>ต้องเตรียมพัสดุ ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text="ไม่มีรายการที่ต้องเตรียมพัสดุ" /> : (
+          {shown.length === 0 ? <EmptyState text={terms.length > 0 ? 'ไม่พบคนไข้ที่ตรงกับคำค้นหา' : 'ไม่มีรายการที่ต้องเตรียมพัสดุ'} /> : (
             <>
             {selectBar('เตรียมพัสดุและพิมพ์ QR ที่เลือก')}
             <ul className="pick-list">
