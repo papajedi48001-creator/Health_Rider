@@ -10,6 +10,7 @@ import { DomainError } from '@/domain/errors';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
+import { assertRiderSeatAvailable } from '@/license/license-store';
 
 // Approving a self-registered account opens it with the role the admin confirms; rejecting keeps it closed.
 export async function POST(request: NextRequest, context: { params: Promise<{ userId: string }> }) {
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ us
     const updated = await db.$transaction(async (tx) => {
       const before = await tx.user.findUnique({ where: { id: userId }, select: { role: true, pendingApproval: true } });
       if (!before) throw new DomainError('ไม่พบบัญชีผู้ใช้', 404);
+      if (decision.decision === 'approve' && decision.role === 'rider') await assertRiderSeatAvailable(tx);
       // The conditional update makes two admins deciding at once safe: only the first one applies.
       const claimed = await tx.user.updateMany({
         where: { id: userId, pendingApproval: true },

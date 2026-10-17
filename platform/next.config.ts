@@ -11,6 +11,8 @@ if (basePath && !/^\/[A-Za-z0-9._~-]+(\/[A-Za-z0-9._~-]+)*$/.test(basePath)) {
 
 // Identifies this build; open pages compare it with /api/version to offer a newer one.
 const appVersion = process.env.APP_VERSION?.trim() || new Date().toISOString();
+// The day this image was built; a license only covers builds up to its updatesUntil day (src/license).
+const buildDate = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 // Next.js hydrates with inline scripts and the app uses inline styles, so those stay allowed; everything
 // else, including framing by other sites, is limited to this origin. Images include data: and blob:
@@ -42,7 +44,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   basePath,
   poweredByHeader: false,
-  env: { NEXT_PUBLIC_APP_VERSION: appVersion },
+  env: { NEXT_PUBLIC_APP_VERSION: appVersion, NEXT_PUBLIC_BUILD_DATE: buildDate },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

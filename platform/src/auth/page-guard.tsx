@@ -11,6 +11,7 @@ import { Icon, type IconName } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
 import { withBasePath } from '@/lib/base-path';
 import { UserAvatar } from '@/account/user-avatar';
+import { currentLicenseState } from '@/license/license-store';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
@@ -49,12 +50,15 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
   const session = await getSessionFromCookies();
   if (!session) redirect(await loginRedirectPath());
   const accountHref = session.role === 'rider' ? '/rider/profile' : '/account';
+  const license = await currentLicenseState();
+  // Everyone needs to know when saving is blocked or about to be; renewal reminders are for admins.
+  const licenseNotice = license.message && (!license.writable || license.status === 'grace' || license.status === 'trial' || session.role === 'admin') ? license.message : null;
 
   return (
     <div className="staff-app">
       <header className="staff-sidebar">
         <Link href={roleHome(session.role)} className="brand">
-          <Brand />
+          <Brand hospitalName={license.license?.licensee.name} />
         </Link>
         <MainNav groups={groupsFor(session.role)} />
         <div className="sidebar-mascot" aria-hidden="true">
@@ -72,6 +76,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
         </div>
       </header>
       <div className="staff-content">
+        {licenseNotice && <p role="status" className={license.writable ? 'notice' : 'notice notice-danger'}>{licenseNotice}</p>}
         {roles.includes(session.role) ? children : (
           <main className="no-access">
             <Mascot width={180} variant="small" />

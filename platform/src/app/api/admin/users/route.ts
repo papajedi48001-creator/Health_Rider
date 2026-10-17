@@ -9,6 +9,7 @@ import { newPublicId } from '@/domain/delivery/status';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
+import { assertRiderSeatAvailable } from '@/license/license-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
     const input = parseNewUser(await readJsonBody(request));
     const passwordHash = await hashPassword(input.password);
     const user = await db.$transaction(async (tx) => {
+      if (input.role === 'rider') await assertRiderSeatAvailable(tx);
       // Two admins saving at once can draw the same code; the unique index refuses the second and they save again.
       const rider = input.rider && { ...input.rider, riderCode: await suggestRiderCode(tx, input.rider.employmentCategory) };
       const created = await tx.user.create({
