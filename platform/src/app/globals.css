@@ -310,35 +310,34 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .label-sheet { display: grid; gap: 12px; margin: 12px 0 20px; }
 .label-dialog .label-sheet { width: min(100%, 760px); margin: 0; padding: 16px; }
 /* The pop-up's photo rules would stretch the QR to the label's width. */
-.label-dialog .parcel-label img { width: 120px; height: 120px; border-radius: 0; background: none; }
+.label-dialog .parcel-label img { width: 7.5em; height: 7.5em; border-radius: 0; background: none; }
 .label-toolbar { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
 .label-toolbar h2 { margin: 0; }
 .label-toolbar p { margin: 0; flex: 1 1 260px; color: var(--muted); }
 .label-actions { display: flex; gap: 8px; }
-.label-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
-.parcel-label { display: grid; gap: 8px; padding: 12px 14px; border: 1.5px dashed #9aa4b2; border-radius: 6px; background: #fff; color: #111; break-inside: avoid; }
-.parcel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* Label sizes are set in millimetres from the admin's label settings; text is in em so it scales with the label. */
+.label-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; justify-content: start; }
+.parcel-label { box-sizing: border-box; display: grid; grid-template-rows: auto 1fr auto auto; gap: 0.45em; padding: 0.7em 0.85em; overflow: hidden; border: 1.5px dashed #9aa4b2; border-radius: 6px; background: #fff; color: #111; break-inside: avoid; }
+.parcel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; }
 .parcel-head > strong { text-decoration: underline; }
-.parcel-code { padding: 2px 8px; border: 1px solid #cbd2db; border-radius: 4px; background: #f6f7f9; font-weight: 700; color: #111; }
-.parcel-body { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
-.parcel-to { display: grid; gap: 4px; min-width: 0; }
-.parcel-name { font-size: 1.3rem; line-height: 1.3; }
-.parcel-address { font-size: 1.05rem; line-height: 1.45; overflow-wrap: anywhere; }
-.parcel-qr { display: grid; justify-items: center; gap: 2px; }
-.parcel-qr img { width: 112px; height: 112px; }
-.parcel-qr strong { font-size: 0.9rem; letter-spacing: 0.02em; }
-.parcel-foot { padding-top: 6px; border-top: 1px solid #d5dae1; text-align: center; font-size: 0.78rem; font-weight: 700; }
-.parcel-label .qr-token { font-size: 0.62rem; color: #555; text-align: center; }
+.parcel-code { padding: 0.1em 0.5em; border: 1px solid #cbd2db; border-radius: 4px; background: #f6f7f9; font-size: 0.9em; font-weight: 700; color: #111; }
+.parcel-body { display: grid; grid-template-columns: 1fr auto; gap: 0.75em; align-items: start; min-height: 0; }
+.parcel-to { display: grid; gap: 0.25em; min-width: 0; }
+.parcel-name { font-size: 1.3em; line-height: 1.3; }
+.parcel-address { font-size: 1.05em; line-height: 1.45; overflow-wrap: anywhere; }
+.parcel-qr { display: grid; justify-items: center; gap: 0.1em; }
+.parcel-qr img { width: 7.5em; height: 7.5em; }
+.parcel-qr strong { max-width: 8.5em; font-size: 0.9em; letter-spacing: 0.02em; text-align: center; overflow-wrap: anywhere; }
+.parcel-foot { padding-top: 0.35em; border-top: 1px solid #d5dae1; text-align: center; font-size: 0.78em; font-weight: 700; }
+.parcel-label .qr-token { font-size: 0.62em; color: #555; text-align: center; }
 
 @media print {
-  @page { size: A4; margin: 10mm; }
-  body * { visibility: hidden; }
-  .label-sheet, .label-sheet * { visibility: visible; }
-  .label-dialog { position: static; display: block; padding: 0; background: none; }
-  .label-dialog .label-sheet { width: 100%; max-height: none; overflow: visible; border-radius: 0; }
-  .label-sheet { position: absolute; inset: 0 auto auto 0; width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; background: none; }
+  body:has(> .label-dialog) > :not(.label-dialog) { display: none !important; }
+  .photo-viewer.label-dialog { position: static; display: block; padding: 0; background: none; }
+  .label-dialog .label-sheet { display: block; width: auto; max-height: none; overflow: visible; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: none; }
   .label-toolbar { display: none; }
-  .label-grid { grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .label-page { break-after: page; }
+  .label-page:last-child { break-after: auto; }
   .parcel-label { border-color: #555; }
 }
 .outcome-delivered { color: var(--success); font-weight: 700; }
@@ -722,3 +721,17 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .date-picker-legend .swatch.has-pending { background: var(--primary); }
 .date-picker-legend .swatch.has-done { background: var(--primary-soft); border: 1px solid var(--primary); }
 .date-picker-head .icon-button { width: 36px; height: 36px; }
+
+/* Admin label settings: one block per print type with its fields, the sheet drawn to scale and a real-size sample. */
+.label-settings { display: grid; gap: 16px; }
+.label-layout { display: grid; gap: 10px; margin: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-surface); background: var(--surface); min-width: 0; }
+.label-layout legend { padding: 0 6px; font-weight: 700; font-size: 1.05rem; }
+.label-layout > p { margin: 0; }
+.label-layout-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; }
+.label-layout-preview { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-start; }
+.label-layout-preview p { margin: 6px 0 0; }
+.label-layout-sample { display: grid; gap: 6px; max-width: 100%; overflow-x: auto; }
+.label-layout-sample .parcel-label img { width: 7.5em; height: 7.5em; }
+.paper-preview { display: block; }
+.paper-preview .paper-sheet { fill: #fff; stroke: #9aa4b2; stroke-width: 0.8; }
+.paper-preview .paper-label { fill: var(--primary-soft); stroke: var(--primary); stroke-width: 0.6; }
