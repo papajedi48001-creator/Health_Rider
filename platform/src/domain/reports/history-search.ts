@@ -24,7 +24,8 @@ export function historyWhere(filters: HistoryFilters, createdAt: { gte: Date; lt
       rider: { OR: [{ displayName: { contains: filters.rider } }, { riderProfile: { riderCode: { contains: filters.rider } } }] },
     } : {}),
     deliveryRequest: {
-      ...(filters.hn ? { hn: { contains: filters.hn } } : {}),
+      // The patient box takes an HN or part of a name.
+      ...(filters.hn ? { OR: [{ hn: { contains: filters.hn } }, { patientName: { contains: filters.hn } }] } : {}),
       ...(filters.zoneId ? { deliveryZoneId: filters.zoneId } : {}),
       ...(filters.subdistrictCode ? { deliveryZone: { subdistrictCode: filters.subdistrictCode } } : {}),
     },

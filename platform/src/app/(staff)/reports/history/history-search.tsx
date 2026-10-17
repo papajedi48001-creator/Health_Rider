@@ -11,7 +11,7 @@ import { formatThaiDateTime, statusLabels } from '@/lib/labels';
 import { statusTone } from '@/lib/status-tone';
 import { ReportFilters, type Range } from '@/reports/report-kit';
 import { bangkokDateString } from '@/lib/time';
-import { RiderPicker, type RiderOption } from './rider-picker';
+import { SuggestBox, type Suggestion } from './suggest-box';
 
 type Zone = { id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string };
 type Filters = { hn: string; rider: string; subdistrict: string; zone: string };
@@ -20,8 +20,11 @@ type HistoryItem = {
   rider: { id: string; displayName: string; avatarUpdatedAt: string | null; riderCode: string | null } | null;
   createdAt: string; finishedAt: string | null;
 };
+type RiderOption = { id: string; displayName: string; riderCode: string };
+type PatientOption = { hn: string; patientName: string };
 type HistoryPage = { page: number; pages: number; total: number; items: HistoryItem[] };
 
+const maxSuggestions = 8;
 const emptyFilters: Filters = { hn: '', rider: '', subdistrict: '', zone: '' };
 
 function thisMonth(): Range {
@@ -62,6 +65,26 @@ export function DeliveryHistorySearch() {
     return () => { current = false; };
   }, [query]);
 
+  // Patients come from the server as they are typed, and only those who have had a delivery.
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const patientText = draft.hn.trim();
+  useEffect(() => {
+    if (!patientText) return setPatients([]);
+    let current = true;
+    const timer = setTimeout(() => {
+      void callApi<{ patients: PatientOption[] }>(`/api/reports/history/patients?${new URLSearchParams({ q: patientText })}`)
+        .then((result) => { if (current && result.ok) setPatients(result.data.patients); });
+    }, 250);
+    return () => { current = false; clearTimeout(timer); };
+  }, [patientText]);
+  const patientSuggestions: Suggestion[] = patients.map((patient) => ({ key: patient.hn, value: patient.hn, label: patient.patientName }));
+
+  const riderText = draft.rider.trim().toLowerCase();
+  const riderSuggestions: Suggestion[] = riders
+    .filter((rider) => rider.riderCode.toLowerCase().includes(riderText) || rider.displayName.toLowerCase().includes(riderText))
+    .slice(0, maxSuggestions)
+    .map((rider) => ({ key: rider.id, value: rider.riderCode, label: rider.displayName }));
+
   const subdistricts = useMemo(() => {
     const seen = new Map<string, string>();
     for (const zone of zones) if (!seen.has(zone.subdistrictCode)) seen.set(zone.subdistrictCode, zone.subdistrictName ?? zone.subdistrictCode);
@@ -86,8 +109,8 @@ export function DeliveryHistorySearch() {
     <div>
       <ReportFilters range={range} onChange={(next) => { setRange(next); setPage(1); }} csvHref={withBasePath(`/api/reports/history?${csvParams}`)} />
       <form className="filter-bar history-filters" aria-label="ค้นหาประวัติการส่ง" onSubmit={search}>
-        <label>HN ผู้ป่วย <input value={draft.hn} onChange={(event) => setDraft({ ...draft, hn: event.target.value })} inputMode="numeric" /></label>
-        <label>รหัสหรือชื่อไรเดอร์ <RiderPicker riders={riders} value={draft.rider} onChange={(rider) => setDraft({ ...draft, rider })} /></label>
+        <label>HN หรือชื่อผู้ป่วย <SuggestBox value={draft.hn} onChange={(hn) => setDraft({ ...draft, hn })} suggestions={patientSuggestions} listLabel="ผู้ป่วยที่ตรงกัน" /></label>
+        <label>รหัสหรือชื่อไรเดอร์ <SuggestBox value={draft.rider} onChange={(rider) => setDraft({ ...draft, rider })} suggestions={riderSuggestions} listLabel="ไรเดอร์ที่ตรงกัน" /></label>
         <label>
           ตำบล
           <select value={draft.subdistrict} onChange={(event) => setDraft({ ...draft, subdistrict: event.target.value, zone: '' })}>
