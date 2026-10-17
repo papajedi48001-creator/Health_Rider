@@ -1,9 +1,9 @@
-import { expect, test, type Browser } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContextOptions } from '@playwright/test';
 import { attemptStatus, createDeliveryRequest, samplePhoto } from './fixtures';
 import { login } from './login';
 
-async function signedIn(browser: Browser, username: string) {
-  const context = await browser.newContext();
+async function signedIn(browser: Browser, username: string, options: BrowserContextOptions = {}) {
+  const context = await browser.newContext(options);
   const page = await context.newPage();
   await login(page, username);
   return { context, page };
@@ -35,7 +35,8 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await expect(pharmacy.page.getByRole('img', { name: /QR พัสดุ/ })).toBeVisible();
   await expect(pharmacy.page.getByLabel('ฉลาก QR พัสดุ')).toContainText(patientName);
 
-  const rider = await signedIn(browser, 'rider.internal.uat');
+  // The rider's phone allows location, so the delivery photo is stamped with where it was taken.
+  const rider = await signedIn(browser, 'rider.internal.uat', { permissions: ['geolocation'], geolocation: { latitude: 17.2501, longitude: 103.9502, accuracy: 15 } });
   await rider.page.goto('/rider/scan');
   await rider.page.getByLabel('รหัสใต้ QR').fill(prepared.token);
   await rider.page.getByRole('button', { name: 'ยืนยันรหัส' }).click();
@@ -67,6 +68,7 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   await expect(rider.page.getByRole('status')).toContainText('บันทึกและส่งข้อมูลแล้ว');
   await expect(rider.page.getByText('สถานะ: ส่งสำเร็จ')).toBeVisible();
   expect(await attemptStatus(prepared.attemptId)).toBe('delivered');
+  await expect(rider.page.locator('body')).not.toContainText('17.25');
 
   await rider.page.getByRole('link', { name: 'ประวัติการส่ง' }).click();
   const delivered = rider.page.getByRole('listitem').filter({ hasText: patientName });
@@ -87,10 +89,18 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   const details = coordinator.page.getByRole('dialog', { name: `รายละเอียดการส่ง ${patientName}` });
   await expect(details.getByText('คู่สมรส')).toBeVisible();
   await expect(details.getByText('UAT-INT-01')).toBeVisible();
+  // Only admins see where the photo was taken.
+  await expect(details).not.toContainText('พิกัด GPS');
   const proof = details.getByRole('img', { name: /รูปหลักฐานการส่ง/ });
   await expect.poll(() => proof.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await coordinator.page.keyboard.press('Escape');
   await expect(coordinator.page.getByRole('dialog')).toHaveCount(0);
+
+  const admin = await signedIn(browser, 'admin.uat');
+  await admin.page.goto('/operations');
+  await admin.page.getByRole('row').filter({ hasText: patientName }).getByRole('button', { name: `ดูรายละเอียดการส่ง ${patientName}` }).click();
+  const adminDetails = admin.page.getByRole('dialog', { name: `รายละเอียดการส่ง ${patientName}` });
+  await expect(adminDetails.getByRole('link', { name: '17.250100,103.950200' })).toHaveAttribute('href', 'https://www.google.com/maps?q=17.250100,103.950200');
 });
 
 test('takes a failed delivery back to pharmacy and allows a new package', async ({ browser }) => {

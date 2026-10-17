@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
     const [returns, conflicts] = await Promise.all([
       db.deliveryAttempt.findMany({
         where: { status: 'return_required' },
@@ -25,6 +25,11 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
-    return NextResponse.json({ returns, conflicts });
+    // The GPS position recorded with a delivery photo is for admins only.
+    const shown = viewer.role === 'admin' ? conflicts : conflicts.map((conflict) => {
+      const { location: _location, ...payload } = (conflict.offlineDeliveryEvent.payload ?? {}) as Record<string, unknown>;
+      return { ...conflict, offlineDeliveryEvent: { ...conflict.offlineDeliveryEvent, payload } };
+    });
+    return NextResponse.json({ returns, conflicts: shown });
   });
 }

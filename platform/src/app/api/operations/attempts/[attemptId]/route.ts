@@ -9,14 +9,14 @@ export const dynamic = 'force-dynamic';
 // Everything about one delivery for the details pop-up: patient, timeline, proof of delivery, other attempts and history.
 export async function GET(request: NextRequest, context: { params: Promise<{ attemptId: string }> }) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
     const { attemptId } = await context.params;
     const attempt = await db.deliveryAttempt.findUnique({
       where: { id: attemptId },
       select: {
         id: true, status: true, createdAt: true, claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true, returnedAt: true,
         rider: { select: { id: true, displayName: true, avatarUpdatedAt: true, phone: true, riderProfile: { select: { riderCode: true } } } },
-        evidence: { select: { recipientRelation: true, deviceCapturedAt: true, serverReceivedAt: true } },
+        evidence: { select: { recipientRelation: true, deviceCapturedAt: true, serverReceivedAt: true, latitude: true, longitude: true, locationAccuracyM: true } },
         deliveryRequest: {
           select: {
             id: true, hosVisitNumber: true, hn: true, patientName: true, patientAge: true, telephone: true, deliveryAddress: true,
@@ -39,12 +39,20 @@ export async function GET(request: NextRequest, context: { params: Promise<{ att
     const actorName = new Map(actors.map((actor) => [actor.id, actor.displayName]));
 
     const { attempts, ...deliveryRequest } = attempt.deliveryRequest;
+    // The GPS position of the delivery photo is for admins only.
+    const evidence = attempt.evidence && (viewer.role === 'admin' ? attempt.evidence : withoutLocation(attempt.evidence));
     return NextResponse.json({
       ...attempt,
+      evidence,
       deliveryRequest,
       attemptNumber: attempts.findIndex((item) => item.id === attempt.id) + 1,
       otherAttempts: attempts.filter((item) => item.id !== attempt.id),
       history: events.map(({ actorId, ...event }) => ({ ...event, actorName: actorName.get(actorId) ?? null })),
     });
   });
+}
+
+function withoutLocation<T extends { latitude: unknown; longitude: unknown; locationAccuracyM: unknown }>(evidence: T) {
+  const { latitude: _latitude, longitude: _longitude, locationAccuracyM: _accuracy, ...rest } = evidence;
+  return rest;
 }

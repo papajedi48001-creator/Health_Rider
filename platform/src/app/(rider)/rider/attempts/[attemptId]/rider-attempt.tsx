@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { failedDeliveryReasons, recipientRelations, type FailedDeliveryReason, type RecipientRelation } from '@/domain/delivery/offline-event-rules';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { failureReasonLabels, recipientRelationLabels, statusLabels } from '@/lib/labels';
 import type { OfflineEvent } from '@/pwa/offline-queue';
+import { currentLocation, type PhoneLocation } from '@/pwa/location';
 import { toEvidenceJpeg } from '@/pwa/photo';
 import { deleteAttemptView, loadAttemptView, saveAttemptView } from '@/pwa/indexeddb-store';
 import { riderQueue, syncRiderQueue } from '@/pwa/rider-sync';
@@ -32,9 +33,12 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
   const [pendingTypes, setPendingTypes] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  // Where the phone was when the photo was taken; stored with the evidence for admins and never shown here.
+  const photoLocation = useRef<Promise<PhoneLocation | null> | null>(null);
 
   // Shows the rider the photo they just took before they save the delivery.
   function choosePhoto(file: File | undefined) {
+    photoLocation.current = file ? currentLocation() : null;
     setPhotoPreview((current) => {
       if (current) URL.revokeObjectURL(current);
       return file ? URL.createObjectURL(file) : null;
@@ -110,8 +114,9 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
     const file = form.get('photo');
     if (!(file instanceof File) || file.size === 0) return setMessage('ต้องถ่ายรูปหลักฐานการส่งก่อน');
     try {
-      const photo = await toEvidenceJpeg(file);
-      await record('delivered', { recipientRelation: form.get('recipientRelation') as RecipientRelation, photo });
+      // Saving waits at most a moment for GPS, so an unanswered location prompt never holds up the delivery.
+      const [photo, location] = await Promise.all([toEvidenceJpeg(file), withinMs(photoLocation.current ?? currentLocation(), 2000)]);
+      await record('delivered', { recipientRelation: form.get('recipientRelation') as RecipientRelation, photo, ...(location ? { location } : {}) });
     } catch {
       setMessage('อ่านรูปไม่ได้ โปรดถ่ายรูปใหม่');
     }
@@ -206,4 +211,8 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
       {view?.status === 'return_required' && <p className="notice notice-danger">นำยากลับมาคืนเภสัชกรรมภายในวันนี้</p>}
     </main>
   );
+}
+
+function withinMs<T>(work: Promise<T | null>, ms: number): Promise<T | null> {
+  return Promise.race([work, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
 }

@@ -15,7 +15,8 @@ type Details = {
   createdAt: string; claimedAt: string | null; pickedUpAt: string | null; deliveredAt: string | null; failedAt: string | null; returnedAt: string | null;
   failureReason: string | null;
   rider: { id: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; riderProfile: { riderCode: string } | null } | null;
-  evidence: { recipientRelation: string; deviceCapturedAt: string; serverReceivedAt: string } | null;
+  // The location fields are only sent to admins.
+  evidence: { recipientRelation: string; deviceCapturedAt: string; serverReceivedAt: string; latitude?: number | null; longitude?: number | null; locationAccuracyM?: number | null } | null;
   deliveryRequest: {
     hosVisitNumber: string | null; hn: string; patientName: string; patientAge: number | null; telephone: string | null; deliveryAddress: string;
     deliveryVersion: number; rateSatang: number | null; createdAt: string; createdBy: { displayName: string }; deliveryZone: { displayName: string };
@@ -92,6 +93,7 @@ export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onC
                   <dt>ผู้รับ</dt><dd>{recipientRelationLabels[details.evidence.recipientRelation as RecipientRelation] ?? details.evidence.recipientRelation}</dd>
                   <dt>ถ่ายรูปเมื่อ</dt><dd>{formatThaiDateTime(details.evidence.deviceCapturedAt)}</dd>
                   <dt>ถึงระบบเมื่อ</dt><dd>{formatThaiDateTime(details.evidence.serverReceivedAt)}</dd>
+                  {details.evidence.latitude !== undefined && <><dt>พิกัด GPS</dt><dd><EvidenceLocation evidence={details.evidence} /></dd></>}
                 </dl>
               </section>
             )}
@@ -155,5 +157,16 @@ export function DeliveryDetails({ attemptId, onClose }: { attemptId: string; onC
         )}
       </div>
     </div>
+  );
+}
+
+function EvidenceLocation({ evidence }: { evidence: { latitude?: number | null; longitude?: number | null; locationAccuracyM?: number | null } }) {
+  if (evidence.latitude == null || evidence.longitude == null) return <span className="muted">ไม่ได้บันทึก (ไรเดอร์ปิด GPS หรือไม่อนุญาตตำแหน่ง)</span>;
+  const position = `${evidence.latitude.toFixed(6)},${evidence.longitude.toFixed(6)}`;
+  return (
+    <>
+      <a href={`https://www.google.com/maps?q=${position}`} target="_blank" rel="noopener noreferrer">{position}</a>
+      {evidence.locationAccuracyM != null && <span className="muted"> (คลาดเคลื่อน ±{Math.round(evidence.locationAccuracyM)} ม.)</span>}
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { DomainError } from '@/domain/errors';
 import { requireRole, type SessionUser } from '@/auth/require-role';
-import { decideOfflineEvent, type AttemptUpdate, type ConflictReason, type OfflineEventDetails } from '@/domain/delivery/offline-event-rules';
+import { decideOfflineEvent, evidenceLocationColumns, type AttemptUpdate, type ConflictReason, type OfflineEventDetails } from '@/domain/delivery/offline-event-rules';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 
 export type OfflineDeliveryEventInput = {
@@ -20,7 +20,7 @@ export type OfflineEventStore = {
   lockRiderAttempt(attemptId: string, riderId: string): Promise<{ id: string; status: DeliveryAttemptStatus; deliveryVersion: number } | null>;
   createEvent(event: OfflineDeliveryEventInput & { riderId: string; serverReceivedAt: Date }): Promise<{ id: string }>;
   updateAttempt(attemptId: string, update: AttemptUpdate): Promise<unknown>;
-  createEvidence(record: { deliveryAttemptId: string; recipientRelation: string; photoPath: string; deviceCapturedAt: Date }): Promise<unknown>;
+  createEvidence(record: { deliveryAttemptId: string; recipientRelation: string; photoPath: string; deviceCapturedAt: Date; latitude?: number; longitude?: number; locationAccuracyM?: number | null }): Promise<unknown>;
   createConflict(record: { offlineDeliveryEventId: string; deliveryAttemptId: string; reason: ConflictReason; previousStatus: DeliveryAttemptStatus }): Promise<unknown>;
   createAudit(audit: { actorId: string; action: string; auditableId: string; oldValues: Record<string, unknown>; newValues: Record<string, unknown> }): Promise<unknown>;
 };
@@ -64,7 +64,7 @@ export async function syncOfflineEvent(event: OfflineDeliveryEventInput, rider: 
 
   await store.updateAttempt(attempt.id, decision.update);
   if (event.details.eventType === 'delivered' && event.photoPath) {
-    await store.createEvidence({ deliveryAttemptId: attempt.id, recipientRelation: event.details.recipientRelation, photoPath: event.photoPath, deviceCapturedAt: event.deviceCapturedAt });
+    await store.createEvidence({ deliveryAttemptId: attempt.id, recipientRelation: event.details.recipientRelation, photoPath: event.photoPath, deviceCapturedAt: event.deviceCapturedAt, ...evidenceLocationColumns(event.details.location) });
   }
   await store.createAudit({
     actorId: actor.id, action: `delivery_attempt.${event.details.eventType}`, auditableId: attempt.id,

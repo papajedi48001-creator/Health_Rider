@@ -26,3 +26,11 @@ test('routes an event from an amended delivery version or a closed attempt to re
   expect(decideOfflineEvent({ status: 'delivered' }, 1, { deliveryVersion: 1, deviceCapturedAt: at, details: { eventType: 'delivery_failed', reason: 'recipient_unavailable' } }))
     .toEqual({ kind: 'conflict', reason: 'invalid_transition' });
 });
+
+test('keeps a sensible GPS position with a delivery and drops anything else', () => {
+  expect(parseOfflineEventDetails('delivered', { recipientRelation: 'self', location: { latitude: 17.25, longitude: 103.95, accuracyM: 11.6 } }))
+    .toEqual({ eventType: 'delivered', recipientRelation: 'self', location: { latitude: 17.25, longitude: 103.95, accuracyM: 12 } });
+  for (const location of [undefined, 'here', { latitude: 95, longitude: 10 }, { latitude: '17', longitude: 103 }, { latitude: Number.NaN, longitude: 1 }]) {
+    expect(parseOfflineEventDetails('delivered', { recipientRelation: 'self', location })).toEqual({ eventType: 'delivered', recipientRelation: 'self' });
+  }
+});
