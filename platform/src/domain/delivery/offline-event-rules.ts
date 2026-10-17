@@ -11,8 +11,11 @@ export type RecipientRelation = (typeof recipientRelations)[number];
 
 export type OfflineEventDetails =
   | { eventType: 'picked_up' }
-  | { eventType: 'delivered'; recipientRelation: RecipientRelation }
+  | { eventType: 'delivered'; recipientRelation: RecipientRelation; location?: EvidenceLocation }
   | { eventType: 'delivery_failed'; reason: FailedDeliveryReason };
+
+// GPS position of the phone when the delivery photo was taken.
+export type EvidenceLocation = { latitude: number; longitude: number; accuracyM: number | null };
 
 export type AttemptUpdate = {
   status: DeliveryAttemptStatus;
@@ -33,7 +36,8 @@ const activeStatuses: readonly DeliveryAttemptStatus[] = ['claimed', 'in_transit
 export function parseOfflineEventDetails(eventType: unknown, payload: Record<string, unknown>): OfflineEventDetails | null {
   if (eventType === 'picked_up') return { eventType };
   if (eventType === 'delivered' && isOneOf(recipientRelations, payload.recipientRelation)) {
-    return { eventType, recipientRelation: payload.recipientRelation };
+    const location = parseEvidenceLocation(payload.location);
+    return { eventType, recipientRelation: payload.recipientRelation, ...(location ? { location } : {}) };
   }
   if (eventType === 'delivery_failed' && isOneOf(failedDeliveryReasons, payload.reason)) {
     return { eventType, reason: payload.reason };
@@ -66,4 +70,19 @@ export function transition(status: DeliveryAttemptStatus, at: Date, details: Off
 
 function isOneOf<T extends string>(values: readonly T[], value: unknown): value is T {
   return typeof value === 'string' && (values as readonly string[]).includes(value);
+}
+
+// A position the phone could not take, or one that makes no sense, is dropped; the delivery still counts.
+export function parseEvidenceLocation(value: unknown): EvidenceLocation | null {
+  if (!value || typeof value !== 'object') return null;
+  const { latitude, longitude, accuracyM } = value as Record<string, unknown>;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number' || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  const accuracy = typeof accuracyM === 'number' && Number.isFinite(accuracyM) && accuracyM >= 0 ? Math.round(accuracyM) : null;
+  return { latitude, longitude, accuracyM: accuracy };
+}
+
+// The evidence columns for a location, empty when the phone gave none.
+export function evidenceLocationColumns(location: EvidenceLocation | undefined) {
+  return location ? { latitude: location.latitude, longitude: location.longitude, locationAccuracyM: location.accuracyM } : {};
 }

@@ -12,7 +12,7 @@ vi.mock('@/lib/db', () => ({
 
 const attempt = {
   id: 'ATTEMPT2', status: 'delivered', createdAt: '2026-10-16T05:00:00.000Z',
-  evidence: { recipientRelation: 'self', deviceCapturedAt: '2026-10-16T07:30:00.000Z', serverReceivedAt: '2026-10-16T07:32:00.000Z' },
+  evidence: { recipientRelation: 'self', deviceCapturedAt: '2026-10-16T07:30:00.000Z', serverReceivedAt: '2026-10-16T07:32:00.000Z', latitude: 17.2501, longitude: 103.9502, locationAccuracyM: 12 },
   deliveryRequest: {
     id: 'REQUEST1', hn: '470032520', patientName: 'ไพวรรณ ผิวบุญเรือง',
     attempts: [
@@ -60,4 +60,14 @@ test('only coordinators and admins can open delivery details', async () => {
   currentSession.mockResolvedValue({ id: 'rider-1', role: 'rider', displayName: 'ไรเดอร์' });
   expect((await get('ATTEMPT2')).status).toBe(403);
   expect(findAttempt).not.toHaveBeenCalled();
+});
+
+test('shows the GPS position of the delivery photo to admins only', async () => {
+  const forCoordinator = await (await get('ATTEMPT2')).json();
+  expect(forCoordinator.evidence).not.toHaveProperty('latitude');
+  expect(forCoordinator.evidence).not.toHaveProperty('longitude');
+
+  currentSession.mockResolvedValue({ id: 'admin-1', role: 'admin', displayName: 'แอดมิน' });
+  const forAdmin = await (await get('ATTEMPT2')).json();
+  expect(forAdmin.evidence).toMatchObject({ latitude: 17.2501, longitude: 103.9502, locationAccuracyM: 12 });
 });

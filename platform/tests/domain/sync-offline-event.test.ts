@@ -37,6 +37,13 @@ test('marks a delivery successful with its evidence and an audit entry', async (
   expect(state.audits).toEqual([expect.objectContaining({ action: 'delivery_attempt.delivered' })]);
 });
 
+test('stores the GPS position of the delivery photo with the evidence', async () => {
+  const { state, store } = memoryStore('in_transit');
+  const location = { latitude: 17.25, longitude: 103.95, accuracyM: 12 };
+  await syncOfflineEvent(event({ details: { eventType: 'delivered', recipientRelation: 'self', location }, photoPath: 'attempt-1/y.jpg' }), rider, store);
+  expect(state.evidence).toEqual([expect.objectContaining({ latitude: 17.25, longitude: 103.95, locationAccuracyM: 12 })]);
+});
+
 test('keeps an event recorded before an amendment and sends it to review', async () => {
   const { state, store } = memoryStore('in_transit', 2);
   await expect(syncOfflineEvent(event({ details: { eventType: 'delivered', recipientRelation: 'self' }, photoPath: 'attempt-1/x.jpg' }), rider, store))

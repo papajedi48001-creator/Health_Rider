@@ -191,6 +191,10 @@ model DeliveryEvidence {
   recipientRelation String          @db.VarChar(100)
   photoPath         String          @db.VarChar(1024)
   deviceCapturedAt  DateTime
+  // Where the phone was when the photo was taken; shown to admins only.
+  latitude          Float?
+  longitude         Float?
+  locationAccuracyM Float?
   serverReceivedAt  DateTime        @default(now())
   createdAt         DateTime        @default(now())
   deliveryAttempt   DeliveryAttempt @relation(fields: [deliveryAttemptId], references: [id])

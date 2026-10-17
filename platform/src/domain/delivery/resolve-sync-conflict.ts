@@ -1,6 +1,6 @@
 import { DomainError } from '@/domain/errors';
 import { requireRole, type SessionUser } from '@/auth/require-role';
-import { parseOfflineEventDetails, transition, type AttemptUpdate } from '@/domain/delivery/offline-event-rules';
+import { evidenceLocationColumns, parseOfflineEventDetails, transition, type AttemptUpdate } from '@/domain/delivery/offline-event-rules';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 
 export const conflictOutcomes = ['accept', 'dismiss'] as const;
@@ -20,7 +20,7 @@ type ConflictStore = {
   otherPendingCount(attemptId: string, conflictId: string): Promise<number>;
   updateConflict(record: { id: string; status: 'resolved'; outcome: ConflictOutcome; resolution: string; resolvedById: string; resolvedAt: Date }): Promise<unknown>;
   updateAttempt(attemptId: string, update: AttemptUpdate): Promise<unknown>;
-  createEvidence(record: { deliveryAttemptId: string; recipientRelation: string; photoPath: string; deviceCapturedAt: Date }): Promise<unknown>;
+  createEvidence(record: { deliveryAttemptId: string; recipientRelation: string; photoPath: string; deviceCapturedAt: Date; latitude?: number; longitude?: number; locationAccuracyM?: number | null }): Promise<unknown>;
   createAudit(audit: { actorId: string; action: string; auditableId: string; oldValues: Record<string, unknown>; newValues: Record<string, unknown>; reason: string }): Promise<unknown>;
 };
 
@@ -42,7 +42,7 @@ export async function resolveSyncConflict(conflictId: string, outcome: ConflictO
     if (details.eventType === 'delivered') {
       const photoPath = conflict.event.payload.photoPath;
       if (typeof photoPath !== 'string') throw new DomainError('รายการนี้ไม่มีรูปหลักฐานการส่ง');
-      await store.createEvidence({ deliveryAttemptId: conflict.deliveryAttemptId, recipientRelation: details.recipientRelation, photoPath, deviceCapturedAt: conflict.event.deviceCapturedAt });
+      await store.createEvidence({ deliveryAttemptId: conflict.deliveryAttemptId, recipientRelation: details.recipientRelation, photoPath, deviceCapturedAt: conflict.event.deviceCapturedAt, ...evidenceLocationColumns(details.location) });
     }
   }
 
