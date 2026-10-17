@@ -71,3 +71,13 @@ test('a coordinator finds a delivery by HN and opens its details from the info b
   await row.getByRole('button', { name: `ดูรายละเอียดการส่ง ${patientName}` }).click();
   await expect(page.getByRole('dialog', { name: `รายละเอียดการส่ง ${patientName}` })).toContainText(request.hn);
 });
+
+test('the rider box suggests riders by part of their code or name', async ({ page }) => {
+  await login(page, 'coordinator.uat');
+  await page.goto('/reports/history');
+  const riderBox = page.getByRole('form', { name: 'ค้นหาประวัติการส่ง' }).getByRole('combobox', { name: 'รหัสหรือชื่อไรเดอร์' });
+  await riderBox.fill('ผู้รับจ้าง');
+  await page.getByRole('option', { name: /UAT-EXT-01/ }).click();
+  await expect(riderBox).toHaveValue('UAT-EXT-01');
+  await expect(page.getByRole('listbox', { name: 'ไรเดอร์ที่ตรงกัน' })).toBeHidden();
+});

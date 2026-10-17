@@ -11,6 +11,7 @@ import { formatThaiDateTime, statusLabels } from '@/lib/labels';
 import { statusTone } from '@/lib/status-tone';
 import { ReportFilters, type Range } from '@/reports/report-kit';
 import { bangkokDateString } from '@/lib/time';
+import { RiderPicker, type RiderOption } from './rider-picker';
 
 type Zone = { id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string };
 type Filters = { hn: string; rider: string; subdistrict: string; zone: string };
@@ -30,6 +31,7 @@ function thisMonth(): Range {
 
 export function DeliveryHistorySearch() {
   const [zones, setZones] = useState<Zone[]>([]);
+  const [riders, setRiders] = useState<RiderOption[]>([]);
   const [range, setRange] = useState<Range>(thisMonth);
   const [draft, setDraft] = useState<Filters>(emptyFilters);
   // Only the filters of the last search are sent, so typing does not reload the table on every key.
@@ -41,6 +43,7 @@ export function DeliveryHistorySearch() {
 
   useEffect(() => {
     void callApi<{ zones: Zone[] }>('/api/reports/history/zones').then((result) => { if (result.ok) setZones(result.data.zones); });
+    void callApi<{ riders: RiderOption[] }>('/api/reports/history/riders').then((result) => { if (result.ok) setRiders(result.data.riders); });
   }, []);
 
   const query = useMemo(() => new URLSearchParams({ ...range, ...applied, page: String(page) }), [range, applied, page]);
@@ -84,7 +87,7 @@ export function DeliveryHistorySearch() {
       <ReportFilters range={range} onChange={(next) => { setRange(next); setPage(1); }} csvHref={withBasePath(`/api/reports/history?${csvParams}`)} />
       <form className="filter-bar history-filters" aria-label="ค้นหาประวัติการส่ง" onSubmit={search}>
         <label>HN ผู้ป่วย <input value={draft.hn} onChange={(event) => setDraft({ ...draft, hn: event.target.value })} inputMode="numeric" /></label>
-        <label>รหัสหรือชื่อไรเดอร์ <input value={draft.rider} onChange={(event) => setDraft({ ...draft, rider: event.target.value })} /></label>
+        <label>รหัสหรือชื่อไรเดอร์ <RiderPicker riders={riders} value={draft.rider} onChange={(rider) => setDraft({ ...draft, rider })} /></label>
         <label>
           ตำบล
           <select value={draft.subdistrict} onChange={(event) => setDraft({ ...draft, subdistrict: event.target.value, zone: '' })}>
