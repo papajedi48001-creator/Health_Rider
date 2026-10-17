@@ -66,6 +66,30 @@ export function PharmacyCandidateList() {
     setMessage(`สร้างงานส่งยาแล้ว ${result.data.confirmed} รายในโซน ${zone.displayName}`);
   }
 
+  type ConfirmMany = { confirmed: number; visitNumbers: string[]; failed: Array<{ visitNumber: string; patientName: string | null; reason: string }> };
+
+  // Creates jobs for every patient in the list as it is filtered now; patients without a zone cannot be confirmed yet.
+  async function confirmAll(ready: ZonedCandidate[], withoutZone: number) {
+    const skipped = withoutZone > 0 ? `\n(ข้าม ${withoutZone} รายที่ยังไม่มีโซน)` : '';
+    if (!window.confirm(`ยืนยันสร้างงานส่งยาทั้งหมด ${ready.length} ราย?${skipped}`)) return;
+    setConfirming('all');
+    setMessage(`กำลังสร้างงานส่งยา ${ready.length} ราย`);
+    const result = await callApi<ConfirmMany>('/api/pharmacy/candidates/confirm-many', { json: { visitNumbers: ready.map((item) => item.visitNumber), date } });
+    setConfirming(null);
+    if (!result.ok) {
+      setMessage(`ไม่สามารถสร้างงานส่งยาได้: ${result.message}`);
+      return;
+    }
+    // Ones confirmed elsewhere meanwhile no longer wait either, so they leave the list too.
+    const done = new Set([...result.data.visitNumbers, ...result.data.failed.filter((item) => item.reason === 'ยืนยันไปแล้ว').map((item) => item.visitNumber)]);
+    setCandidates((current) => current.filter((item) => !done.has(item.visitNumber)));
+    window.dispatchEvent(new Event('health-rider:counts'));
+    const failed = result.data.failed;
+    setMessage(failed.length === 0
+      ? `สร้างงานส่งยาแล้ว ${result.data.confirmed} ราย`
+      : `สร้างงานส่งยาแล้ว ${result.data.confirmed} ราย ไม่สำเร็จ ${failed.length} ราย: ${failed.map((item) => `${item.patientName ?? item.visitNumber} (${item.reason})`).join(', ')}`);
+  }
+
   const subdistricts = new Map<string, { name: string; count: number }>();
   for (const candidate of candidates) {
     const entry = subdistricts.get(candidate.subdistrictCode) ?? { name: candidate.subdistrictName ?? `ตำบล ${candidate.subdistrictCode}`, count: 0 };
@@ -93,6 +117,8 @@ export function PharmacyCandidateList() {
     const haystack = `${candidate.hn} ${candidate.patientName} ${candidate.deliveryAddress}`;
     return terms.every((term) => haystack.includes(term));
   });
+
+  const ready = shown.filter((candidate) => candidate.zone);
 
   return (
     <section aria-live="polite">
@@ -125,6 +151,11 @@ export function PharmacyCandidateList() {
       {selectedZone && (
         <button type="button" disabled={confirming !== null} onClick={() => void confirmZone(selectedZone.zone, selectedZone.count)}>
           {confirming === selectedZone.zone.id ? 'กำลังยืนยันทั้งโซน' : `ยืนยันทั้งโซน ${selectedZone.zone.displayName} (${selectedZone.count} ราย)`}
+        </button>
+      )}
+      {ready.length > 0 && (
+        <button type="button" className="btn btn-primary" disabled={confirming !== null} onClick={() => void confirmAll(ready, shown.length - ready.length)}>
+          {confirming === 'all' ? 'กำลังสร้างงานทั้งหมด' : `สร้างงานทั้งหมด (${ready.length} ราย)`}
         </button>
       )}
       {candidates.length > 0 && (
