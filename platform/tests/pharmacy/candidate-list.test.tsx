@@ -100,3 +100,33 @@ test('picks a subdistrict first, then only offers that subdistrict\'s zones', as
   expect(screen.getByRole('option', { name: 'หมู่ 1 ต.ปลาโหล (1 ราย)' })).toBeInTheDocument();
   expect(screen.queryByRole('option', { name: 'หมู่ 2 ต.ค้อเขียว (1 ราย)' })).not.toBeInTheDocument();
 });
+
+test('creates jobs for every patient in the filtered list at once and reports what failed', async () => {
+  const zone6 = { id: 'zone-6', displayName: 'ปลาโหล หมู่ 6' };
+  const candidate = (visit: string, patientName: string, zone: typeof zone6 | null) => ({
+    visitNumber: visit, hn: `HN-${visit}`, patientName, patientAge: 60, telephone: null, deliveryAddress: 'ปลาโหล',
+    subdistrictCode: '470907', villageCode: zone ? '06' : '09', zone,
+  });
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify([
+      candidate('VN-1', 'ผู้ป่วยหนึ่ง', zone6), candidate('VN-2', 'ผู้ป่วยสอง', zone6), candidate('VN-3', 'ผู้ป่วยสาม', null),
+    ]), { status: 200 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      confirmed: 1, visitNumbers: ['VN-1'], failed: [{ visitNumber: 'VN-2', patientName: 'ผู้ป่วยสอง', reason: 'บันทึกไม่สำเร็จ' }],
+    }), { status: 201 }));
+  vi.stubGlobal('fetch', fetchMock);
+  const confirmDialog = vi.fn(() => true);
+  vi.stubGlobal('confirm', confirmDialog);
+
+  render(<PharmacyCandidateList />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'สร้างงานทั้งหมด (2 ราย)' }));
+
+  expect(confirmDialog).toHaveBeenCalledWith(expect.stringContaining('ข้าม 1 รายที่ยังไม่มีโซน'));
+  expect(await screen.findByText('สร้างงานส่งยาแล้ว 1 ราย ไม่สำเร็จ 1 ราย: ผู้ป่วยสอง (บันทึกไม่สำเร็จ)')).toBeInTheDocument();
+  expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/pharmacy/candidates/confirm-many');
+  expect(JSON.parse(fetchMock.mock.calls[1]?.[1].body)).toEqual({ visitNumbers: ['VN-1', 'VN-2'], date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) });
+  expect(screen.queryByText('ผู้ป่วยหนึ่ง')).not.toBeInTheDocument();
+  expect(screen.getByText('ผู้ป่วยสอง')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'สร้างงานทั้งหมด (1 ราย)' })).toBeInTheDocument();
+});
