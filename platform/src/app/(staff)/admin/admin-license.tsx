@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
 import { callApi } from '@/lib/api-client';
+import { deliveryTierNotice } from '@/license/delivery-tier';
 import type { LicenseState, LicenseStatus } from '@/license/license';
 
-type LicenseInfo = { license: LicenseState; activeRiders: number; buildDate: string | null };
+type LicenseInfo = { license: LicenseState; activeRiders: number; deliveriesThisMonth: number; buildDate: string | null };
 
 const statusLabels: Record<LicenseStatus, string> = {
   unconfigured: 'เวอร์ชันนี้ยังไม่เปิดใช้ระบบ license',
@@ -52,12 +53,14 @@ export function AdminLicense() {
   if (!info) return <section aria-labelledby="settings-license"><h2 id="settings-license">License</h2><p aria-live="polite">{message || 'กำลังโหลด'}</p></section>;
   const { license } = info;
   const current = license.license;
+  const tierNotice = deliveryTierNotice(current, info.deliveriesThisMonth);
 
   return (
     <section aria-labelledby="settings-license">
       <h2 id="settings-license">License</h2>
       <p>สถานะ: <strong>{statusLabels[license.status]}</strong></p>
       {license.message && <p className={license.writable ? 'notice' : 'notice notice-danger'}>{license.message}</p>}
+      {tierNotice && <p className="notice">{tierNotice}</p>}
       {license.problem && <p className="notice notice-danger">ไฟล์ที่ติดตั้งไว้ใช้ไม่ได้: {license.problem}</p>}
       {current && (
         <table>
@@ -68,6 +71,7 @@ export function AdminLicense() {
             <tr><th scope="row">ใช้งานได้ถึง</th><td>{thaiDate(current.expiresAt)}</td></tr>
             <tr><th scope="row">สิทธิ์รับอัปเดตถึง</th><td>{thaiDate(current.updatesUntil)}</td></tr>
             <tr><th scope="row">ไรเดอร์ที่ใช้งานอยู่</th><td>{info.activeRiders} / {current.maxRiders ?? 'ไม่จำกัด'} คน</td></tr>
+            <tr><th scope="row">งานส่งยาเดือนนี้</th><td>{info.deliveriesThisMonth.toLocaleString('th-TH')} / {current.maxDeliveriesPerMonth?.toLocaleString('th-TH') ?? 'ไม่จำกัด'} งาน</td></tr>
           </tbody>
         </table>
       )}

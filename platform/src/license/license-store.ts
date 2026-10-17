@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { audit } from '@/domain/audit/write-audit-event';
 import { DomainError } from '@/domain/errors';
 import { db } from '@/lib/db';
-import { bangkokDateString } from '@/lib/time';
+import { bangkokDateString, startOfBangkokDay } from '@/lib/time';
 import { evaluateLicense, parseSignedLicense, type LicenseState } from '@/license/license';
 import { licensePublicKey } from '@/license/public-key';
 
@@ -61,6 +61,12 @@ export async function installLicense(text: string, adminId: string): Promise<Lic
     });
   });
   return currentLicenseState();
+}
+
+// Delivery jobs created since the 1st of this month, Bangkok time; compared with the license tier.
+export async function deliveriesThisMonth(now = new Date()): Promise<number> {
+  const since = startOfBangkokDay(`${bangkokDateString(now).slice(0, 8)}01`);
+  return db.deliveryRequest.count({ where: { createdAt: { gte: since ?? now } } });
 }
 
 // Called inside the transaction that creates, approves or reactivates a rider account.

@@ -70,7 +70,8 @@ function save(files, ledger, signed, revision) {
   writeFileSync(files.ledger, `${JSON.stringify(ledger, null, 2)}\n`);
   console.log(`ออก license ${signed.licenseId} ครั้งที่ ${revision} ให้ ${signed.licensee.name}`);
   console.log(`  ประเภท: ${signed.type === 'perpetual' ? 'ขายขาด + MA' : 'subscription'}`);
-  console.log(`  ใช้งานได้ถึง: ${signed.expiresAt ?? 'ไม่หมดอายุ'} · รับอัปเดตถึง: ${signed.updatesUntil} · ไรเดอร์: ${signed.maxRiders ?? 'ไม่จำกัด'}`);
+  console.log(`  ใช้งานได้ถึง: ${signed.expiresAt ?? 'ไม่หมดอายุ'} · รับอัปเดตถึง: ${signed.updatesUntil}`);
+  console.log(`  ไรเดอร์: ${signed.maxRiders ?? 'ไม่จำกัด'} · งานส่งต่อเดือน: ${signed.maxDeliveriesPerMonth ?? 'ไม่จำกัด'}`);
   console.log(`  ไฟล์ที่ส่งให้ รพ.: ${file}`);
 }
 
@@ -79,11 +80,11 @@ function terms(type, start, years) {
   return type === 'perpetual' ? { expiresAt: null, updatesUntil: end } : { expiresAt: end, updatesUntil: end };
 }
 
-function parseRiders(value) {
+function parseLimit(value, flag) {
   if (value === undefined || value === 'unlimited') return null;
-  const riders = Number(value);
-  if (!Number.isInteger(riders) || riders < 1) fail('--max-riders ต้องเป็นจำนวนเต็มบวก หรือ unlimited');
-  return riders;
+  const limit = Number(value);
+  if (!Number.isInteger(limit) || limit < 1) fail(`${flag} ต้องเป็นจำนวนเต็มบวก หรือ unlimited`);
+  return limit;
 }
 
 function issue(files, options) {
@@ -102,7 +103,8 @@ function issue(files, options) {
     type: options.type,
     issuedAt: bangkokToday(),
     ...terms(options.type, start, Number(options.years ?? 1)),
-    maxRiders: parseRiders(options['max-riders']),
+    maxRiders: parseLimit(options['max-riders'], '--max-riders'),
+    maxDeliveriesPerMonth: parseLimit(options['max-deliveries'], '--max-deliveries'),
   };
   save(files, ledger, signLicense(files, body), 1);
 }
@@ -123,7 +125,8 @@ function renew(files, licenseId, options) {
     type,
     issuedAt: bangkokToday(),
     ...terms(type, start, Number(options.years ?? 1)),
-    maxRiders: options['max-riders'] === undefined ? last.maxRiders : parseRiders(options['max-riders']),
+    maxRiders: options['max-riders'] === undefined ? last.maxRiders : parseLimit(options['max-riders'], '--max-riders'),
+    maxDeliveriesPerMonth: options['max-deliveries'] === undefined ? last.maxDeliveriesPerMonth ?? null : parseLimit(options['max-deliveries'], '--max-deliveries'),
   };
   save(files, ledger, signLicense(files, body), history.length + 1);
 }
@@ -137,10 +140,10 @@ function list(files, options) {
     return { ...entry, end, left: daysUntil(end) };
   }).sort((left, right) => left.left - right.left);
   if (rows.length === 0) return console.log('ยังไม่มี license ที่ออกไป');
-  console.log('เลขที่\t\tรพ.\t\t\tประเภท\t\tสิ้นสุด\t\tเหลือ (วัน)\tไรเดอร์');
+  console.log('เลขที่\t\tรพ.\t\t\tประเภท\t\tสิ้นสุด\t\tเหลือ (วัน)\tไรเดอร์\tงาน/เดือน');
   for (const row of rows) {
     const flag = row.left < 0 ? '  ← หมดแล้ว' : row.left <= soon ? '  ← ใกล้หมด ติดต่อต่ออายุ' : '';
-    console.log(`${row.licenseId}\t${row.licensee.name} (${row.licensee.hcode})\t${row.type === 'perpetual' ? 'ขายขาด+MA' : 'subscription'}\t${row.end}\t${row.left}\t\t${row.maxRiders ?? 'ไม่จำกัด'}${flag}`);
+    console.log(`${row.licenseId}\t${row.licensee.name} (${row.licensee.hcode})\t${row.type === 'perpetual' ? 'ขายขาด+MA' : 'subscription'}\t${row.end}\t${row.left}\t\t${row.maxRiders ?? 'ไม่จำกัด'}\t${row.maxDeliveriesPerMonth ?? 'ไม่จำกัด'}${flag}`);
   }
 }
 
@@ -156,8 +159,8 @@ const usage = `ใช้งาน: node license-tool/hr-license.mjs <คำส�
 
   keygen                         สร้างกุญแจ (ครั้งเดียว)
   issue  --type perpetual|subscription --name "โรงพยาบาล..." --hcode 10999 --province "..."
-         [--start YYYY-MM-DD] [--years 1] [--max-riders 30|unlimited]
-  renew  <licenseId> [--years 1] [--type ...] [--max-riders ...]
+         [--start YYYY-MM-DD] [--years 1] [--max-riders 30|unlimited] [--max-deliveries 500|unlimited]
+  renew  <licenseId> [--years 1] [--type ...] [--max-riders ...] [--max-deliveries ...]
   list   [--days 60]                แสดงลูกค้าเรียงตามวันสิ้นสุด
   verify <ไฟล์ license>
 
@@ -168,7 +171,7 @@ function main() {
     allowPositionals: true,
     options: {
       dir: { type: 'string' }, type: { type: 'string' }, name: { type: 'string' }, hcode: { type: 'string' }, province: { type: 'string' },
-      start: { type: 'string' }, years: { type: 'string' }, 'max-riders': { type: 'string' }, days: { type: 'string' },
+      start: { type: 'string' }, years: { type: 'string' }, 'max-riders': { type: 'string' }, 'max-deliveries': { type: 'string' }, days: { type: 'string' },
     },
   });
   const files = paths(values.dir);

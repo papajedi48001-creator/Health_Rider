@@ -4,8 +4,8 @@ import { NextRequest } from 'next/server';
 import { canonicalJson } from '@/license/license';
 
 const keys = vi.hoisted(() => ({ publicBase64: '' }));
-const { findSetting, upsertSetting, countUsers, createAudit, currentSession } = vi.hoisted(() => ({
-  findSetting: vi.fn(), upsertSetting: vi.fn(), countUsers: vi.fn(), createAudit: vi.fn(), currentSession: vi.fn(),
+const { findSetting, upsertSetting, countUsers, countRequests, createAudit, currentSession } = vi.hoisted(() => ({
+  findSetting: vi.fn(), upsertSetting: vi.fn(), countUsers: vi.fn(), countRequests: vi.fn(), createAudit: vi.fn(), currentSession: vi.fn(),
 }));
 const tx = { systemSetting: { upsert: upsertSetting }, auditEvent: { create: createAudit }, user: { count: countUsers } };
 
@@ -15,6 +15,7 @@ vi.mock('@/lib/db', () => ({
   db: {
     systemSetting: { findUnique: findSetting, upsert: upsertSetting },
     user: { count: countUsers },
+    deliveryRequest: { count: countRequests },
     $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx),
   },
 }));
@@ -24,7 +25,7 @@ keys.publicBase64 = publicKey.export({ type: 'spki', format: 'der' }).toString('
 
 const body = {
   licenseId: 'HR-2026-0001', product: 'health-rider', licensee: { name: 'โรงพยาบาลตัวอย่าง', hcode: '10999', province: 'สกลนคร' },
-  type: 'subscription', issuedAt: '2026-10-01', expiresAt: '2099-09-30', updatesUntil: '2099-09-30', maxRiders: 2,
+  type: 'subscription', issuedAt: '2026-10-01', expiresAt: '2099-09-30', updatesUntil: '2099-09-30', maxRiders: 2, maxDeliveriesPerMonth: 500,
 };
 const licenseText = JSON.stringify({ ...body, signature: sign(null, Buffer.from(canonicalJson(body)), privateKey).toString('base64') });
 const admin = { id: 'admin-1', role: 'admin', displayName: 'ผู้ดูแล' };
@@ -44,6 +45,7 @@ beforeEach(() => {
     return { key: where.key, value };
   });
   countUsers.mockResolvedValue(1);
+  countRequests.mockResolvedValue(612);
 });
 
 test('only admins can see or install the license', async () => {
@@ -61,7 +63,7 @@ test('a fresh install is on trial, and installing a signed file makes it active 
 
   const response = await PUT(request('PUT', { text: licenseText }));
   expect(response.status).toBe(200);
-  expect((await response.json()).license).toMatchObject({ status: 'active', writable: true, license: { licensee: { hcode: '10999' } } });
+  expect(await response.json()).toMatchObject({ deliveriesThisMonth: 612, license: { status: 'active', writable: true, license: { licensee: { hcode: '10999' }, maxDeliveriesPerMonth: 500 } } });
   expect(createAudit.mock.calls[0]?.[0].data).toMatchObject({ action: 'license.installed', newValues: expect.objectContaining({ licenseId: 'HR-2026-0001' }) });
 });
 

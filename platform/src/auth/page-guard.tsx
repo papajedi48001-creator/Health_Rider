@@ -11,7 +11,8 @@ import { Icon, type IconName } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
 import { withBasePath } from '@/lib/base-path';
 import { UserAvatar } from '@/account/user-avatar';
-import { currentLicenseState } from '@/license/license-store';
+import { deliveryTierNotice } from '@/license/delivery-tier';
+import { currentLicenseState, deliveriesThisMonth } from '@/license/license-store';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
@@ -53,6 +54,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
   const license = await currentLicenseState();
   // Everyone needs to know when saving is blocked or about to be; renewal reminders are for admins.
   const licenseNotice = license.message && (!license.writable || license.status === 'grace' || license.status === 'trial' || session.role === 'admin') ? license.message : null;
+  const tierNotice = session.role === 'admin' && license.license?.maxDeliveriesPerMonth ? deliveryTierNotice(license.license, await deliveriesThisMonth()) : null;
 
   return (
     <div className="staff-app">
@@ -77,6 +79,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
       </header>
       <div className="staff-content">
         {licenseNotice && <p role="status" className={license.writable ? 'notice' : 'notice notice-danger'}>{licenseNotice}</p>}
+        {tierNotice && <p role="status" className="notice">{tierNotice}</p>}
         {roles.includes(session.role) ? children : (
           <main className="no-access">
             <Mascot width={180} variant="small" />

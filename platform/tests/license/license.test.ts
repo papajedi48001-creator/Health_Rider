@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { deliveryTierNotice } from '@/license/delivery-tier';
 import { canonicalJson, evaluateLicense, parseSignedLicense, requestNeedsWritableLicense, type License } from '@/license/license';
 
 const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -12,7 +13,7 @@ const publicBase64 = publicKey.export({ type: 'spki', format: 'der' }).toString(
 const perpetual: License = {
   licenseId: 'HR-2026-0001', product: 'health-rider',
   licensee: { name: 'โรงพยาบาลตัวอย่าง', hcode: '10999', province: 'สกลนคร' },
-  type: 'perpetual', issuedAt: '2026-10-01', expiresAt: null, updatesUntil: '2027-09-30', maxRiders: 20,
+  type: 'perpetual', issuedAt: '2026-10-01', expiresAt: null, updatesUntil: '2027-09-30', maxRiders: 20, maxDeliveriesPerMonth: null,
 };
 const subscription: License = { ...perpetual, licenseId: 'HR-2026-0002', type: 'subscription', expiresAt: '2027-09-30' };
 
@@ -41,6 +42,11 @@ describe('license file', () => {
     expect(parseSignedLicense('not json', publicBase64).problem).toMatch(/JSON/);
   });
 
+  test('a file issued before delivery tiers existed reads as unlimited', () => {
+    const { maxDeliveriesPerMonth: _tier, ...older } = perpetual;
+    expect(parseSignedLicense(signed(older), publicBase64).license?.maxDeliveriesPerMonth).toBeNull();
+  });
+
   test('a signed file with the wrong shape is refused', () => {
     expect(parseSignedLicense(signed({ ...subscription, expiresAt: null }), publicBase64).license).toBeNull();
     expect(parseSignedLicense(signed({ ...perpetual, product: 'other' }), publicBase64).license).toBeNull();
@@ -50,10 +56,10 @@ describe('license file', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'hr-license-'));
     const tool = path.resolve(__dirname, '../../../license-tool/hr-license.mjs');
     execFileSync(process.execPath, [tool, 'keygen', '--dir', dir]);
-    execFileSync(process.execPath, [tool, 'issue', '--dir', dir, '--type', 'subscription', '--name', 'โรงพยาบาลตัวอย่าง', '--hcode', '10999', '--province', 'สกลนคร', '--start', '2026-11-01', '--max-riders', '15']);
+    execFileSync(process.execPath, [tool, 'issue', '--dir', dir, '--type', 'subscription', '--name', 'โรงพยาบาลตัวอย่าง', '--hcode', '10999', '--province', 'สกลนคร', '--start', '2026-11-01', '--max-riders', '15', '--max-deliveries', '500']);
     const key = readFileSync(path.join(dir, 'public-key.txt'), 'utf8').trim();
     const text = readFileSync(path.join(dir, 'issued', 'HR-2026-0001-r1.json'), 'utf8');
-    expect(parseSignedLicense(text, key).license).toMatchObject({ type: 'subscription', expiresAt: '2027-10-31', updatesUntil: '2027-10-31', maxRiders: 15 });
+    expect(parseSignedLicense(text, key).license).toMatchObject({ type: 'subscription', expiresAt: '2027-10-31', updatesUntil: '2027-10-31', maxRiders: 15, maxDeliveriesPerMonth: 500 });
     expect(parseSignedLicense(text, publicBase64).license).toBeNull();
   });
 });
@@ -90,4 +96,11 @@ test('read-only mode still lets people sign in, install a license and sync deliv
   for (const pathname of ['/api/auth/login', '/api/auth/logout', '/api/admin/license', '/api/rider/sync-events', '/api/rider/attempts/abc/evidence', '/api/me/password']) {
     expect(requestNeedsWritableLicense('POST', pathname)).toBe(false);
   }
+});
+
+test('going over the monthly delivery tier only warns', () => {
+  const tiered = { ...subscription, maxDeliveriesPerMonth: 500 };
+  expect(deliveryTierNotice(tiered, 500)).toBeNull();
+  expect(deliveryTierNotice(tiered, 501)).toMatch(/เกินขั้นของ license/);
+  expect(deliveryTierNotice(perpetual, 5000)).toBeNull();
 });

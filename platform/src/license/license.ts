@@ -17,6 +17,8 @@ export type License = {
   updatesUntil: string;
   // Active rider accounts allowed; null is unlimited.
   maxRiders: number | null;
+  // Delivery jobs per month the price tier covers; null is unlimited. Going over only warns.
+  maxDeliveriesPerMonth: number | null;
 };
 
 export type LicenseStatus = 'unconfigured' | 'trial' | 'unlicensed' | 'active' | 'grace' | 'expired' | 'updatesExpired';
@@ -61,6 +63,10 @@ function isDate(value: unknown): value is string {
   return typeof value === 'string' && datePattern.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 }
 
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) > 0;
+}
+
 function asLicense(value: Record<string, unknown>): License | null {
   const licensee = value.licensee as Record<string, unknown> | undefined;
   if (value.product !== 'health-rider') return null;
@@ -69,7 +75,10 @@ function asLicense(value: Record<string, unknown>): License | null {
   if (value.type !== 'perpetual' && value.type !== 'subscription') return null;
   if (!isDate(value.issuedAt) || !isDate(value.updatesUntil)) return null;
   if (value.type === 'subscription' ? !isDate(value.expiresAt) : value.expiresAt !== null) return null;
-  if (value.maxRiders !== null && !(Number.isInteger(value.maxRiders) && (value.maxRiders as number) > 0)) return null;
+  if (value.maxRiders !== null && !isPositiveInteger(value.maxRiders)) return null;
+  // Files issued before tiers existed have no maxDeliveriesPerMonth; they are unlimited.
+  const maxDeliveriesPerMonth = value.maxDeliveriesPerMonth ?? null;
+  if (maxDeliveriesPerMonth !== null && !isPositiveInteger(maxDeliveriesPerMonth)) return null;
   return {
     licenseId: value.licenseId,
     product: 'health-rider',
@@ -79,6 +88,7 @@ function asLicense(value: Record<string, unknown>): License | null {
     expiresAt: value.expiresAt as string | null,
     updatesUntil: value.updatesUntil,
     maxRiders: value.maxRiders as number | null,
+    maxDeliveriesPerMonth: maxDeliveriesPerMonth as number | null,
   };
 }
 
