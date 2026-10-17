@@ -39,3 +39,8 @@ export type HosVillageRow = {
   subdistrict_name: string | Buffer | null;
   visits: number | string;
 };
+
+// An eligible visit and its Thai service date, used to mark busy days on the calendar.
+export type HosVisitDay = { date: string; visitNumber: string };
+
+export type HosVisitDayRow = { visit_date: string; visit_number: string | number };

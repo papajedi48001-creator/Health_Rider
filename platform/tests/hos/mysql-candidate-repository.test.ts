@@ -69,3 +69,11 @@ test('lists HOSxP villages once per normalised code with their visit counts', as
   ]);
   expect(execute).toHaveBeenCalledWith(expect.stringContaining('LEFT JOIN thaiaddress'), ['100001', '2026-07-16']);
 });
+
+test('lists eligible visits between two Thai dates with the date read as text', async () => {
+  const execute = vi.fn().mockResolvedValue([[{ visit_date: '2026-10-16', visit_number: 661016001 }]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await expect(repository.visitsBetween('2026-10-01', '2026-10-31')).resolves.toEqual([{ date: '2026-10-16', visitNumber: '661016001' }]);
+  expect(execute).toHaveBeenCalledWith(expect.stringContaining("DATE_FORMAT(o.vstdate, '%Y-%m-%d') AS visit_date"), ['100001', '2026-10-01', '2026-10-31']);
+});
