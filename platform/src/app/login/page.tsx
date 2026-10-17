@@ -4,6 +4,7 @@ import { getSessionFromCookies } from '@/auth/current-session';
 import { roleHome, safeNextPath } from '@/auth/role-home';
 import { LoginForm } from '@/app/login/login-form';
 import { Brand } from '@/brand/logo';
+import { currentLicenseState } from '@/license/license-store';
 import { Mascot, mascotName } from '@/brand/mascot';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <p>พร้อมพายาจากโรงพยาบาลไปถึงบ้านผู้ป่วยอย่างปลอดภัย</p>
         </div>
         <div className="login-card">
-          <div className="brand"><Brand size={40} /></div>
+          <div className="brand"><Brand size={40} hospitalName={(await currentLicenseState()).license?.licensee.name} /></div>
           <h1>เข้าสู่ระบบ</h1>
           <p className="login-tagline">ระบบส่งยาถึงบ้าน ปลอดภัย ตรวจสอบได้ทุกขั้นตอน</p>
           <LoginForm next={next} initialMessage={errorMessages[params.error ?? ''] ?? (params.reason === 'expired' ? 'หมดเวลาใช้งานหรือออกจากระบบแล้ว กรุณาเข้าสู่ระบบใหม่' : '')} />

@@ -8,6 +8,7 @@ import { DomainError } from '@/domain/errors';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
+import { assertRiderSeatAvailable } from '@/license/license-store';
 
 // Deactivating an account or resetting its password also ends its open sessions.
 export async function PATCH(request: NextRequest, context: { params: Promise<{ userId: string }> }) {
@@ -21,6 +22,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ u
       const before = await tx.user.findUnique({ where: { id: userId }, select: { displayName: true, role: true, active: true, pendingApproval: true } });
       if (!before) throw new DomainError('ไม่พบบัญชีผู้ใช้', 404);
       if (before.pendingApproval && changes.active === true) throw new DomainError('บัญชีนี้รออนุมัติ โปรดใช้ปุ่มอนุมัติ');
+      const becomesActiveRider = (changes.role ?? before.role) === 'rider' && (changes.active ?? before.active) && !(before.role === 'rider' && before.active);
+      if (becomesActiveRider) await assertRiderSeatAvailable(tx, userId);
       const after = await tx.user.update({
         where: { id: userId },
         data: { ...changes, ...(passwordHash ? { passwordHash } : {}) },

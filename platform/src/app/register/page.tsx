@@ -4,6 +4,7 @@ import { getSessionFromCookies } from '@/auth/current-session';
 import { roleHome } from '@/auth/role-home';
 import { RegisterForm } from '@/app/register/register-form';
 import { Brand } from '@/brand/logo';
+import { currentLicenseState } from '@/license/license-store';
 import { Mascot, mascotName } from '@/brand/mascot';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export default async function RegisterPage() {
           <p>กรอกข้อมูลให้ครบ ผู้ดูแลระบบจะตรวจสอบและอนุมัติก่อนเข้าใช้งานได้</p>
         </div>
         <div className="login-card">
-          <div className="brand"><Brand size={40} /></div>
+          <div className="brand"><Brand size={40} hospitalName={(await currentLicenseState()).license?.licensee.name} /></div>
           <h1>สมัครเข้าใช้งาน</h1>
           <p className="login-tagline">บัญชีใหม่ต้องรอผู้ดูแลระบบอนุมัติก่อน</p>
           <RegisterForm />
