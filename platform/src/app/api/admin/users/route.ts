@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       const rider = input.rider && { ...input.rider, riderCode: await suggestRiderCode(tx, input.rider.employmentCategory) };
       const created = await tx.user.create({
         data: {
-          id: newPublicId(), username: input.username, displayName: input.displayName, role: input.role, passwordHash,
+          id: newPublicId(), username: input.username, displayName: input.displayName, role: input.role, passwordHash, mustChangePassword: true,
           phone: input.phone, healthCenter: input.healthCenter,
           ...(rider ? { riderProfile: { create: { id: newPublicId(), ...rider } } } : {}),
         },

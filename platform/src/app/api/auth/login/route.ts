@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   const user = await db.user.findUnique({
     where: { username },
-    select: { id: true, role: true, active: true, pendingApproval: true, passwordHash: true },
+    select: { id: true, role: true, active: true, pendingApproval: true, passwordHash: true, healthCenter: true, mustChangePassword: true },
   });
   const passwordMatches = await verifyLoginPassword(body.password, user?.passwordHash ?? null);
   // Only someone who knows the password learns that the application is still waiting.
@@ -72,9 +72,21 @@ export async function POST(request: NextRequest) {
   await db.session.deleteMany({ where: { OR: [{ expiresAt: { lt: cutoff } }, { revokedAt: { lt: cutoff } }] } })
     .catch((error: unknown) => console.error('Could not delete old sessions', error));
 
-  const response = isFormPost ? redirectTo(next ?? roleHome(user.role)) : NextResponse.json({ redirectTo: roleHome(user.role) });
+  // Someone without a รพ.สต. is warned and sent to pick one before anything else.
+  const missingHealthCenter = !user.healthCenter;
+  const response = isFormPost
+    ? redirectTo(missingHealthCenter ? profilePath(user.role) : next ?? roleHome(user.role))
+    : NextResponse.json({
+      redirectTo: roleHome(user.role),
+      ...(missingHealthCenter ? { missingHealthCenter, profilePath: profilePath(user.role) } : {}),
+      ...(user.mustChangePassword ? { mustChangePassword: true } : {}),
+    });
   response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.expiresAt, user.role));
   return response;
+}
+
+function profilePath(role: string) {
+  return role === 'rider' ? '/rider/profile' : '/account';
 }
 
 function redirectTo(location: string) {

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { ForcedPasswordChange } from '@/account/forced-password-change';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
 import { UserAvatar } from '@/account/user-avatar';
 import { isAdminView, viewCookieName } from '@/auth/view-as';
@@ -29,7 +30,7 @@ export async function RiderShell({ children }: { children: ReactNode }) {
         <RiderLogout />
       </header>
       {session.role === 'admin' && <div className="rider-view-switcher"><ViewSwitcher view={isAdminView(view) ? view : 'admin'} /></div>}
-      {session.role === 'rider' || session.role === 'admin' ? (
+      {session.mustChangePassword ? <ForcedPasswordChange /> : session.role === 'rider' || session.role === 'admin' ? (
         <>
           {children}
           <RiderTabBar />

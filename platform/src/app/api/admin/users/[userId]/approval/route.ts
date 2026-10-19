@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ us
       const claimed = await tx.user.updateMany({
         where: { id: userId, pendingApproval: true },
         data: decision.decision === 'approve'
-          ? { pendingApproval: false, active: true, role: decision.role }
+          ? { pendingApproval: false, active: true, role: decision.role, healthCenter: decision.healthCenter }
           : { pendingApproval: false, active: false },
       });
       if (claimed.count !== 1) throw new DomainError('คำขอนี้ได้รับการพิจารณาไปแล้ว', 409);
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ us
         auditableType: 'User', auditableId: userId,
         oldValues: { requestedRole: before.role, active: false },
         newValues: decision.decision === 'approve'
-          ? { role: decision.role, active: true, riderCode }
+          ? { role: decision.role, healthCenter: decision.healthCenter, active: true, riderCode }
           : { active: false },
       });
       return tx.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, username: true, role: true, active: true, pendingApproval: true } });

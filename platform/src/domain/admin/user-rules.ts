@@ -1,5 +1,6 @@
 import { userRoles, type UserRole } from '@/auth/roles';
 import { parsePhone } from '@/domain/account/profile-rules';
+import { parseHealthCenter } from '@/domain/admin/health-centers';
 import { DomainError } from '@/domain/errors';
 
 export const minimumPasswordLength = 12;
@@ -12,12 +13,12 @@ export type NewUserInput = {
   role: UserRole;
   password: string;
   phone: string | null;
-  healthCenter: string | null;
+  healthCenter: string;
   rider?: { employmentCategory: EmploymentCategory };
 };
 
 export type UserChanges = {
-  displayName?: string; phone?: string | null; healthCenter?: string | null; role?: UserRole; active?: boolean; password?: string;
+  displayName?: string; phone?: string | null; healthCenter?: string; role?: UserRole; active?: boolean; password?: string;
 };
 
 export function parseNewUser(value: unknown): NewUserInput {
@@ -29,12 +30,12 @@ export function parseNewUser(value: unknown): NewUserInput {
   const role = parseRole(body.role);
   const password = parsePassword(body.password);
   const phone = parsePhone(body.phone);
-  if (role !== 'rider') return { username, displayName, role, password, phone, healthCenter: parseHealthCenter(body.healthCenter) };
+  const healthCenter = parseHealthCenter(body.healthCenter);
+  if (role !== 'rider') return { username, displayName, role, password, phone, healthCenter };
 
   // The rider code is always assigned by the server, so any code sent along is ignored.
   if (!(employmentCategories as readonly unknown[]).includes(body.employmentCategory)) throw new DomainError('ต้องเลือกประเภทไรเดอร์');
-  // Only staff belong to a รพ.สต.; riders never have one.
-  return { username, displayName, role, password, phone, healthCenter: null, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
+  return { username, displayName, role, password, phone, healthCenter, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
 }
 
 // Admins cannot lock themselves out by deactivating or demoting their own account.
@@ -58,14 +59,6 @@ export function parseUserChanges(value: unknown, actorId: string, targetId: stri
   }
   if (Object.keys(changes).length === 0) throw new DomainError('ไม่มีข้อมูลที่เปลี่ยนแปลง');
   return changes;
-}
-
-// The รพ.สต. name as typed, or null when left blank.
-function parseHealthCenter(value: unknown): string | null {
-  if (value !== null && value !== undefined && typeof value !== 'string') throw new DomainError('ชื่อ รพ.สต. ไม่ถูกต้อง');
-  const name = (value ?? '').trim();
-  if (name.length > 255) throw new DomainError('ชื่อ รพ.สต. ยาวเกินไป');
-  return name || null;
 }
 
 function parseRole(value: unknown): UserRole {

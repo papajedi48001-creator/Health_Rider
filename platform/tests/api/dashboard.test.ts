@@ -39,3 +39,23 @@ test('dashboard can include jobs still open from earlier days, so it matches the
     },
   }));
 });
+
+test('dashboard downloads the filtered list as CSV', async () => {
+  const { GET } = await import('@/app/api/operations/dashboard/route');
+  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C' });
+  findMany.mockResolvedValueOnce([{
+    id: 'ATTEMPT1ABC', status: 'delivered', createdAt: new Date('2026-10-14T03:00:00Z'), claimedAt: null, pickedUpAt: null,
+    deliveredAt: new Date('2026-10-14T05:00:00Z'), failedAt: null, failureReason: null,
+    rider: { id: 'r1', displayName: 'ไรเดอร์ เอ', avatarUpdatedAt: null, riderProfile: { riderCode: 'R-01' } },
+    deliveryRequest: { id: 'q1', hn: '470000001', patientName: 'ผู้ป่วย ทดสอบ', telephone: null, deliveryAddress: '1 หมู่ 9', deliveryVersion: 1, deliveryZone: { displayName: 'หมู่ 9 บ้านดงเชียงเครือ' } },
+  }]);
+
+  const response = await GET(new NextRequest('http://localhost/api/operations/dashboard?date=2026-10-14&status=delivered&format=csv'));
+
+  expect(response.headers.get('content-type')).toContain('text/csv');
+  expect(response.headers.get('content-disposition')).toContain('delivery-overview-2026-10-14-2026-10-14.csv');
+  const body = await response.text();
+  expect(body).toContain('470000001');
+  expect(body).toContain('หมู่ 9 บ้านดงเชียงเครือ');
+  expect(body).toContain('R-01');
+});

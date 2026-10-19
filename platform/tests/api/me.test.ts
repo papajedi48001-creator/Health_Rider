@@ -40,10 +40,11 @@ test('changes the password only with the current one and keeps this device signe
 
   expect((await POST(json('/api/me/password', 'POST', { currentPassword: 'wrong-password-1', newPassword: 'brand-new-password' }))).status).toBe(422);
   expect(updateUser).not.toHaveBeenCalled();
+  expect((await POST(json('/api/me/password', 'POST', { currentPassword: 'current-password-1', newPassword: 'current-password-1' }))).status).toBe(422);
 
   const response = await POST(json('/api/me/password', 'POST', { currentPassword: 'current-password-1', newPassword: 'brand-new-password' }));
   expect(response.status).toBe(200);
-  expect(updateUser).toHaveBeenCalledWith({ where: { id: 'rider-1' }, data: { passwordHash: expect.any(String) } });
+  expect(updateUser).toHaveBeenCalledWith({ where: { id: 'rider-1' }, data: { passwordHash: expect.any(String), mustChangePassword: false } });
   expect(updateSessions).toHaveBeenCalledWith({
     where: { userId: 'rider-1', revokedAt: null, tokenHash: { not: hashSessionToken('current-token', secret) } }, data: { revokedAt: expect.any(Date) },
   });

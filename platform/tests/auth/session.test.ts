@@ -62,3 +62,9 @@ test('keeps a rider session through a long offline job until the shift lifetime 
   await expect(resolveSession(token, minutes(5 * 60), secret, store)).resolves.toMatchObject({ role: 'rider' });
   await expect(resolveSession(token, expiresAt, secret, store)).resolves.toBeNull();
 });
+
+test('carries a pending forced password change with the session', async () => {
+  const { store } = memoryStore({ ...rider, mustChangePassword: true });
+  const { token } = await startSession(rider.id, now, secret, store);
+  await expect(resolveSession(token, now, secret, store)).resolves.toMatchObject({ id: 'rider-1', mustChangePassword: true });
+});

@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({ db: { ...tx, $transaction: (work: (client: typeof t
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) => new NextRequest(`http://localhost${path}`, {
   method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body),
 });
-const application = { username: 'new.pharmacist', displayName: 'เภสัชใหม่', phone: '0812345678', role: 'pharmacy', password: 'long-enough-password' };
+const application = { username: 'new.pharmacist', displayName: 'เภสัชใหม่', phone: '0812345678', healthCenter: 'รพ.สต.จำปาทอง', role: 'pharmacy', password: 'long-enough-password' };
 const params = { params: Promise.resolve({ userId: 'user-9' }) };
 
 beforeEach(() => {
@@ -37,7 +37,7 @@ test('creates an application that cannot sign in until approved, and audits it',
 
   expect(response.status).toBe(201);
   expect(createUser).toHaveBeenCalledWith(expect.objectContaining({
-    data: expect.objectContaining({ username: 'new.pharmacist', role: 'pharmacy', active: false, pendingApproval: true }),
+    data: expect.objectContaining({ username: 'new.pharmacist', role: 'pharmacy', healthCenter: 'รพ.สต.จำปาทอง', active: false, pendingApproval: true }),
   }));
   expect(createUser.mock.calls[0][0].data.passwordHash).not.toBe(application.password);
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.registered' }) }));
@@ -63,13 +63,13 @@ test('only an admin approves, and a rider gets a profile with the approval', asy
   findUser.mockResolvedValue({ role: 'rider', pendingApproval: true });
 
   currentSession.mockResolvedValueOnce({ id: 'coord-1', role: 'coordinator', displayName: 'ผู้ประสานงาน' });
-  expect((await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: 'R-1', employmentCategory: 'internal' }), params)).status).toBe(403);
+  expect((await POST(post('/x', { decision: 'approve', role: 'rider', healthCenter: 'รพ.สต.ปลาโหล', riderCode: 'R-1', employmentCategory: 'internal' }), params)).status).toBe(403);
 
   currentSession.mockResolvedValue({ id: 'admin-1', role: 'admin', displayName: 'แอดมิน' });
-  const response = await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: 'R-1', employmentCategory: 'internal' }), params);
+  const response = await POST(post('/x', { decision: 'approve', role: 'rider', healthCenter: 'รพ.สต.ปลาโหล', riderCode: 'R-1', employmentCategory: 'internal' }), params);
 
   expect(response.status).toBe(200);
-  expect(updateUsers).toHaveBeenCalledWith({ where: { id: 'user-9', pendingApproval: true }, data: { pendingApproval: false, active: true, role: 'rider' } });
+  expect(updateUsers).toHaveBeenCalledWith({ where: { id: 'user-9', pendingApproval: true }, data: { pendingApproval: false, active: true, role: 'rider', healthCenter: 'รพ.สต.ปลาโหล' } });
   expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'user-9', riderCode: 'INT-001', employmentCategory: 'internal' }) });
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.registration_approved' }) }));
 });
@@ -80,7 +80,7 @@ test('approving a rider always gives the next code of that category, whatever co
   findUser.mockResolvedValue({ role: 'rider', pendingApproval: true });
   findRiders.mockResolvedValue([{ riderCode: 'EXT-001' }, { riderCode: 'EXT-009' }, { riderCode: 'EXT-old' }]);
 
-  expect((await POST(post('/x', { decision: 'approve', role: 'rider', riderCode: 'MY-OWN', employmentCategory: 'external' }), params)).status).toBe(200);
+  expect((await POST(post('/x', { decision: 'approve', role: 'rider', healthCenter: 'รพ.สต.ปลาโหล', riderCode: 'MY-OWN', employmentCategory: 'external' }), params)).status).toBe(200);
   expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ riderCode: 'EXT-010', employmentCategory: 'external' }) });
 });
 
