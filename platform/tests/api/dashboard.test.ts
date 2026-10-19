@@ -5,9 +5,9 @@ const { findMany, currentSession } = vi.hoisted(() => ({ findMany: vi.fn().mockR
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({ db: { deliveryAttempt: { findMany }, deliveryZone: { findMany: vi.fn().mockResolvedValue([]) } } }));
 
-test('dashboard applies an allowed status filter for coordinator on a Thai day', async () => {
+test('dashboard applies an allowed status filter for the district coordinator on a Thai day', async () => {
   const { GET } = await import('@/app/api/operations/dashboard/route');
-  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C' });
+  currentSession.mockResolvedValue({ id: 'p1', role: 'pharmacy', displayName: 'P' });
 
   const response = await GET(new NextRequest('http://localhost/api/operations/dashboard?status=delivered&date=2026-10-14'));
 
@@ -19,14 +19,14 @@ test('dashboard applies an allowed status filter for coordinator on a Thai day',
 
 test('dashboard answers an unknown status with 422 instead of a server error', async () => {
   const { GET } = await import('@/app/api/operations/dashboard/route');
-  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C' });
+  currentSession.mockResolvedValue({ id: 'p1', role: 'pharmacy', displayName: 'P' });
 
   expect((await GET(new NextRequest('http://localhost/api/operations/dashboard?status=lost'))).status).toBe(422);
 });
 
 test('dashboard can include jobs still open from earlier days, so it matches the menu count', async () => {
   const { GET } = await import('@/app/api/operations/dashboard/route');
-  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C' });
+  currentSession.mockResolvedValue({ id: 'p1', role: 'pharmacy', displayName: 'P' });
 
   await GET(new NextRequest('http://localhost/api/operations/dashboard?date=2026-10-14&includeOpen=1'));
 
@@ -42,7 +42,7 @@ test('dashboard can include jobs still open from earlier days, so it matches the
 
 test('dashboard downloads the filtered list as CSV', async () => {
   const { GET } = await import('@/app/api/operations/dashboard/route');
-  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C' });
+  currentSession.mockResolvedValue({ id: 'p1', role: 'pharmacy', displayName: 'P' });
   findMany.mockResolvedValueOnce([{
     id: 'ATTEMPT1ABC', status: 'delivered', createdAt: new Date('2026-10-14T03:00:00Z'), claimedAt: null, pickedUpAt: null,
     deliveredAt: new Date('2026-10-14T05:00:00Z'), failedAt: null, failureReason: null,
@@ -58,4 +58,13 @@ test('dashboard downloads the filtered list as CSV', async () => {
   expect(body).toContain('470000001');
   expect(body).toContain('หมู่ 9 บ้านดงเชียงเครือ');
   expect(body).toContain('R-01');
+});
+
+test('a coordinator sees only jobs carried by riders of their own รพ.สต.', async () => {
+  const { GET } = await import('@/app/api/operations/dashboard/route');
+  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C', healthCenter: 'รพ.สต.หนองท่ม' });
+
+  await GET(new NextRequest('http://localhost/api/operations/dashboard?date=2026-10-14'));
+
+  expect(findMany.mock.calls.at(-1)![0].where.AND[1]).toEqual({ rider: { healthCenter: 'รพ.สต.หนองท่ม' } });
 });

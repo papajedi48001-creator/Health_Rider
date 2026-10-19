@@ -22,13 +22,12 @@ test('normalises HOSxP zone codes', () => {
   expect(() => parseZone({ subdistrictCode: '46', villageCode: '3', displayName: 'x' })).toThrow('6 หลัก');
 });
 
-test('every account takes a phone and a รพ.สต. from the list', () => {
+test('every account takes a phone and a รพ.สต.', () => {
   expect(parseNewUser({ username: 'nurse.a', displayName: 'พยาบาล', role: 'coordinator', password: 'long-enough-password', phone: '081-234-5678', healthCenter: ' รพ.สต.ปลาโหล ' }))
     .toMatchObject({ phone: '0812345678', healthCenter: 'รพ.สต.ปลาโหล' });
   expect(parseNewUser({ username: 'rider.b', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password', employmentCategory: 'internal', healthCenter: 'รพ.สต.ปลาโหล' }))
     .toMatchObject({ healthCenter: 'รพ.สต.ปลาโหล' });
   expect(() => parseNewUser({ username: 'rider.c', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password', employmentCategory: 'internal' })).toThrow('ต้องเลือก รพ.สต.');
-  expect(() => parseNewUser({ username: 'nurse.c', displayName: 'พยาบาล', role: 'pharmacy', password: 'long-enough-password', healthCenter: 'รพ.สต.อื่น' })).toThrow('ไม่อยู่ในรายชื่อ');
   expect(parseUserChanges({ displayName: 'ชื่อใหม่', phone: '', healthCenter: 'PCU รพ.วาริชภูมิ' }, 'admin-1', 'user-1')).toEqual({ displayName: 'ชื่อใหม่', phone: null, healthCenter: 'PCU รพ.วาริชภูมิ' });
   expect(() => parseUserChanges({ healthCenter: '' }, 'admin-1', 'user-1')).toThrow('ต้องเลือก รพ.สต.');
   expect(() => parseUserChanges({ phone: '12345' }, 'admin-1', 'user-1')).toThrow('เบอร์โทร');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { scoped } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { dateRangeFilter, parseReportRange } from '@/domain/reports/reports';
 import { db } from '@/lib/db';
@@ -13,7 +14,7 @@ const riderJobsPageSize = 20;
 // One rider's jobs behind a row of the delivery report: claimed, delivered or failed in the range, latest first.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const params = request.nextUrl.searchParams;
     const range = parseReportRange(params);
     if ('error' in range) return invalidInput(range.error);
@@ -23,9 +24,9 @@ export async function GET(request: NextRequest) {
     const within = dateRangeFilter(range);
 
     const [rider, attempts] = await Promise.all([
-      db.user.findUnique({ where: { id: riderId }, select: { id: true, displayName: true, avatarUpdatedAt: true, phone: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } }),
+      db.user.findUnique({ where: { id: riderId }, select: { id: true, displayName: true, avatarUpdatedAt: true, phone: true, healthCenter: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } }),
       db.deliveryAttempt.findMany({
-        where: { riderId, OR: [{ claimedAt: within }, { deliveredAt: within }, { failedAt: within }] },
+        where: scoped(viewer, { riderId, OR: [{ claimedAt: within }, { deliveredAt: within }, { failedAt: within }] }),
         select: {
           id: true, status: true, claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true,
           evidence: { select: { id: true } },
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
-    if (!rider) return NextResponse.json({ message: 'ไม่พบไรเดอร์' }, { status: 404 });
+    if (!rider || (viewer.role === 'coordinator' && rider.healthCenter !== viewer.healthCenter)) return NextResponse.json({ message: 'ไม่พบไรเดอร์' }, { status: 404 });
 
     const latest = (attempt: (typeof attempts)[number]) => (attempt.deliveredAt ?? attempt.failedAt ?? attempt.claimedAt ?? new Date(0)).getTime();
     const sorted = [...attempts].sort((left, right) => latest(right) - latest(left));

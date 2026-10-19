@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { scoped } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { csvResponse, toCsv } from '@/domain/reports/reports';
@@ -18,7 +19,7 @@ const openStatuses: DeliveryAttemptStatus[] = ['prepared', 'claimed', 'in_transi
 // format=csv downloads the same list.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const params = request.nextUrl.searchParams;
     const status = params.get('status');
     const zoneId = params.get('zoneId');
@@ -27,11 +28,11 @@ export async function GET(request: NextRequest) {
     if (!dayStart || (status && !deliveryAttemptStatuses.includes(status as DeliveryAttemptStatus))) return invalidInput('ตัวกรองไม่ถูกต้อง');
 
     const onDay = { createdAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) } };
-    const where: Prisma.DeliveryAttemptWhereInput = {
+    const where: Prisma.DeliveryAttemptWhereInput = scoped(viewer, {
       ...(params.get('includeOpen') === '1' ? { OR: [onDay, { status: { in: openStatuses } }] } : onDay),
       ...(status ? { status: status as DeliveryAttemptStatus } : {}),
       ...(zoneId ? { deliveryRequest: { deliveryZoneId: zoneId } } : {}),
-    };
+    });
     const [attempts, zones] = await Promise.all([
       db.deliveryAttempt.findMany({
         where,

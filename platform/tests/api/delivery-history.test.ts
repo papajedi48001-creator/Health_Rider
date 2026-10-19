@@ -10,7 +10,7 @@ const search = async (query: string) => (await import('@/app/api/reports/history
 
 beforeEach(() => {
   vi.clearAllMocks();
-  as('coordinator');
+  as('pharmacy');
   count.mockResolvedValue(26);
   findMany.mockResolvedValue([{
     id: 'ATTEMPT0ABC12', status: 'delivered', createdAt: new Date('2026-10-01T02:00:00Z'), claimedAt: null, deliveredAt: new Date('2026-10-01T04:40:00Z'), failedAt: null, failureReason: null,
@@ -19,8 +19,8 @@ beforeEach(() => {
   }]);
 });
 
-test('only coordinators and admins search delivery history', async () => {
-  for (const role of ['pharmacy', 'rider', 'auditor']) {
+test('only pharmacy, coordinators and admins search delivery history', async () => {
+  for (const role of ['rider', 'auditor']) {
     as(role);
     expect((await search('')).status).toBe(403);
   }
@@ -57,4 +57,16 @@ test('filters by delivery status, and rejects an unknown one', async () => {
   expect(findMany.mock.calls[0][0].where.status).toBe('delivery_failed');
 
   expect((await search('from=2026-10-01&to=2026-10-31&status=lost')).status).toBe(422);
+});
+
+test('a coordinator searches only the jobs of riders from their own รพ.สต.', async () => {
+  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'C', healthCenter: 'รพ.สต.ปลาโหล' });
+  await search('from=2026-10-01&to=2026-10-31&status=delivered');
+  const where = findMany.mock.calls[0][0].where;
+  expect(where.AND[0].status).toBe('delivered');
+  expect(where.AND[1]).toEqual({ rider: { healthCenter: 'รพ.สต.ปลาโหล' } });
+
+  currentSession.mockResolvedValue({ id: 'c2', role: 'coordinator', displayName: 'C', healthCenter: null });
+  await search('from=2026-10-01&to=2026-10-31');
+  expect(findMany.mock.calls[1][0].where.AND[1]).toEqual({ id: { in: [] } });
 });

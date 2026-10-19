@@ -1,12 +1,12 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { findUnique, update, revoke, createAudit, currentSession } = vi.hoisted(() => ({
-  findUnique: vi.fn(), update: vi.fn(), revoke: vi.fn(), createAudit: vi.fn(), currentSession: vi.fn(),
+const { findUnique, update, revoke, createAudit, currentSession, countCenters } = vi.hoisted(() => ({
+  findUnique: vi.fn(), update: vi.fn(), revoke: vi.fn(), createAudit: vi.fn(), currentSession: vi.fn(), countCenters: vi.fn().mockResolvedValue(1),
 }));
 const tx = { user: { findUnique, update }, session: { updateMany: revoke }, auditEvent: { create: createAudit } };
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
-vi.mock('@/lib/db', () => ({ db: { $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
+vi.mock('@/lib/db', () => ({ db: { healthCenter: { count: countCenters }, $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
 
 const edit = async (userId: string, json: Record<string, unknown>) => (await import('@/app/api/admin/users/[userId]/route')).PATCH(
   new NextRequest(`http://localhost/api/admin/users/${userId}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(json) }),

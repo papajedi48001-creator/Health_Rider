@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { scoped } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { historyPageSize, historyWhere, parseHistoryFilters } from '@/domain/reports/history-search';
 import { csvResponse, dateRangeFilter, parseReportRange, toCsv } from '@/domain/reports/reports';
@@ -14,12 +15,12 @@ const csvLimit = 5000;
 // Searches delivery history by patient HN, rider, subdistrict, village zone and status within a date range.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const params = request.nextUrl.searchParams;
     const range = parseReportRange(params);
     if ('error' in range) return invalidInput(range.error);
     const filters = parseHistoryFilters(params);
-    const where = historyWhere(filters, dateRangeFilter(range));
+    const where = scoped(viewer, historyWhere(filters, dateRangeFilter(range)));
     const asCsv = params.get('format') === 'csv';
 
     const [total, attempts] = await Promise.all([

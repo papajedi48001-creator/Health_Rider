@@ -4,6 +4,7 @@ import { hashPassword } from '@/auth/session';
 import { audit } from '@/domain/audit/write-audit-event';
 import { parseRegistration } from '@/domain/admin/registration-rules';
 import { newPublicId } from '@/domain/delivery/status';
+import { knownHealthCenter } from '@/domain/admin/health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { clientAddress, isCrossSiteRequest } from '@/lib/request-origin';
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'ส่งคำขอสมัครหลายครั้งเกินไป โปรดรอ 15 นาทีแล้วลองใหม่' }, { status: 429 });
     }
     const registration = parseRegistration(await readJsonBody(request));
+    await knownHealthCenter(db, registration.healthCenter);
     if (address) addressThrottle.recordFailure(address, now);
     if (await db.user.count({ where: { pendingApproval: true } }) >= maximumPendingRegistrations) {
       return NextResponse.json({ message: 'มีคำขอสมัครรออนุมัติจำนวนมาก โปรดติดต่อผู้ดูแลระบบ' }, { status: 429 });

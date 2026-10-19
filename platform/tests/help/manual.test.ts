@@ -6,7 +6,7 @@ import { manual, manualFor } from '@/help/manual';
 describe('user manual', () => {
   it('puts the sections written for a role right after the overview', () => {
     expect(manualFor('rider').map((section) => section.id)).toEqual(['overview', 'login', 'rider', 'pharmacy', 'coordinator', 'reports', 'admin', 'faq']);
-    expect(manualFor('pharmacy').map((section) => section.id).slice(2, 4)).toEqual(['pharmacy', 'reports']);
+    expect(manualFor('pharmacy').map((section) => section.id).slice(2, 5)).toEqual(['pharmacy', 'coordinator', 'reports']);
   });
 
   it('keeps every section for every role', () => {

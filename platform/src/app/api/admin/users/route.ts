@@ -6,6 +6,7 @@ import { suggestRiderCode } from '@/domain/admin/rider-code';
 import { parseNewUser } from '@/domain/admin/user-rules';
 import { audit } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
+import { knownHealthCenter } from '@/domain/admin/health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
   return handleRoute(async () => {
     const admin = requireRole(await getSessionFromRequest(request), 'admin');
     const input = parseNewUser(await readJsonBody(request));
+    await knownHealthCenter(db, input.healthCenter);
     const passwordHash = await hashPassword(input.password);
     const user = await db.$transaction(async (tx) => {
       // Two admins saving at once can draw the same code; the unique index refuses the second and they save again.

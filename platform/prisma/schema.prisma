@@ -37,7 +37,7 @@ model User {
   passwordHash    String            @db.VarChar(255)
   displayName     String            @db.VarChar(255)
   phone           String?           @db.VarChar(20)
-  // The รพ.สต. (health-promoting hospital) the user works at, entered by an admin.
+  // The name of the user's รพ.สต. from health_centers; coordinators see only riders of their own.
   healthCenter    String?           @db.VarChar(255)
   role            UserRole
   active          Boolean           @default(true)
@@ -83,6 +83,17 @@ model RiderProfile {
   user               User               @relation(fields: [userId], references: [id])
 
   @@map("rider_profiles")
+}
+
+// A care unit (hosp_sname in HOSxP) that accounts belong to; several units may share one hospcode.
+model HealthCenter {
+  id        String   @id @db.Char(26)
+  name      String   @unique @db.VarChar(255)
+  hospcode  String?  @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("health_centers")
 }
 
 model DeliveryZone {

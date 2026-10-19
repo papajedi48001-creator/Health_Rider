@@ -5,6 +5,7 @@ import { hashPassword } from '@/auth/session';
 import { parseUserChanges } from '@/domain/admin/user-rules';
 import { audit } from '@/domain/audit/write-audit-event';
 import { DomainError } from '@/domain/errors';
+import { knownHealthCenter } from '@/domain/admin/health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
@@ -15,6 +16,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ u
     const admin = requireRole(await getSessionFromRequest(request), 'admin');
     const { userId } = await context.params;
     const { password, ...changes } = parseUserChanges(await readJsonBody(request), admin.id, userId);
+    if (changes.healthCenter) await knownHealthCenter(db, changes.healthCenter);
     const passwordHash = password ? await hashPassword(password) : undefined;
 
     const updated = await db.$transaction(async (tx) => {

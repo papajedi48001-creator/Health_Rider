@@ -4,6 +4,7 @@ import { requireRole } from '@/auth/require-role';
 import { userRoles } from '@/auth/roles';
 import { parseProfileChanges } from '@/domain/account/profile-rules';
 import { audit } from '@/domain/audit/write-audit-event';
+import { knownHealthCenter } from '@/domain/admin/health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
@@ -28,6 +29,7 @@ export async function PATCH(request: NextRequest) {
   return handleRoute(async () => {
     const session = requireRole(await getSessionFromRequest(request), ...userRoles);
     const changes = parseProfileChanges(await readJsonBody(request));
+    if (changes.healthCenter) await knownHealthCenter(db, changes.healthCenter);
     const updated = await db.$transaction(async (tx) => {
       const before = await tx.user.findUniqueOrThrow({ where: { id: session.id }, select: { displayName: true, phone: true, healthCenter: true } });
       const after = await tx.user.update({ where: { id: session.id }, data: changes, select: profileFields });

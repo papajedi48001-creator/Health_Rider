@@ -27,7 +27,7 @@ type ConflictStore = {
 // Accept applies the retained offline event as if it had matched; dismiss keeps it as evidence only
 // and returns the attempt to the state it had before the conflict.
 export async function resolveSyncConflict(conflictId: string, outcome: ConflictOutcome, resolution: string, coordinator: SessionUser | null, store: ConflictStore) {
-  const actor = requireRole(coordinator, 'coordinator', 'admin');
+  const actor = requireRole(coordinator, 'pharmacy', 'coordinator', 'admin');
   if (!conflictOutcomes.includes(outcome)) throw new DomainError('ผลการตรวจสอบไม่ถูกต้อง');
   if (!resolution.trim()) throw new DomainError('ต้องระบุผลการตรวจสอบ');
   const conflict = await store.findPending(conflictId);
