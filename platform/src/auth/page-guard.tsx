@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
 import { roleHome } from '@/auth/role-home';
 import type { UserRole } from '@/auth/roles';
 import { MainNav, type NavGroup } from '@/auth/main-nav';
+import { isAdminView, menuRole, viewCookieName } from '@/auth/view-as';
+import { ViewSwitcher } from '@/auth/view-switcher';
 import { roleLabels } from '@/lib/labels';
 import { Brand } from '@/brand/logo';
 import { Icon, type IconName } from '@/brand/icons';
@@ -50,14 +53,17 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
   const session = await getSessionFromCookies();
   if (!session) redirect(await loginRedirectPath());
   const accountHref = session.role === 'rider' ? '/rider/profile' : '/account';
+  const view = (await cookies()).get(viewCookieName)?.value;
+  const shownRole = menuRole(session.role, view);
 
   return (
     <div className="staff-app">
       <header className="staff-sidebar">
-        <Link href={roleHome(session.role)} className="brand">
+        <Link href={roleHome(shownRole)} className="brand">
           <Brand />
         </Link>
-        <MainNav groups={groupsFor(session.role)} />
+        {session.role === 'admin' && <ViewSwitcher view={isAdminView(view) ? view : 'admin'} />}
+        <MainNav groups={groupsFor(shownRole)} />
         <div className="sidebar-mascot" aria-hidden="true">
           <Mascot width={120} variant="small" />
           <span>{mascotName} พร้อมส่งยาถึงบ้าน</span>
