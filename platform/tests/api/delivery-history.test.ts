@@ -44,9 +44,17 @@ test('blank filters match everything in the date range, and a CSV can be downloa
   await search('from=2026-10-01&to=2026-10-31');
   const where = findMany.mock.calls[0][0].where;
   expect(where).not.toHaveProperty('rider');
+  expect(where).not.toHaveProperty('status');
   expect(where.deliveryRequest).toEqual({});
 
   const csv = await search('from=2026-10-01&to=2026-10-31&format=csv');
   expect(csv.headers.get('content-type')).toContain('text/csv');
   expect(await csv.text()).toContain('470032520');
+});
+
+test('filters by delivery status, and rejects an unknown one', async () => {
+  await search('from=2026-10-01&to=2026-10-31&status=delivery_failed');
+  expect(findMany.mock.calls[0][0].where.status).toBe('delivery_failed');
+
+  expect((await search('from=2026-10-01&to=2026-10-31&status=lost')).status).toBe(422);
 });

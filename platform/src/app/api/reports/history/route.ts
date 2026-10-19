@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const csvLimit = 5000;
 
-// Searches delivery history by patient HN, rider, subdistrict and village zone within a date range.
+// Searches delivery history by patient HN, rider, subdistrict, village zone and status within a date range.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
