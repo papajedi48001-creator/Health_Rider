@@ -19,11 +19,12 @@ export function LogoMark({ size = 36 }: { size?: number }) {
   );
 }
 
-export function Brand({ size = 36 }: { size?: number }) {
+// The hospital name comes from the installed license; installs without one keep the original hospital's name.
+export function Brand({ size = 36, hospitalName = 'โรงพยาบาลวาริชภูมิ' }: { size?: number; hospitalName?: string }) {
   return (
     <>
       <LogoMark size={size} />
-      <span className="brand-text"><strong>Health Rider</strong><small>โรงพยาบาลวาริชภูมิ</small></span>
+      <span className="brand-text"><strong>Health Rider</strong><small>{hospitalName}</small></span>
     </>
   );
 }
