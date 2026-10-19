@@ -3,12 +3,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ParcelLabel, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import {
-  pageLayout, paperName, paperSizes, parseLabelLayout, type LabelLayout, type LabelPrint, type LabelSettings, type Paper,
+  labelFontPt, pageLayout, paperName, paperSizes, parseLabelLayout, type LabelLayout, type LabelPrint, type LabelSettings, type Paper,
 } from '@/domain/settings/label-layout';
 import { callApi } from '@/lib/api-client';
 
 // Typed values stay as text until saved, so a half-typed number does not jump around.
-type Draft = Record<Exclude<keyof LabelLayout, 'paper' | 'orientation'>, string> & Pick<LabelLayout, 'paper' | 'orientation'>;
+type Draft = Record<Exclude<keyof LabelLayout, 'paper' | 'orientation' | 'fontPt'>, string> & { fontPt: string } & Pick<LabelLayout, 'paper' | 'orientation'>;
 
 const prints: Array<{ key: LabelPrint; title: string; hint: string }> = [
   { key: 'single', title: 'พิมพ์ฉลากเดียว', hint: 'ใช้เมื่อกดเตรียมพัสดุทีละราย' },
@@ -31,6 +31,7 @@ function toDraft(layout: LabelLayout): Draft {
     ...layout,
     labelWidthMm: String(layout.labelWidthMm), labelHeightMm: String(layout.labelHeightMm),
     paperWidthMm: String(layout.paperWidthMm), paperHeightMm: String(layout.paperHeightMm), marginMm: String(layout.marginMm),
+    fontPt: layout.fontPt === null ? '' : String(layout.fontPt),
   };
 }
 
@@ -93,6 +94,10 @@ function LayoutFields({ print, draft, onChange }: { print: (typeof prints)[numbe
         {draft.paper !== 'label' && (
           <label>ขอบกระดาษ (มม.) <input name={`${print.key}-marginMm`} inputMode="decimal" value={draft.marginMm} onChange={set('marginMm')} /></label>
         )}
+        <label>ขนาดตัวอักษร (pt)
+          <input name={`${print.key}-fontPt`} inputMode="decimal" placeholder={`อัตโนมัติ (${layout ? labelFontPt({ ...layout, fontPt: null }) : '-'})`}
+            value={draft.fontPt} onChange={set('fontPt')} />
+        </label>
       </div>
       {problem && <p className="notice notice-danger">{problem}</p>}
       {layout && page && (

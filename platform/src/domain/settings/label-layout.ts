@@ -23,6 +23,8 @@ export type LabelLayout = {
   paperWidthMm: number;
   paperHeightMm: number;
   marginMm: number;
+  // Base text size in points; null follows the label size (labelFontPt).
+  fontPt: number | null;
 };
 
 // "single" applies when one package is prepared, "batch" when several labels print together.
@@ -30,11 +32,11 @@ export type LabelSettings = { single: LabelLayout; batch: LabelLayout };
 export type LabelPrint = 'single' | 'batch';
 
 export const labelGapMm = 3;
-export const limits = { label: [20, 300], paper: [30, 600], margin: [0, 30] } as const;
+export const limits = { label: [20, 300], paper: [30, 600], margin: [0, 30], font: [5, 30] } as const;
 
 // The layout the app printed before labels could be configured: 90 × 65 mm, two columns on A4.
 const standardLayout: LabelLayout = {
-  labelWidthMm: 90, labelHeightMm: 65, paper: 'A4', orientation: 'portrait', paperWidthMm: 210, paperHeightMm: 297, marginMm: 10,
+  labelWidthMm: 90, labelHeightMm: 65, paper: 'A4', orientation: 'portrait', paperWidthMm: 210, paperHeightMm: 297, marginMm: 10, fontPt: null,
 };
 export const defaultLabelSettings: LabelSettings = { single: { ...standardLayout }, batch: { ...standardLayout } };
 
@@ -62,12 +64,18 @@ export function paperName(layout: LabelLayout): string {
   return `${paperSizes[layout.paper].name} ${layout.orientation === 'landscape' ? 'แนวนอน' : 'แนวตั้ง'}`;
 }
 
-function millimetres(value: unknown, name: string, [min, max]: readonly [number, number]): number {
+function millimetres(value: unknown, name: string, [min, max]: readonly [number, number], unit = 'มม.'): number {
   const number = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
   if (typeof number !== 'number' || !Number.isFinite(number) || number < min || number > max) {
-    throw new DomainError(`${name}ต้องเป็นตัวเลข ${min}-${max} มม.`);
+    throw new DomainError(`${name}ต้องเป็นตัวเลข ${min}-${max} ${unit}`);
   }
   return Math.round(number * 10) / 10;
+}
+
+// Empty means automatic; settings saved before the field existed have none and stay automatic.
+function fontSize(value: unknown, name: string): number | null {
+  if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) return null;
+  return millimetres(value, name, limits.font, 'pt');
 }
 
 export function parseLabelLayout(value: unknown, title: string): LabelLayout {
@@ -82,6 +90,7 @@ export function parseLabelLayout(value: unknown, title: string): LabelLayout {
     paperWidthMm: paper === 'custom' ? millimetres(body.paperWidthMm, `${title}: ความกว้างกระดาษ`, limits.paper) : standardLayout.paperWidthMm,
     paperHeightMm: paper === 'custom' ? millimetres(body.paperHeightMm, `${title}: ความยาวกระดาษ`, limits.paper) : standardLayout.paperHeightMm,
     marginMm: paper === 'label' ? 0 : millimetres(body.marginMm, `${title}: ขอบกระดาษ`, limits.margin),
+    fontPt: fontSize(body.fontPt, `${title}: ขนาดตัวอักษร`),
   };
   if (pageLayout(layout).perPage === 0) {
     throw new DomainError(`${title}: ฉลาก ${layout.labelWidthMm} × ${layout.labelHeightMm} มม. ใหญ่กว่าพื้นที่พิมพ์ของกระดาษ ${paperName(layout)} (หักขอบแล้ว)`);
@@ -108,7 +117,9 @@ export async function loadLabelSettings(store: SettingStore): Promise<{ settings
 }
 
 // Text is sized against the standard 90 × 65 mm label so a bigger or smaller label keeps the same look.
+// An admin-set size wins.
 export function labelFontPt(layout: LabelLayout): number {
+  if (layout.fontPt) return layout.fontPt;
   const scale = Math.min(layout.labelWidthMm / standardLayout.labelWidthMm, layout.labelHeightMm / standardLayout.labelHeightMm);
   return Math.min(22, Math.max(5, Math.round(11 * scale * 10) / 10));
 }
