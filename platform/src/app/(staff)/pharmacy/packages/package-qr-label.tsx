@@ -3,7 +3,7 @@
 import QRCode from 'qrcode';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { defaultLabelSettings, labelFontPt, pageLayout, paperName, type LabelLayout, type LabelSettings } from '@/domain/settings/label-layout';
+import { defaultLabelSettings, labelSizes, pageLayout, paperName, type LabelLayout, type LabelSettings } from '@/domain/settings/label-layout';
 import { callApi } from '@/lib/api-client';
 import { shortCode } from '@/lib/labels';
 
@@ -20,6 +20,8 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
     void QRCode.toDataURL(label.token, { errorCorrectionLevel: 'M', margin: 1, width: 240 }).then(setImage);
   }, [label.token]);
 
+  const sizes = labelSizes(layout);
+  const qr = { width: `${sizes.qrMm}mm`, height: `${sizes.qrMm}mm` };
   return (
     <article className="parcel-label" style={labelStyle(layout)} aria-label={`ฉลากพัสดุ ${shortCode(label.attemptId)}`}>
       <div className="parcel-head">
@@ -28,11 +30,11 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
       </div>
       <div className="parcel-body">
         <div className="parcel-to">
-          <strong className="parcel-name">{label.patientName}</strong>
-          <span className="parcel-address">{label.deliveryAddress}</span>
+          <strong className="parcel-name" style={{ fontSize: `${sizes.namePt}pt` }}>{label.patientName}</strong>
+          <span className="parcel-address" style={{ fontSize: `${sizes.addressPt}pt` }}>{label.deliveryAddress}</span>
         </div>
         <div className="parcel-qr">
-          {image ? <img src={image} alt={`QR พัสดุ ${shortCode(label.attemptId)}`} width={120} height={120} /> : <span>กำลังสร้าง QR</span>}
+          {image ? <img src={image} alt={`QR พัสดุ ${shortCode(label.attemptId)}`} width={120} height={120} style={qr} /> : <span style={qr}>กำลังสร้าง QR</span>}
           <strong>{label.visitNumber ?? label.hn}</strong>
         </div>
       </div>
@@ -45,7 +47,7 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
 
 // A label is the same size in millimetres on screen as on paper.
 export function labelStyle(layout: LabelLayout): CSSProperties {
-  return { width: `${layout.labelWidthMm}mm`, height: `${layout.labelHeightMm}mm`, fontSize: `${labelFontPt(layout)}pt` };
+  return { width: `${layout.labelWidthMm}mm`, height: `${layout.labelHeightMm}mm`, fontSize: `${labelSizes(layout).basePt}pt` };
 }
 
 // Sets the sheet size and margin for printing, and how many labels sit across each sheet.

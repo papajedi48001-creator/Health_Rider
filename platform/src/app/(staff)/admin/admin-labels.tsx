@@ -3,12 +3,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ParcelLabel, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import {
-  labelFontPt, pageLayout, paperName, paperSizes, parseLabelLayout, type LabelLayout, type LabelPrint, type LabelSettings, type Paper,
+  labelSizes, pageLayout, paperName, paperSizes, parseLabelLayout, type LabelLayout, type LabelPrint, type LabelSettings, type Paper,
 } from '@/domain/settings/label-layout';
 import { callApi } from '@/lib/api-client';
 
 // Typed values stay as text until saved, so a half-typed number does not jump around.
-type Draft = Record<Exclude<keyof LabelLayout, 'paper' | 'orientation' | 'fontPt'>, string> & { fontPt: string } & Pick<LabelLayout, 'paper' | 'orientation'>;
+type Draft = Record<Exclude<keyof LabelLayout, 'paper' | 'orientation'>, string> & Pick<LabelLayout, 'paper' | 'orientation'>;
 
 const prints: Array<{ key: LabelPrint; title: string; hint: string }> = [
   { key: 'single', title: 'พิมพ์ฉลากเดียว', hint: 'ใช้เมื่อกดเตรียมพัสดุทีละราย' },
@@ -26,12 +26,15 @@ const sample: PackageLabel = {
   hn: '000000000', visitNumber: '690101000001', subdistrictCode: '471101', villageCode: '03',
 };
 
+// An empty field means the size is worked out automatically.
+const blankIfAuto = (value: number | null) => (value === null ? '' : String(value));
+
 function toDraft(layout: LabelLayout): Draft {
   return {
     ...layout,
     labelWidthMm: String(layout.labelWidthMm), labelHeightMm: String(layout.labelHeightMm),
     paperWidthMm: String(layout.paperWidthMm), paperHeightMm: String(layout.paperHeightMm), marginMm: String(layout.marginMm),
-    fontPt: layout.fontPt === null ? '' : String(layout.fontPt),
+    fontPt: blankIfAuto(layout.fontPt), nameFontPt: blankIfAuto(layout.nameFontPt), addressFontPt: blankIfAuto(layout.addressFontPt), qrMm: blankIfAuto(layout.qrMm),
   };
 }
 
@@ -65,6 +68,14 @@ function LayoutFields({ print, draft, onChange }: { print: (typeof prints)[numbe
   const { layout, problem } = check(draft, print.title);
   const set = (field: keyof Draft) => (event: { target: { value: string } }) => onChange({ ...draft, [field]: event.target.value });
   const page = layout && pageLayout(layout);
+  // What each empty size field would print with, given the other fields as typed.
+  const auto = layout && labelSizes({ ...layout, nameFontPt: null, addressFontPt: null, qrMm: null });
+  const automatic = {
+    basePt: layout ? `อัตโนมัติ ${labelSizes({ ...layout, fontPt: null }).basePt}` : 'อัตโนมัติ',
+    namePt: auto ? `อัตโนมัติ ${auto.namePt}` : 'อัตโนมัติ',
+    addressPt: auto ? `อัตโนมัติ ${auto.addressPt}` : 'อัตโนมัติ',
+    qrMm: auto ? `อัตโนมัติ ${auto.qrMm}` : 'อัตโนมัติ',
+  };
   return (
     <fieldset className="label-layout" aria-label={print.title}>
       <legend>{print.title}</legend>
@@ -94,9 +105,20 @@ function LayoutFields({ print, draft, onChange }: { print: (typeof prints)[numbe
         {draft.paper !== 'label' && (
           <label>ขอบกระดาษ (มม.) <input name={`${print.key}-marginMm`} inputMode="decimal" value={draft.marginMm} onChange={set('marginMm')} /></label>
         )}
-        <label>ขนาดตัวอักษร (pt)
-          <input name={`${print.key}-fontPt`} inputMode="decimal" placeholder={`อัตโนมัติ (${layout ? labelFontPt({ ...layout, fontPt: null }) : '-'})`}
-            value={draft.fontPt} onChange={set('fontPt')} />
+      </div>
+      <p className="muted">ขนาดตัวอักษรและ QR เว้นว่างไว้ ระบบจะคำนวณตามขนาดฉลาก (ตัวเลขในช่องคือค่าอัตโนมัติ) มีผลกับฉลากทุกหน้าที่พิมพ์ QR</p>
+      <div className="label-layout-fields">
+        <label>ขนาดตัวอักษรทั่วไป (pt)
+          <input name={`${print.key}-fontPt`} inputMode="decimal" placeholder={automatic.basePt} value={draft.fontPt} onChange={set('fontPt')} />
+        </label>
+        <label>ขนาดชื่อผู้ป่วย (pt)
+          <input name={`${print.key}-nameFontPt`} inputMode="decimal" placeholder={automatic.namePt} value={draft.nameFontPt} onChange={set('nameFontPt')} />
+        </label>
+        <label>ขนาดที่อยู่ (pt)
+          <input name={`${print.key}-addressFontPt`} inputMode="decimal" placeholder={automatic.addressPt} value={draft.addressFontPt} onChange={set('addressFontPt')} />
+        </label>
+        <label>ขนาด QR (มม.)
+          <input name={`${print.key}-qrMm`} inputMode="decimal" placeholder={automatic.qrMm} value={draft.qrMm} onChange={set('qrMm')} />
         </label>
       </div>
       {problem && <p className="notice notice-danger">{problem}</p>}
