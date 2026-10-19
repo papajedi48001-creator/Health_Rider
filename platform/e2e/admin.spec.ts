@@ -25,6 +25,7 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await userForm.getByLabel('ชื่อผู้ใช้').fill(username);
   await userForm.getByLabel('ชื่อที่แสดง').fill(`ไรเดอร์ E2E ${suffix}`);
   await userForm.getByLabel('บทบาท').selectOption('rider');
+  await userForm.getByLabel('รพ.สต.').selectOption('รพ.สต.ปลาโหล');
   // The system gives the next free code for the category; the admin cannot type over it.
   await expect(userForm.getByLabel('รหัสไรเดอร์')).toHaveValue(/^INT-\d{3,}$/);
   await userForm.getByLabel('ประเภทไรเดอร์').selectOption('external');
@@ -46,6 +47,13 @@ test('admin adds a zone and a rider, and a deactivated rider can no longer sign 
   await riderPage.getByLabel('รหัสผ่าน').fill('e2e-rider-password');
   await riderPage.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
   await expect(riderPage).toHaveURL(/\/rider\/scan$/);
+  // A password the admin chose must be replaced before the rider can work.
+  const passwordForm = riderPage.getByRole('form', { name: 'ตั้งรหัสผ่านใหม่' });
+  await passwordForm.getByLabel('รหัสผ่านที่ได้รับจากผู้ดูแลระบบ').fill('e2e-rider-password');
+  await passwordForm.getByLabel('รหัสผ่านใหม่ (อย่างน้อย').fill('e2e-rider-own-password');
+  await passwordForm.getByLabel('ยืนยันรหัสผ่านใหม่').fill('e2e-rider-own-password');
+  await passwordForm.getByRole('button', { name: 'ตั้งรหัสผ่านใหม่' }).click();
+  await expect(passwordForm).toHaveCount(0);
 
   await row.getByRole('button', { name: 'ปิดใช้งาน' }).click();
   // Deactivated accounts are hidden until the admin turns on the switch.

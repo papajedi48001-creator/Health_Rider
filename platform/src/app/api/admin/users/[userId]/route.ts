@@ -21,11 +21,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ u
       const before = await tx.user.findUnique({ where: { id: userId }, select: { displayName: true, phone: true, healthCenter: true, role: true, active: true, pendingApproval: true } });
       if (!before) throw new DomainError('ไม่พบบัญชีผู้ใช้', 404);
       if (before.pendingApproval && changes.active === true) throw new DomainError('บัญชีนี้รออนุมัติ โปรดใช้ปุ่มอนุมัติ');
-      // Only staff belong to a รพ.สต.; a rider's is cleared rather than kept.
-      if ((changes.role ?? before.role) === 'rider' && (changes.healthCenter !== undefined || before.healthCenter !== null)) changes.healthCenter = null;
       const after = await tx.user.update({
         where: { id: userId },
-        data: { ...changes, ...(passwordHash ? { passwordHash } : {}) },
+        data: { ...changes, ...(passwordHash ? { passwordHash, mustChangePassword: true } : {}) },
         select: { id: true, username: true, displayName: true, phone: true, healthCenter: true, role: true, active: true },
       });
       if (changes.active === false || passwordHash) {

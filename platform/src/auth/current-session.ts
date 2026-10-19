@@ -11,7 +11,7 @@ export const sessionStore: SessionStore = {
   create: (record) => db.session.create({ data: record }),
   findByTokenHash: (tokenHash) => db.session.findUnique({
     where: { tokenHash },
-    select: { expiresAt: true, lastSeenAt: true, revokedAt: true, user: { select: { id: true, role: true, displayName: true, active: true, avatarUpdatedAt: true } } },
+    select: { expiresAt: true, lastSeenAt: true, revokedAt: true, user: { select: { id: true, role: true, displayName: true, active: true, avatarUpdatedAt: true, mustChangePassword: true } } },
   }),
   revoke: (tokenHash, revokedAt) => db.session.updateMany({ where: { tokenHash, revokedAt: null }, data: { revokedAt } }),
   touch: (tokenHash, lastSeenAt) => db.session.updateMany({ where: { tokenHash, revokedAt: null }, data: { lastSeenAt } }),

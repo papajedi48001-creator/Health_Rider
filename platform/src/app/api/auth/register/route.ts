@@ -37,13 +37,14 @@ export async function POST(request: NextRequest) {
       const created = await tx.user.create({
         data: {
           id: newPublicId(), username: registration.username, displayName: registration.displayName, phone: registration.phone,
+          healthCenter: registration.healthCenter,
           role: registration.role, passwordHash, active: false, pendingApproval: true,
         },
         select: { id: true },
       });
       await audit(tx, {
         actorId: created.id, action: 'user.registered', auditableType: 'User', auditableId: created.id,
-        newValues: { username: registration.username, requestedRole: registration.role },
+        newValues: { username: registration.username, requestedRole: registration.role, healthCenter: registration.healthCenter },
       });
     });
     return NextResponse.json({ pendingApproval: true }, { status: 201 });

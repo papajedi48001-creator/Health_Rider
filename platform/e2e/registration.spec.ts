@@ -12,6 +12,7 @@ test('a new pharmacist applies on the login page and signs in once an admin appr
   await form.getByLabel('ชื่อ-นามสกุล').fill(displayName);
   await form.getByLabel('เบอร์โทร').fill('0812345678');
   await form.getByLabel('หน้าที่ที่ต้องการใช้งาน').selectOption('pharmacy');
+  await form.getByLabel('รพ.สต.').selectOption('รพ.สต.หนองท่ม');
   await form.getByLabel('ชื่อผู้ใช้').fill(username);
   await form.getByLabel('รหัสผ่าน', { exact: true }).fill(password);
   await form.getByLabel('ยืนยันรหัสผ่าน').fill(password);
@@ -35,6 +36,7 @@ test('a new pharmacist applies on the login page and signs in once an admin appr
   await listed.getByRole('button', { name: 'พิจารณา' }).click();
   const application = admin.getByRole('dialog', { name: `คำขอของ ${displayName}` });
   await expect(application).not.toContainText(username);
+  await expect(application.getByLabel('รพ.สต.')).toHaveValue('รพ.สต.หนองท่ม');
   await application.getByRole('button', { name: 'อนุมัติ', exact: true }).click();
   await expect(admin.getByText(`อนุมัติ ${displayName} แล้ว`)).toBeVisible();
   await expect(application).toBeHidden();

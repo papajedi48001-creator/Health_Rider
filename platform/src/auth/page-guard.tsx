@@ -14,6 +14,7 @@ import { Icon, type IconName } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
 import { withBasePath } from '@/lib/base-path';
 import { UserAvatar } from '@/account/user-avatar';
+import { ForcedPasswordChange } from '@/account/forced-password-change';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
@@ -79,7 +80,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
         </div>
       </header>
       <div className="staff-content">
-        {roles.includes(session.role) ? children : (
+        {session.mustChangePassword ? <ForcedPasswordChange /> : roles.includes(session.role) ? children : (
           <main className="no-access">
             <Mascot width={180} variant="small" />
             <h1>ไม่มีสิทธิ์เข้าหน้านี้</h1>

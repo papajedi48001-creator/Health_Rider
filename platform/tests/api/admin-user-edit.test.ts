@@ -27,8 +27,17 @@ test('an admin edits a staff account\'s name, phone and รพ.สต.', async (
   expect(revoke).not.toHaveBeenCalled();
 });
 
-test('a rider is never given a รพ.สต.', async () => {
+test('a rider is given a รพ.สต. too, and it cannot be cleared', async () => {
   findUnique.mockResolvedValue({ displayName: 'ไรเดอร์', phone: null, healthCenter: null, role: 'rider', active: true, pendingApproval: false });
   await edit('u2', { displayName: 'ไรเดอร์', healthCenter: 'รพ.สต.ปลาโหล' });
-  expect(update.mock.calls[0][0].data).toMatchObject({ healthCenter: null });
+  expect(update.mock.calls[0][0].data).toMatchObject({ healthCenter: 'รพ.สต.ปลาโหล' });
+  expect((await edit('u2', { healthCenter: '' })).status).toBe(422);
+  expect(update).toHaveBeenCalledTimes(1);
+});
+
+test('a password set by an admin must be changed at the next sign-in', async () => {
+  findUnique.mockResolvedValue({ displayName: 'ไรเดอร์', phone: null, healthCenter: 'รพ.สต.ปลาโหล', role: 'rider', active: true, pendingApproval: false });
+  await edit('u2', { password: 'reset-by-admin-123' });
+  expect(update.mock.calls[0][0].data).toMatchObject({ mustChangePassword: true });
+  expect(revoke).toHaveBeenCalled();
 });

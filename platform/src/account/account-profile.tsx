@@ -7,6 +7,7 @@ import { toAvatarJpeg } from '@/account/avatar-image';
 import type { UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
+import { HealthCenterSelect } from '@/account/health-center-select';
 import { employmentLabels, formatThaiDateTime, roleLabels } from '@/lib/labels';
 
 type Profile = {
@@ -15,13 +16,14 @@ type Profile = {
   username: string;
   displayName: string;
   phone: string | null;
+  healthCenter: string | null;
   role: UserRole;
   riderProfile: { riderCode: string; employmentCategory: string } | null;
 };
 
 type Change = { id: string; action: string; at: string; byMe: boolean; oldValues: Record<string, unknown> | null; newValues: Record<string, unknown> | null };
 
-const fieldLabels: Record<string, string> = { displayName: 'ชื่อที่แสดง', phone: 'เบอร์โทร', role: 'บทบาท', active: 'สถานะบัญชี' };
+const fieldLabels: Record<string, string> = { displayName: 'ชื่อที่แสดง', phone: 'เบอร์โทร', healthCenter: 'รพ.สต.', role: 'บทบาท', active: 'สถานะบัญชี' };
 const actionLabels: Record<string, string> = {
   'user.avatar_updated': 'เปลี่ยนรูปโปรไฟล์', 'user.avatar_removed': 'ลบรูปโปรไฟล์',
   'user.created': 'สร้างบัญชี', 'user.updated': 'ผู้ดูแลระบบแก้ไขบัญชี', 'user.profile_updated': 'แก้ไขข้อมูลส่วนตัว', 'user.password_changed': 'เปลี่ยนรหัสผ่าน',
@@ -34,7 +36,7 @@ function shown(field: string, value: unknown): string {
   return String(value);
 }
 
-// The signed-in user's own account: details the admin set, plus a name, phone and password they can change.
+// The signed-in user's own account: details the admin set, plus a name, phone, รพ.สต. and password they can change.
 export function AccountProfile() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -52,6 +54,7 @@ export function AccountProfile() {
       if (!result.ok) return setMessage(result.message);
       setProfile(result.data);
       setMessage('');
+      if (!result.data.healthCenter) setEditing(true);
     });
     loadChanges();
   }, []);
@@ -60,7 +63,7 @@ export function AccountProfile() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setSaving(true);
-    const result = await callApi<Profile>('/api/me', { method: 'PATCH', json: { displayName: form.get('displayName'), phone: form.get('phone') } });
+    const result = await callApi<Profile>('/api/me', { method: 'PATCH', json: { displayName: form.get('displayName'), phone: form.get('phone'), healthCenter: form.get('healthCenter') } });
     setSaving(false);
     if (!result.ok) return setMessage(result.message);
     setProfile(result.data);
@@ -154,6 +157,8 @@ export function AccountProfile() {
                   เบอร์โทร
                   <input name="phone" type="tel" inputMode="tel" defaultValue={profile.phone ?? ''} placeholder="08xxxxxxxx" autoComplete="tel" />
                 </label>
+                {!profile.healthCenter && <p className="notice notice-danger" role="alert">ยังไม่ได้ระบุ รพ.สต. โปรดเลือกก่อนใช้งาน</p>}
+                <HealthCenterSelect value={profile.healthCenter} />
                 <div className="button-row">
                   <button type="button" className="btn btn-secondary" onClick={() => setEditing(false)} disabled={saving}>ยกเลิก</button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>บันทึก</button>
@@ -166,6 +171,7 @@ export function AccountProfile() {
                   <dt>เบอร์โทร</dt><dd>{profile.phone ?? '-'}</dd>
                   <dt>ชื่อผู้ใช้</dt><dd><code>{profile.username}</code></dd>
                   <dt>บทบาท</dt><dd>{roleLabels[profile.role]}</dd>
+                  <dt>รพ.สต.</dt><dd>{profile.healthCenter ?? '-'}</dd>
                   {profile.riderProfile && <><dt>รหัสไรเดอร์</dt><dd><code>{profile.riderProfile.riderCode}</code></dd></>}
                 </dl>
                 <button type="button" className="btn btn-secondary btn-block" onClick={() => { setEditing(true); setMessage(''); }}>แก้ไขข้อมูล</button>

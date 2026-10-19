@@ -23,7 +23,7 @@ export type StoredSession = {
   expiresAt: Date;
   lastSeenAt: Date;
   revokedAt: Date | null;
-  user: { id: string; role: UserRole; displayName: string; active: boolean; avatarUpdatedAt?: Date | null };
+  user: { id: string; role: UserRole; displayName: string; active: boolean; avatarUpdatedAt?: Date | null; mustChangePassword?: boolean };
 };
 
 export type SessionStore = {
@@ -77,8 +77,12 @@ export async function resolveSession(token: string, now: Date, secret: string, s
   }
   if (now.getTime() - session.lastSeenAt.getTime() >= touchIntervalMs) await store.touch(tokenHash, now);
 
-  const { id, role, displayName, avatarUpdatedAt } = session.user;
-  return { id, role, displayName, ...(avatarUpdatedAt ? { avatarVersion: avatarUpdatedAt.getTime() } : {}) };
+  const { id, role, displayName, avatarUpdatedAt, mustChangePassword } = session.user;
+  return {
+    id, role, displayName,
+    ...(avatarUpdatedAt ? { avatarVersion: avatarUpdatedAt.getTime() } : {}),
+    ...(mustChangePassword ? { mustChangePassword } : {}),
+  };
 }
 
 export async function endSession(token: string, now: Date, secret: string, store: SessionStore): Promise<void> {

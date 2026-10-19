@@ -31,7 +31,7 @@ beforeEach(() => {
 
 test('signs in an active user with an HttpOnly session cookie and audits it', async () => {
   const { POST } = await import('@/app/api/auth/login/route');
-  findUser.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', active: true, passwordHash: await hashPassword('correct-password') });
+  findUser.mockResolvedValue({ id: 'pharmacy-1', role: 'pharmacy', active: true, healthCenter: 'รพ.สต.ปลาโหล', passwordHash: await hashPassword('correct-password') });
 
   const response = await POST(login({ username: 'pharmacy.uat', password: 'correct-password' }));
 
@@ -43,6 +43,16 @@ test('signs in an active user with an HttpOnly session cookie and audits it', as
   // Sessions that ended more than 30 days ago are removed so the table stays small.
   const where = deleteSessions.mock.calls[0][0].where;
   expect(where.OR[0].expiresAt.lt.getTime()).toBeLessThan(Date.now() - 29 * 24 * 60 * 60 * 1000);
+});
+
+test('warns someone without a รพ.สต. and sends them to pick one', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  findUser.mockResolvedValue({ id: 'rider-1', role: 'rider', active: true, healthCenter: null, passwordHash: await hashPassword('correct-password') });
+
+  const response = await POST(login({ username: 'rider.uat', password: 'correct-password' }));
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({ redirectTo: '/rider/scan', missingHealthCenter: true, profilePath: '/rider/profile' });
 });
 
 test('rejects a wrong password or a deactivated account without creating a session', async () => {
@@ -67,7 +77,7 @@ test('answers malformed input with 422 instead of a server error', async () => {
 
 test('a plain form post signs in with a redirect and never needs credentials in a URL', async () => {
   const { POST } = await import('@/app/api/auth/login/route');
-  findUser.mockResolvedValue({ id: 'rider-1', role: 'rider', active: true, passwordHash: await hashPassword('correct-password') });
+  findUser.mockResolvedValue({ id: 'rider-1', role: 'rider', active: true, healthCenter: 'รพ.สต.ปลาโหล', passwordHash: await hashPassword('correct-password') });
   const form = (password: string) => new NextRequest('http://localhost/api/auth/login', {
     method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ username: 'rider.c', password, next: '/rider/attempts/a1' }).toString(),

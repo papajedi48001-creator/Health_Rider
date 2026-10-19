@@ -11,7 +11,7 @@ import { handleRoute } from '@/lib/route';
 export const dynamic = 'force-dynamic';
 
 const profileFields = {
-  id: true, username: true, displayName: true, phone: true, role: true, avatarUpdatedAt: true,
+  id: true, username: true, displayName: true, phone: true, healthCenter: true, role: true, avatarUpdatedAt: true,
   riderProfile: { select: { riderCode: true, employmentCategory: true } },
 } as const;
 
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest) {
     const session = requireRole(await getSessionFromRequest(request), ...userRoles);
     const changes = parseProfileChanges(await readJsonBody(request));
     const updated = await db.$transaction(async (tx) => {
-      const before = await tx.user.findUniqueOrThrow({ where: { id: session.id }, select: { displayName: true, phone: true } });
+      const before = await tx.user.findUniqueOrThrow({ where: { id: session.id }, select: { displayName: true, phone: true, healthCenter: true } });
       const after = await tx.user.update({ where: { id: session.id }, data: changes, select: profileFields });
       const changed = Object.keys(changes) as Array<keyof typeof changes>;
       await audit(tx, {

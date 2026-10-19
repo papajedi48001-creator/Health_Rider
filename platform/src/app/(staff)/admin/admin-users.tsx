@@ -5,6 +5,7 @@ import { userRoles, type UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
 import { roleLabels } from '@/lib/labels';
+import { HealthCenterSelect } from '@/account/health-center-select';
 import { PersonName } from '@/account/person-name';
 import { Icon } from '@/brand/icons';
 
@@ -82,7 +83,6 @@ export function AdminUsers() {
   const accounts = users.filter((user) => !user.pendingApproval);
   const inactiveCount = accounts.filter((user) => !user.active).length;
   const shownAccounts = showInactive ? accounts : accounts.filter((user) => user.active);
-  const healthCenters = [...new Set(users.map((user) => user.healthCenter).filter((name): name is string => Boolean(name)))].sort();
 
   function resetPassword(user: User) {
     const password = window.prompt(`รหัสผ่านใหม่ของ ${user.displayName} (อย่างน้อย ${minimumPasswordLength} ตัวอักษร)`);
@@ -104,7 +104,7 @@ export function AdminUsers() {
               <li key={user.id}>
                 <span className="pending-who">
                   <strong><PersonName person={user} /></strong>
-                  <span className="muted">ขอใช้งานเป็น {roleLabels[user.role]} · โทร {user.phone ?? '-'} · สมัครเมื่อ {formatApplied(user.createdAt)}</span>
+                  <span className="muted">ขอใช้งานเป็น {roleLabels[user.role]} · {user.healthCenter ?? 'ยังไม่ระบุ รพ.สต.'} · โทร {user.phone ?? '-'} · สมัครเมื่อ {formatApplied(user.createdAt)}</span>
                 </span>
                 <button type="button" onClick={() => setReviewing(user)}>พิจารณา</button>
               </li>
@@ -121,20 +121,19 @@ export function AdminUsers() {
       )}
       {creating && <CreateAccount refreshKey={usersVersion} onCreate={create} onClose={() => setCreating(false)} />}
       {editing && <EditAccount user={editing} onSave={(changes) => saveEdit(editing, changes)} onClose={() => setEditing(null)} />}
-      <datalist id="health-centers">{healthCenters.map((name) => <option key={name} value={name} />)}</datalist>
       <label className="switch-toggle">
         <input type="checkbox" role="switch" checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />
         <span className="switch-track" aria-hidden="true" />
         แสดงบัญชีที่ปิดใช้งาน ({inactiveCount})
       </label>
       <table>
-        <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>รพ.สต. / ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
+        <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>รพ.สต.</th><th>สถานะ</th><th /></tr></thead>
         <tbody>
           {shownAccounts.map((user) => (
             <tr key={user.id}>
               <td><PersonName person={user} /></td>
-              <td>{roleLabels[user.role]}</td>
-              <td>{user.riderProfile ? `${user.riderProfile.riderCode} (${user.riderProfile.employmentCategory === 'external' ? 'ภายนอก' : 'ภายใน'})` : user.healthCenter ?? '-'}</td>
+              <td>{roleLabels[user.role]}{user.riderProfile && ` · ${user.riderProfile.riderCode} (${user.riderProfile.employmentCategory === 'external' ? 'ภายนอก' : 'ภายใน'})`}</td>
+              <td>{user.healthCenter ?? 'ยังไม่ระบุ'}</td>
               <td>{user.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
               <td>
                 <button type="button" onClick={() => setEditing(user)}>แก้ไข</button>
@@ -195,7 +194,8 @@ function CreateAccount({ refreshKey, onCreate, onClose }: {
               {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
             </select>
           </label>
-          {role === 'rider' ? <RiderFields refreshKey={refreshKey} /> : <HealthCenterField />}
+          <HealthCenterSelect />
+          {role === 'rider' && <RiderFields refreshKey={refreshKey} />}
           <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
           <div className="dialog-actions">
             <button type="submit" disabled={busy}>{busy ? 'กำลังสร้าง' : 'สร้างบัญชี'}</button>
@@ -205,11 +205,6 @@ function CreateAccount({ refreshKey, onCreate, onClose }: {
       </div>
     </div>
   );
-}
-
-// Staff only: riders are not attached to a รพ.สต. Earlier names are offered as the admin types.
-function HealthCenterField({ value }: { value?: string | null }) {
-  return <label>รพ.สต. <input name="healthCenter" list="health-centers" defaultValue={value ?? ''} placeholder="เว้นว่างได้" /></label>;
 }
 
 // A pop-up for changing an account's name, phone and รพ.สต.; the username, role and rider code stay as they are.
@@ -247,7 +242,7 @@ function EditAccount({ user, onSave, onClose }: {
         <form onSubmit={(event) => void submit(event)} aria-label={`ข้อมูลของ ${user.displayName}`}>
           <label>ชื่อที่แสดง <input name="displayName" required defaultValue={user.displayName} autoFocus /></label>
           <label>เบอร์โทร <input name="phone" type="tel" inputMode="tel" pattern="0[0-9 \-]{8,11}" defaultValue={user.phone ?? ''} /></label>
-          {user.role !== 'rider' && <HealthCenterField value={user.healthCenter} />}
+          <HealthCenterSelect value={user.healthCenter} />
           <div className="dialog-actions">
             <button type="submit" disabled={busy}>{busy ? 'กำลังบันทึก' : 'บันทึก'}</button>
             <button type="button" className="btn btn-secondary" onClick={onClose}>ยกเลิก</button>
@@ -286,6 +281,7 @@ function PendingRegistration({ user, refreshKey, onApprove, onReject, onClose }:
           <dt>ชื่อ</dt><dd><PersonName person={user} /></dd>
           <dt>โทร</dt><dd>{user.phone ?? '-'}</dd>
           <dt>ขอใช้งานเป็น</dt><dd>{roleLabels[user.role]}</dd>
+          <dt>รพ.สต.</dt><dd>{user.healthCenter ?? '-'}</dd>
           <dt>สมัครเมื่อ</dt><dd>{formatApplied(user.createdAt)}</dd>
         </dl>
         <p className="muted">ตรวจสอบตัวตนทางโทรศัพท์ก่อนอนุมัติ</p>
@@ -296,6 +292,7 @@ function PendingRegistration({ user, refreshKey, onApprove, onReject, onClose }:
               {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
             </select>
           </label>
+          <HealthCenterSelect value={user.healthCenter} />
           {role === 'rider' && <RiderFields refreshKey={refreshKey} />}
           <div className="dialog-actions">
             <button type="submit">อนุมัติ</button>

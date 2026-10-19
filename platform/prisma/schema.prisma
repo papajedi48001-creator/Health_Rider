@@ -43,6 +43,8 @@ model User {
   active          Boolean           @default(true)
   // Set for a self-registered account until an admin approves or rejects it; such an account stays inactive.
   pendingApproval Boolean           @default(false)
+  // Set when an admin chooses the password; cleared once the user picks their own.
+  mustChangePassword Boolean        @default(false)
   // Set when the user uploads a profile photo; also tells browsers to fetch the new one.
   avatarUpdatedAt DateTime?
   createdAt       DateTime          @default(now())

@@ -6,6 +6,8 @@ export type SessionUser = {
   displayName: string;
   // Present once the user has uploaded a profile photo; changes whenever they replace it.
   avatarVersion?: number;
+  // The password was set by an admin and must be replaced before anything else.
+  mustChangePassword?: boolean;
 };
 
 export class UnauthorizedError extends Error {
