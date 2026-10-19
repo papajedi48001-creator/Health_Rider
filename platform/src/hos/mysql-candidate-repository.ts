@@ -98,7 +98,7 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
   async villageNames(): Promise<Map<string, string>> {
     if (villageCache && Date.now() - villageCache.at < villageCacheMs) return villageCache.names;
     try {
-      const [rows] = await this.connection.execute('SELECT CONCAT(chwpart, amppart, tmbpart) AS subdistrict_code, moopart AS village_code, banname AS village_name FROM hosp_moo_control', []);
+      const [rows] = await this.connection.execute('SELECT CONCAT(chwpart, amppart, tmbpart) AS subdistrict_code, moo AS village_code, banname AS village_name FROM hosp_moo_control', []);
       const names = new Map((rows as Array<{ subdistrict_code: string | number | null; village_code: string | number | null; village_name: string | Buffer | null }>)
         .map((row) => [villageKey(String(row.subdistrict_code ?? '').trim(), normaliseVillageCode(row.village_code)), decodeLegacyText(row.village_name)] as const)
         .filter(([, name]) => name !== ''));
@@ -223,7 +223,13 @@ export type HosConnectionTest = {
   items: Array<{ code: string; name: string | null }>;
 };
 
-const requiredTables = ['opitemrece', 'patient', 'thaiaddress', 'hosp_moo_control'];
+// Each table is read with the columns the app uses, so a missing column shows up in the test, not as a silent blank.
+const requiredTables: Record<string, string> = {
+  opitemrece: '1',
+  patient: '1',
+  thaiaddress: '1',
+  hosp_moo_control: 'chwpart, amppart, tmbpart, moo, banname',
+};
 
 // Checks a HOSxP connection the way the app uses it: can log in, read the tables it needs, and find the item codes.
 export async function testHosConnection(connection: HosConnection, eligibleItemCodes: readonly string[]): Promise<HosConnectionTest> {
@@ -239,9 +245,9 @@ export async function testHosConnection(connection: HosConnection, eligibleItemC
     const version = String((versionRows as Array<{ version: unknown }>)[0]?.version ?? '');
 
     const tables: HosConnectionTest['tables'] = [];
-    for (const name of requiredTables) {
+    for (const [name, columns] of Object.entries(requiredTables)) {
       try {
-        await client.query(`SELECT 1 FROM \`${name}\` LIMIT 0`);
+        await client.query(`SELECT ${columns} FROM \`${name}\` LIMIT 0`);
         tables.push({ name, ok: true, message: null });
       } catch (error) {
         tables.push({ name, ok: false, message: describeHosError(error) });

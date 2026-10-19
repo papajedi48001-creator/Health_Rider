@@ -114,6 +114,8 @@ test('adds the village name from hosp_moo_control to the address', async () => {
   const [candidate] = await repository.eligibleFor(new Date('2026-10-19T03:00:00Z'));
   expect(candidate?.deliveryAddress).toBe('154 หมู่ 2 บ้านจิ๋ว ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร');
   await expect(repository.villageNames()).resolves.toEqual(new Map([['470602/02', 'จิ๋ว'], ['470602/03', 'ดอนยานาง']]));
+  // hosp_moo_control names its village number column moo, not moopart as in patient.
+  expect(execute).toHaveBeenCalledWith(expect.stringMatching(/\bmoo AS village_code\b.*FROM hosp_moo_control/), []);
 });
 
 test('without hosp_moo_control the address is shown as HOSxP has it', async () => {
