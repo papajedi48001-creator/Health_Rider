@@ -15,7 +15,7 @@ function candidateQuery(itemCodeCount: number): string {
   SELECT DISTINCT
     o.vn AS visit_number,
     o.hn AS hn,
-    CONCAT_WS(' ', p.fname, p.lname) AS patient_name,
+    CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name,
     TIMESTAMPDIFF(YEAR, p.birthday, o.vstdate) AS patient_age,
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
     p.informaddr AS delivery_address,

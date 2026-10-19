@@ -54,6 +54,16 @@ test('reads the subdistrict as the full HOSxP address code', async () => {
   expect(execute.mock.calls[0]?.[0]).toContain('CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code');
 });
 
+// HOSxP keeps the title (นาย, นาง, ด.ช.) in pname; it joins the first name as written on Thai labels, and a missing title drops out.
+test('reads the patient name with its title', async () => {
+  const execute = vi.fn().mockResolvedValue([[]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await repository.eligibleFor(new Date('2026-10-13T18:30:00.000Z'));
+
+  expect(execute.mock.calls[0]?.[0]).toContain("CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name");
+});
+
 test('lists HOSxP villages once per normalised code with their visit counts', async () => {
   const execute = vi.fn().mockResolvedValue([[
     { subdistrict_code: '470603', village_code: '6', subdistrict_name: Buffer.from('ต.ปลาโหล', 'utf8'), visits: 40 },

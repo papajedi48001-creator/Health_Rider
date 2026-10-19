@@ -35,6 +35,15 @@ test('text scales with the label so larger labels print larger', () => {
   expect(labelFontPt(parseLabelLayout({ ...layout, labelWidthMm: '45', labelHeightMm: '40' }, 'x'))).toBe(5.5);
 });
 
+test('an admin can set the label text size; left empty it follows the label size', () => {
+  expect(parseLabelLayout(layout, 'x').fontPt).toBeNull();
+  expect(parseLabelLayout({ ...layout, fontPt: '' }, 'x').fontPt).toBeNull();
+  const set = parseLabelLayout({ ...layout, fontPt: '14' }, 'x');
+  expect(set.fontPt).toBe(14);
+  expect(labelFontPt(set)).toBe(14);
+  expect(() => parseLabelLayout({ ...layout, fontPt: '2' }, 'ฉลากเดียว')).toThrow('ฉลากเดียว: ขนาดตัวอักษรต้องเป็นตัวเลข 5-30 pt');
+});
+
 test('loads saved settings, and falls back to the standard layout when none or a broken value is stored', async () => {
   const saved = parseLabelSettings({ single: { ...layout, paper: 'label' }, batch: layout });
   await expect(loadLabelSettings({ findUnique: async () => ({ value: saved }) })).resolves.toEqual({ settings: saved, saved: true });
