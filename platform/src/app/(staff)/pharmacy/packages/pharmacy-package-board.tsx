@@ -107,8 +107,9 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   for (const row of allRows) {
     if (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) zones.set(row.zone.id, row.zone.displayName);
   }
-  // Only the prepare queue has a search box: pharmacy looks up the patient whose medicine is in hand by HN or name words.
-  const terms = view === 'prepare' ? query.trim().split(/\s+/).filter(Boolean) : [];
+  // Every queue has a search box: pharmacy looks up the patient in hand by HN or name words.
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  const emptyText = (none: string) => (terms.length > 0 ? 'ไม่พบคนไข้ที่ตรงกับคำค้นหา' : none);
   const inZone = allRows.filter((row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter));
   const shown = inZone.filter((row) => terms.every((term) => `${row.hn} ${row.patientName}`.includes(term)));
   const ticked = shown.filter((row) => selected.has(row.id));
@@ -162,26 +163,22 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
               ))}
             </select>
           </label>
-          {view === 'prepare' && (
-            <label>
-              ค้นหา HN / ชื่อคนไข้
-              <input type="search" list="package-patients" autoComplete="off" value={query} onChange={(event) => setQuery(event.target.value)} />
-            </label>
-          )}
+          <label>
+            ค้นหา HN / ชื่อคนไข้
+            <input type="search" list="package-patients" autoComplete="off" value={query} onChange={(event) => setQuery(event.target.value)} />
+          </label>
         </div>
       )}
       {/* The browser suggests matching patients while typing; picking one fills "name HN", which narrows to that patient. */}
-      {view === 'prepare' && (
-        <datalist id="package-patients">
-          {inZone.map((row) => <option key={row.id} value={`${row.patientName} ${row.hn}`} />)}
-        </datalist>
-      )}
+      <datalist id="package-patients">
+        {inZone.map((row) => <option key={row.id} value={`${row.patientName} ${row.hn}`} />)}
+      </datalist>
       <p aria-live="polite">{message}</p>
       {labels && <PackageQrSheet labels={labels} onClose={() => setLabels(null)} />}
       {board && view === 'prepare' && (
         <section>
           <h2>ต้องเตรียมพัสดุ ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text={terms.length > 0 ? 'ไม่พบคนไข้ที่ตรงกับคำค้นหา' : 'ไม่มีรายการที่ต้องเตรียมพัสดุ'} /> : (
+          {shown.length === 0 ? <EmptyState text={emptyText('ไม่มีรายการที่ต้องเตรียมพัสดุ')} /> : (
             <>
             {selectBar('เตรียมพัสดุและพิมพ์ QR ที่เลือก')}
             <ul className="pick-list">
@@ -203,7 +200,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
       {board && view === 'awaiting' && (
         <section>
           <h2>รอไรเดอร์รับงาน ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text="ไม่มีพัสดุที่รอไรเดอร์รับงาน" /> : (
+          {shown.length === 0 ? <EmptyState text={emptyText('ไม่มีพัสดุที่รอไรเดอร์รับงาน')} /> : (
             <>
             {selectBar('ออก QR ใหม่และพิมพ์ที่เลือก')}
             <ul className="pick-list">
@@ -224,7 +221,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
       {board && view === 'returns' && (
         <section>
           <h2>รอรับยาคืน ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text="ไม่มียาที่รอรับคืน" /> : (
+          {shown.length === 0 ? <EmptyState text={emptyText('ไม่มียาที่รอรับคืน')} /> : (
             <ul>
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
