@@ -1,0 +1,34 @@
+import { beforeEach, expect, test, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+
+const { findUnique, update, revoke, createAudit, currentSession } = vi.hoisted(() => ({
+  findUnique: vi.fn(), update: vi.fn(), revoke: vi.fn(), createAudit: vi.fn(), currentSession: vi.fn(),
+}));
+const tx = { user: { findUnique, update }, session: { updateMany: revoke }, auditEvent: { create: createAudit } };
+vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
+vi.mock('@/lib/db', () => ({ db: { $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
+
+const edit = async (userId: string, json: Record<string, unknown>) => (await import('@/app/api/admin/users/[userId]/route')).PATCH(
+  new NextRequest(`http://localhost/api/admin/users/${userId}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(json) }),
+  { params: Promise.resolve({ userId }) },
+);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  currentSession.mockResolvedValue({ id: 'admin-1', role: 'admin', displayName: 'admin' });
+  update.mockImplementation(async ({ data }) => ({ id: 'u1', username: 'u', displayName: 'x', phone: null, healthCenter: null, role: 'coordinator', active: true, ...data }));
+});
+
+test('an admin edits a staff account\'s name, phone and รพ.สต.', async () => {
+  findUnique.mockResolvedValue({ displayName: 'เดิม', phone: null, healthCenter: null, role: 'coordinator', active: true, pendingApproval: false });
+  const response = await edit('u1', { displayName: 'ชื่อใหม่', phone: '0812345678', healthCenter: 'รพ.สต.ปลาโหล' });
+  expect(response.status).toBe(200);
+  expect(update.mock.calls[0][0].data).toEqual({ displayName: 'ชื่อใหม่', phone: '0812345678', healthCenter: 'รพ.สต.ปลาโหล' });
+  expect(revoke).not.toHaveBeenCalled();
+});
+
+test('a rider is never given a รพ.สต.', async () => {
+  findUnique.mockResolvedValue({ displayName: 'ไรเดอร์', phone: null, healthCenter: null, role: 'rider', active: true, pendingApproval: false });
+  await edit('u2', { displayName: 'ไรเดอร์', healthCenter: 'รพ.สต.ปลาโหล' });
+  expect(update.mock.calls[0][0].data).toMatchObject({ healthCenter: null });
+});

@@ -9,7 +9,7 @@ import { PersonName } from '@/account/person-name';
 import { Icon } from '@/brand/icons';
 
 type User = {
-  id: string; username: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; role: UserRole; active: boolean; pendingApproval: boolean; createdAt: string;
+  id: string; username: string; displayName: string; avatarUpdatedAt: string | null; phone: string | null; healthCenter: string | null; role: UserRole; active: boolean; pendingApproval: boolean; createdAt: string;
   riderProfile: { riderCode: string; employmentCategory: string } | null;
 };
 
@@ -20,6 +20,7 @@ export function AdminUsers() {
   const [creating, setCreating] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
   const [reviewing, setReviewing] = useState<User | null>(null);
+  const [editing, setEditing] = useState<User | null>(null);
   // Bumped after every reload so suggested rider codes skip codes that were just taken. It only refetches the
   // code: remounting the rider fields would throw away a category the admin picked while the list was loading.
   const [usersVersion, setUsersVersion] = useState(0);
@@ -53,6 +54,16 @@ export function AdminUsers() {
     setMessage(done);
   }
 
+  // Returns the reason when the changes could not be saved, so the pop-up stays open to fix them.
+  async function saveEdit(user: User, changes: Record<string, unknown>): Promise<string | null> {
+    const result = await callApi(`/api/admin/users/${user.id}`, { method: 'PATCH', json: changes });
+    if (!result.ok) return result.message;
+    setEditing(null);
+    await load();
+    setMessage(`บันทึกข้อมูลของ ${String(changes.displayName ?? user.displayName)} แล้ว`);
+    return null;
+  }
+
   async function decide(user: User, json: Record<string, unknown>, done: string) {
     const result = await callApi(`/api/admin/users/${user.id}/approval`, { json });
     if (!result.ok) return setMessage(result.message);
@@ -71,6 +82,7 @@ export function AdminUsers() {
   const accounts = users.filter((user) => !user.pendingApproval);
   const inactiveCount = accounts.filter((user) => !user.active).length;
   const shownAccounts = showInactive ? accounts : accounts.filter((user) => user.active);
+  const healthCenters = [...new Set(users.map((user) => user.healthCenter).filter((name): name is string => Boolean(name)))].sort();
 
   function resetPassword(user: User) {
     const password = window.prompt(`รหัสผ่านใหม่ของ ${user.displayName} (อย่างน้อย ${minimumPasswordLength} ตัวอักษร)`);
@@ -108,21 +120,24 @@ export function AdminUsers() {
         />
       )}
       {creating && <CreateAccount refreshKey={usersVersion} onCreate={create} onClose={() => setCreating(false)} />}
+      {editing && <EditAccount user={editing} onSave={(changes) => saveEdit(editing, changes)} onClose={() => setEditing(null)} />}
+      <datalist id="health-centers">{healthCenters.map((name) => <option key={name} value={name} />)}</datalist>
       <label className="switch-toggle">
         <input type="checkbox" role="switch" checked={showInactive} onChange={(event) => setShowInactive(event.target.checked)} />
         <span className="switch-track" aria-hidden="true" />
         แสดงบัญชีที่ปิดใช้งาน ({inactiveCount})
       </label>
       <table>
-        <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
+        <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>รพ.สต. / ไรเดอร์</th><th>สถานะ</th><th /></tr></thead>
         <tbody>
           {shownAccounts.map((user) => (
             <tr key={user.id}>
               <td><PersonName person={user} /></td>
               <td>{roleLabels[user.role]}</td>
-              <td>{user.riderProfile ? `${user.riderProfile.riderCode} (${user.riderProfile.employmentCategory === 'external' ? 'ภายนอก' : 'ภายใน'})` : '-'}</td>
+              <td>{user.riderProfile ? `${user.riderProfile.riderCode} (${user.riderProfile.employmentCategory === 'external' ? 'ภายนอก' : 'ภายใน'})` : user.healthCenter ?? '-'}</td>
               <td>{user.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
               <td>
+                <button type="button" onClick={() => setEditing(user)}>แก้ไข</button>
                 <button type="button" onClick={() => void update(user, { active: !user.active }, user.active ? `ปิดบัญชี ${user.displayName} แล้ว` : `เปิดบัญชี ${user.displayName} แล้ว`)}>
                   {user.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                 </button>
@@ -173,16 +188,68 @@ function CreateAccount({ refreshKey, onCreate, onClose }: {
         <form onSubmit={(event) => void submit(event)} aria-label="ข้อมูลบัญชีใหม่">
           <label>ชื่อผู้ใช้ <input name="username" required pattern="[a-z0-9._\-]{3,100}" autoFocus /></label>
           <label>ชื่อที่แสดง <input name="displayName" required /></label>
+          <label>เบอร์โทร <input name="phone" type="tel" inputMode="tel" pattern="0[0-9 \-]{8,11}" /></label>
           <label>
             บทบาท
             <select name="role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
               {userRoles.map((item) => <option key={item} value={item}>{roleLabels[item]}</option>)}
             </select>
           </label>
-          {role === 'rider' && <RiderFields refreshKey={refreshKey} />}
+          {role === 'rider' ? <RiderFields refreshKey={refreshKey} /> : <HealthCenterField />}
           <label>รหัสผ่านเริ่มต้น <input name="password" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>
           <div className="dialog-actions">
             <button type="submit" disabled={busy}>{busy ? 'กำลังสร้าง' : 'สร้างบัญชี'}</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>ยกเลิก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Staff only: riders are not attached to a รพ.สต. Earlier names are offered as the admin types.
+function HealthCenterField({ value }: { value?: string | null }) {
+  return <label>รพ.สต. <input name="healthCenter" list="health-centers" defaultValue={value ?? ''} placeholder="เว้นว่างได้" /></label>;
+}
+
+// A pop-up for changing an account's name, phone and รพ.สต.; the username, role and rider code stay as they are.
+function EditAccount({ user, onSave, onClose }: {
+  user: User; onSave: (changes: Record<string, unknown>) => Promise<string | null>; onClose: () => void;
+}) {
+  const [problem, setProblem] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setProblem((await onSave(Object.fromEntries(new FormData(event.currentTarget)))) ?? '');
+    setBusy(false);
+  }
+
+  return (
+    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={`แก้ไขข้อมูล ${user.displayName}`}>
+      <div className="photo-viewer-body detail-dialog">
+        <div className="photo-viewer-head">
+          <strong>แก้ไขข้อมูลบัญชี</strong>
+          <button type="button" className="icon-button" aria-label="ปิด" onClick={onClose}><Icon name="close" /></button>
+        </div>
+        {problem && <p className="notice notice-danger" role="alert">{problem}</p>}
+        <dl className="detail-list">
+          <dt>ชื่อผู้ใช้</dt><dd><code>{user.username}</code></dd>
+          <dt>บทบาท</dt><dd>{roleLabels[user.role]}{user.riderProfile && ` · ${user.riderProfile.riderCode}`}</dd>
+        </dl>
+        <form onSubmit={(event) => void submit(event)} aria-label={`ข้อมูลของ ${user.displayName}`}>
+          <label>ชื่อที่แสดง <input name="displayName" required defaultValue={user.displayName} autoFocus /></label>
+          <label>เบอร์โทร <input name="phone" type="tel" inputMode="tel" pattern="0[0-9 \-]{8,11}" defaultValue={user.phone ?? ''} /></label>
+          {user.role !== 'rider' && <HealthCenterField value={user.healthCenter} />}
+          <div className="dialog-actions">
+            <button type="submit" disabled={busy}>{busy ? 'กำลังบันทึก' : 'บันทึก'}</button>
             <button type="button" className="btn btn-secondary" onClick={onClose}>ยกเลิก</button>
           </div>
         </form>

@@ -37,6 +37,8 @@ model User {
   passwordHash    String            @db.VarChar(255)
   displayName     String            @db.VarChar(255)
   phone           String?           @db.VarChar(20)
+  // The รพ.สต. (health-promoting hospital) the user works at, entered by an admin.
+  healthCenter    String?           @db.VarChar(255)
   role            UserRole
   active          Boolean           @default(true)
   // Set for a self-registered account until an admin approves or rejects it; such an account stays inactive.

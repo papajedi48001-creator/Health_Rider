@@ -13,7 +13,7 @@ import { handleRoute } from '@/lib/route';
 export const dynamic = 'force-dynamic';
 
 const userSelect = {
-  id: true, username: true, displayName: true, avatarUpdatedAt: true, phone: true, role: true, active: true, pendingApproval: true, createdAt: true,
+  id: true, username: true, displayName: true, avatarUpdatedAt: true, phone: true, healthCenter: true, role: true, active: true, pendingApproval: true, createdAt: true,
   riderProfile: { select: { riderCode: true, employmentCategory: true } },
 } as const;
 
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       const created = await tx.user.create({
         data: {
           id: newPublicId(), username: input.username, displayName: input.displayName, role: input.role, passwordHash,
+          phone: input.phone, healthCenter: input.healthCenter,
           ...(rider ? { riderProfile: { create: { id: newPublicId(), ...rider } } } : {}),
         },
         select: userSelect,
