@@ -739,3 +739,10 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 /* A section title with its main action on the right, e.g. the accounts list and its create button. */
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
 .section-head h2 { margin: 0; }
+
+/* The admin's menu view switcher, in the sidebar and above the rider app. */
+.view-switcher { display: grid; gap: 4px; margin: 0 12px 8px; padding: 0 10px; font-size: 0.8rem; color: inherit; }
+.staff-sidebar .view-switcher { color: rgba(255, 255, 255, 0.7); }
+.view-switcher select { min-height: 36px; margin: 0; }
+@media (max-width: 959px) { .staff-sidebar .view-switcher { grid-column: 1 / -1; margin: 0 12px 8px; padding: 0; } }
+.rider-view-switcher { padding: 8px 16px 0; }

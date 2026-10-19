@@ -1,17 +1,22 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
 import { UserAvatar } from '@/account/user-avatar';
+import { isAdminView, viewCookieName } from '@/auth/view-as';
+import { ViewSwitcher } from '@/auth/view-switcher';
 import { RiderLogout } from '@/rider/rider-logout';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
 import { LogoMark } from '@/brand/logo';
 import { Mascot } from '@/brand/mascot';
 
-// The rider app frame: a slim top bar, a single mobile column and bottom tabs.
+// The rider app frame: a slim top bar, a single mobile column and bottom tabs. An admin may open it to see the
+// rider's screens, with the view switcher to get back; the rider-only actions still answer them with no permission.
 export async function RiderShell({ children }: { children: ReactNode }) {
   const session = await getSessionFromCookies();
   if (!session) redirect(await loginRedirectPath());
+  const view = (await cookies()).get(viewCookieName)?.value;
 
   return (
     <div className="rider-app">
@@ -23,7 +28,8 @@ export async function RiderShell({ children }: { children: ReactNode }) {
         </Link>
         <RiderLogout />
       </header>
-      {session.role === 'rider' ? (
+      {session.role === 'admin' && <div className="rider-view-switcher"><ViewSwitcher view={isAdminView(view) ? view : 'admin'} /></div>}
+      {session.role === 'rider' || session.role === 'admin' ? (
         <>
           {children}
           <RiderTabBar />
