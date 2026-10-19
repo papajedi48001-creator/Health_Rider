@@ -64,6 +64,18 @@ test('reads the patient name with its title', async () => {
   expect(execute.mock.calls[0]?.[0]).toContain("CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name");
 });
 
+test('looks up current names with their title by HN', async () => {
+  const execute = vi.fn().mockResolvedValue([[{ hn: '450014298', patient_name: Buffer.from('นางสมร ศาลารักษ์', 'utf8') }]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await expect(repository.patientNames(['450014298', '450003368'])).resolves.toEqual(new Map([['450014298', 'นางสมร ศาลารักษ์']]));
+  expect(execute.mock.calls[0]?.[0]).toContain("CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name");
+  expect(execute.mock.calls[0]?.[0]).toContain('WHERE p.hn IN (?, ?)');
+  expect(execute.mock.calls[0]?.[1]).toEqual(['450014298', '450003368']);
+  await expect(repository.patientNames([])).resolves.toEqual(new Map());
+  expect(execute).toHaveBeenCalledTimes(1);
+});
+
 test('lists HOSxP villages once per normalised code with their visit counts', async () => {
   const execute = vi.fn().mockResolvedValue([[
     { subdistrict_code: '470603', village_code: '6', subdistrict_name: Buffer.from('ต.ปลาโหล', 'utf8'), visits: 40 },

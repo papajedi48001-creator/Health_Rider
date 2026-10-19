@@ -9,13 +9,16 @@ type ReadOnlyConnection = {
   execute(sql: string, values?: unknown): Promise<[unknown, ...unknown[]]>;
 };
 
+// The title (pname) joins the first name as Thai labels write it; a missing title drops out.
+const patientNameSql = "CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname)";
+
 function candidateQuery(itemCodeCount: number): string {
   const itemCodePlaceholders = Array.from({ length: itemCodeCount }, () => '?').join(', ');
   return `
   SELECT DISTINCT
     o.vn AS visit_number,
     o.hn AS hn,
-    CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name,
+    ${patientNameSql} AS patient_name,
     TIMESTAMPDIFF(YEAR, p.birthday, o.vstdate) AS patient_age,
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
     p.informaddr AS delivery_address,
@@ -85,6 +88,13 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
 
     const [rows] = await this.connection.execute(visitDayQuery(this.eligibleItemCodes.length), [...this.eligibleItemCodes, from, to]);
     return (rows as HosVisitDayRow[]).map((row) => ({ date: String(row.visit_date), visitNumber: String(row.visit_number) }));
+  }
+
+  async patientNames(hns: string[]): Promise<Map<string, string>> {
+    if (hns.length === 0) return new Map();
+    const placeholders = hns.map(() => '?').join(', ');
+    const [rows] = await this.connection.execute(`SELECT p.hn AS hn, ${patientNameSql} AS patient_name FROM patient AS p WHERE p.hn IN (${placeholders})`, hns);
+    return new Map((rows as Array<{ hn: string | number; patient_name: string | Buffer | null }>).map((row) => [String(row.hn), decodeLegacyText(row.patient_name)]));
   }
 
   // Villages are normalised the same way as candidates, so "6" and "06" fold into one zone.

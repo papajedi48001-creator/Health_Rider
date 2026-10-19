@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { defaultLabelSettings, labelFontPt, loadLabelSettings, pageLayout, parseLabelLayout, parseLabelSettings } from '@/domain/settings/label-layout';
+import { defaultLabelSettings, labelFontPt, labelSizes, loadLabelSettings, pageLayout, parseLabelLayout, parseLabelSettings } from '@/domain/settings/label-layout';
 
 const layout = { labelWidthMm: '90', labelHeightMm: '65', paper: 'A4', orientation: 'portrait', marginMm: '10' };
 
@@ -42,6 +42,17 @@ test('an admin can set the label text size; left empty it follows the label size
   expect(set.fontPt).toBe(14);
   expect(labelFontPt(set)).toBe(14);
   expect(() => parseLabelLayout({ ...layout, fontPt: '2' }, 'ฉลากเดียว')).toThrow('ฉลากเดียว: ขนาดตัวอักษรต้องเป็นตัวเลข 5-30 pt');
+});
+
+test('name, address and QR sizes follow the text size unless the admin sets each one', () => {
+  expect(labelSizes(defaultLabelSettings.single)).toEqual({ basePt: 11, namePt: 14.3, addressPt: 11.6, qrMm: 29.1 });
+  expect(labelSizes(parseLabelLayout({ ...layout, fontPt: '10' }, 'x'))).toEqual({ basePt: 10, namePt: 13, addressPt: 10.5, qrMm: 26.5 });
+  const set = parseLabelLayout({ ...layout, nameFontPt: '20', addressFontPt: '9', qrMm: '35' }, 'x');
+  expect(labelSizes(set)).toEqual({ basePt: 11, namePt: 20, addressPt: 9, qrMm: 35 });
+  expect(parseLabelLayout({ ...layout, nameFontPt: '', qrMm: '' }, 'x')).toMatchObject({ nameFontPt: null, addressFontPt: null, qrMm: null });
+  expect(() => parseLabelLayout({ ...layout, nameFontPt: '50' }, 'ฉลากรวม')).toThrow('ฉลากรวม: ขนาดชื่อต้องเป็นตัวเลข 5-40 pt');
+  expect(() => parseLabelLayout({ ...layout, addressFontPt: '1' }, 'x')).toThrow('ขนาดที่อยู่ต้องเป็นตัวเลข 5-30 pt');
+  expect(() => parseLabelLayout({ ...layout, qrMm: '5' }, 'x')).toThrow('ขนาด QR ต้องเป็นตัวเลข 10-100 มม.');
 });
 
 test('loads saved settings, and falls back to the standard layout when none or a broken value is stored', async () => {
