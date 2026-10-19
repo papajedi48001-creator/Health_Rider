@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { requireAttemptInScope } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { audit } from '@/domain/audit/write-audit-event';
 import { amendInTransit } from '@/domain/delivery/amend-in-transit';
@@ -11,8 +12,9 @@ type AmendmentBody = { deliveryAddress?: unknown; telephone?: unknown; reason?: 
 
 export async function POST(request: NextRequest, context: { params: Promise<{ requestId: string }> }) {
   return handleRoute(async () => {
-    const coordinator = requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const coordinator = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const { requestId } = await context.params;
+    await requireAttemptInScope(db, coordinator, { deliveryRequestId: requestId });
     const body = await readJsonBody(request) as AmendmentBody | undefined;
     if (!body || typeof body.reason !== 'string' || !Number.isInteger(body.expectedVersion)
       || (body.deliveryAddress !== undefined && typeof body.deliveryAddress !== 'string')

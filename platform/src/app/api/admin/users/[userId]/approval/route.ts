@@ -7,6 +7,7 @@ import { suggestRiderCode } from '@/domain/admin/rider-code';
 import { audit } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
 import { DomainError } from '@/domain/errors';
+import { knownHealthCenter } from '@/domain/admin/health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ us
     const admin = requireRole(await getSessionFromRequest(request), 'admin');
     const { userId } = await context.params;
     const decision = parseApproval(await readJsonBody(request), userRoles);
+    if (decision.decision === 'approve') await knownHealthCenter(db, decision.healthCenter);
 
     const updated = await db.$transaction(async (tx) => {
       const before = await tx.user.findUnique({ where: { id: userId }, select: { role: true, pendingApproval: true } });

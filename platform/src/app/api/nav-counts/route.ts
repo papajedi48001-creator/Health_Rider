@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { scoped } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { userRoles, type UserRole } from '@/auth/roles';
 import { refreshJobsFromHos } from '@/domain/delivery/refresh-from-hos';
@@ -59,11 +60,11 @@ export async function GET(request: NextRequest) {
       counts['/pharmacy/awaiting-rider'] = queues.awaitingRider;
       counts['/pharmacy/returns'] = queues.returnRequired;
     }
-    if (can(session.role, 'coordinator', 'admin')) {
+    if (can(session.role, 'pharmacy', 'coordinator', 'admin')) {
       const [inTransit, returns, conflicts] = await Promise.all([
-        db.deliveryAttempt.count({ where: { status: { in: ['claimed', 'in_transit'] } } }),
-        db.deliveryAttempt.count({ where: { status: 'return_required' } }),
-        db.syncConflict.count({ where: { status: 'pending' } }),
+        db.deliveryAttempt.count({ where: scoped(session, { status: { in: ['claimed', 'in_transit'] } }) }),
+        db.deliveryAttempt.count({ where: scoped(session, { status: 'return_required' }) }),
+        db.syncConflict.count({ where: { status: 'pending', deliveryAttempt: scoped(session, {}) } }),
       ]);
       counts['/operations'] = inTransit;
       counts['/operations/exceptions'] = returns + conflicts;

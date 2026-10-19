@@ -1,14 +1,15 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { currentSession, countUsers, findUser, createUser, updateUsers, findUserOrThrow, createRider, findRider, findRiders, createAudit } = vi.hoisted(() => ({
+const { currentSession, countCenters, countUsers, findUser, createUser, updateUsers, findUserOrThrow, createRider, findRider, findRiders, createAudit } = vi.hoisted(() => ({
   currentSession: vi.fn(), countUsers: vi.fn(), findUser: vi.fn(), createUser: vi.fn(), updateUsers: vi.fn(), findUserOrThrow: vi.fn(), createRider: vi.fn(),
-  findRider: vi.fn(), findRiders: vi.fn(), createAudit: vi.fn(),
+  findRider: vi.fn(), findRiders: vi.fn(), createAudit: vi.fn(), countCenters: vi.fn().mockResolvedValue(1),
 }));
 const tx = {
   user: { count: countUsers, findUnique: findUser, create: createUser, updateMany: updateUsers, findUniqueOrThrow: findUserOrThrow },
   riderProfile: { create: createRider, findUnique: findRider, findMany: findRiders },
   auditEvent: { create: createAudit },
+  healthCenter: { count: countCenters },
 };
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({ db: { ...tx, $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
@@ -92,4 +93,15 @@ test('a decision already made by another admin is not applied twice', async () =
 
   expect((await POST(post('/x', { decision: 'reject' }), params)).status).toBe(409);
   expect(createAudit).not.toHaveBeenCalled();
+});
+
+test('refuses a รพ.สต. that is not on the settings list', async () => {
+  const { POST } = await import('@/app/api/auth/register/route');
+  countCenters.mockResolvedValueOnce(0);
+
+  const response = await POST(post('/api/auth/register', { ...application, username: 'unknown.center' }));
+
+  expect(response.status).toBe(422);
+  await expect(response.json()).resolves.toEqual({ message: 'รพ.สต. ไม่อยู่ในรายชื่อ' });
+  expect(countCenters).toHaveBeenCalledWith({ where: { name: 'รพ.สต.จำปาทอง' } });
 });

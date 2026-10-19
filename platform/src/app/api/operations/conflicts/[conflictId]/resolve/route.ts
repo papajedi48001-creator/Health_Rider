@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { requireAttemptInScope } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { audit } from '@/domain/audit/write-audit-event';
 import { conflictOutcomes, resolveSyncConflict, type ConflictOutcome } from '@/domain/delivery/resolve-sync-conflict';
@@ -10,8 +11,9 @@ import { handleRoute, invalidInput } from '@/lib/route';
 
 export async function POST(request: NextRequest, context: { params: Promise<{ conflictId: string }> }) {
   return handleRoute(async () => {
-    const coordinator = requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const coordinator = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const { conflictId } = await context.params;
+    await requireAttemptInScope(db, coordinator, { syncConflicts: { some: { id: conflictId } } }, 'ไม่พบรายการนี้');
     const body = await readJsonBody(request) as { outcome?: unknown; resolution?: unknown } | undefined;
     if (!body || typeof body.resolution !== 'string' || !conflictOutcomes.includes(body.outcome as ConflictOutcome)) {
       return invalidInput('ต้องเลือกผลการตรวจสอบและระบุเหตุผล');

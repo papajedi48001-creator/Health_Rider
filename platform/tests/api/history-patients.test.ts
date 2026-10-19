@@ -10,7 +10,7 @@ const suggest = async (q: string) => (await import('@/app/api/reports/history/pa
 
 beforeEach(() => {
   vi.clearAllMocks();
-  as('coordinator');
+  as('pharmacy');
   findMany.mockResolvedValue([
     { hn: '470032520', patientName: 'ไพวรรณ ผิวบุญเรือง' },
     { hn: '470032520', patientName: 'ไพวรรณ เก่า' },
@@ -28,7 +28,7 @@ test('suggests each delivered-to patient once by HN or name', async () => {
 test('blank text reads nothing, and other roles are refused', async () => {
   expect(await (await suggest('  ')).json()).toEqual({ patients: [] });
   expect(findMany).not.toHaveBeenCalled();
-  for (const role of ['pharmacy', 'rider', 'auditor']) {
+  for (const role of ['rider', 'auditor']) {
     as(role);
     expect((await suggest('47')).status).toBe(403);
   }

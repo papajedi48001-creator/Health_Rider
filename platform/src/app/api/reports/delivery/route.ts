@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { scoped } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { csvResponse, dateRangeFilter, parseReportRange, summarizeDeliveries, toCsv } from '@/domain/reports/reports';
 import { db } from '@/lib/db';
@@ -11,13 +12,13 @@ export const dynamic = 'force-dynamic';
 // The coordinator's report: results per rider and zone, delivery time after pickup, and why deliveries failed.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const range = parseReportRange(request.nextUrl.searchParams);
     if ('error' in range) return invalidInput(range.error);
     const within = dateRangeFilter(range);
 
     const attempts = await db.deliveryAttempt.findMany({
-      where: { OR: [{ claimedAt: within }, { deliveredAt: within }, { failedAt: within }] },
+      where: scoped(viewer, { OR: [{ claimedAt: within }, { deliveredAt: within }, { failedAt: within }] }),
       select: {
         claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true,
         rider: { select: { id: true, displayName: true, avatarUpdatedAt: true, riderProfile: { select: { riderCode: true, employmentCategory: true } } } },

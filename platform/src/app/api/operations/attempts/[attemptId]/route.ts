@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { requireAttemptInScope } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { db } from '@/lib/db';
 import { handleRoute } from '@/lib/route';
@@ -11,6 +12,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ att
   return handleRoute(async () => {
     const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const { attemptId } = await context.params;
+    await requireAttemptInScope(db, viewer, { id: attemptId }, 'ไม่พบงานส่งนี้');
     const attempt = await db.deliveryAttempt.findUnique({
       where: { id: attemptId },
       select: {

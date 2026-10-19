@@ -8,6 +8,8 @@ export type SessionUser = {
   avatarVersion?: number;
   // The password was set by an admin and must be replaced before anything else.
   mustChangePassword?: boolean;
+  // The user's รพ.สต.; a coordinator sees only the work of riders from the same one.
+  healthCenter?: string | null;
 };
 
 export class UnauthorizedError extends Error {

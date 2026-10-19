@@ -9,8 +9,10 @@ export const dynamic = 'force-dynamic';
 // Riders to suggest in the history search, including deactivated ones whose past jobs are still searchable.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const profiles = await db.riderProfile.findMany({
+      // A coordinator is offered only the riders of their own รพ.สต.
+      ...(viewer.role === 'coordinator' ? { where: { user: { healthCenter: viewer.healthCenter ?? { in: [] } } } } : {}),
       orderBy: { riderCode: 'asc' },
       select: { riderCode: true, user: { select: { id: true, displayName: true } } },
     });
