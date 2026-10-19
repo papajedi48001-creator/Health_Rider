@@ -5,6 +5,9 @@ import type { EmploymentCategory, UserRole } from '@prisma/client';
 import { ulid } from 'ulidx';
 import { createPrismaClient } from '../src/lib/prisma-client.mjs';
 
+// UAT accounts belong to the hospital itself so they never hit the missing-รพ.สต. prompt.
+const uatHealthCenter = 'รพ.วาริชภูมิ';
+
 type SeedAccount = { username: string; displayName: string; role: UserRole; rider?: { riderCode: string; employmentCategory: EmploymentCategory } };
 
 const uatAccounts: SeedAccount[] = [
@@ -28,8 +31,8 @@ async function main() {
   for (const account of uatAccounts) {
     const user = await prisma.user.upsert({
       where: { username: account.username },
-      update: { displayName: account.displayName, role: account.role, passwordHash, active: true },
-      create: { id: ulid(), username: account.username, displayName: account.displayName, role: account.role, passwordHash },
+      update: { displayName: account.displayName, role: account.role, passwordHash, active: true, healthCenter: uatHealthCenter, mustChangePassword: false },
+      create: { id: ulid(), username: account.username, displayName: account.displayName, role: account.role, passwordHash, healthCenter: uatHealthCenter },
     });
     if (account.rider) {
       await prisma.riderProfile.upsert({
