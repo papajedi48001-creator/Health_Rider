@@ -3,6 +3,7 @@ import { HosUnavailableError, loadHosConfig, type HosConnection } from '@/hos/ho
 import { db } from '@/lib/db';
 import { bangkokDateString } from '@/lib/time';
 import type { HosCandidateRepository } from '@/hos/candidate-repository';
+import { villageKey, withVillageName } from '@/domain/delivery/village-address';
 import type { HosCandidate, HosCandidateRow, HosVillage, HosVillageRow, HosVisitDay, HosVisitDayRow } from '@/hos/types';
 
 type ReadOnlyConnection = {
@@ -60,6 +61,14 @@ function visitDayQuery(itemCodeCount: number): string {
 `;
 }
 
+// Village names change rarely; read them at most every ten minutes.
+const villageCacheMs = 10 * 60_000;
+let villageCache: { at: number; names: Map<string, string> } | null = null;
+
+export function clearVillageNameCache() {
+  villageCache = null;
+}
+
 // One row per visit even when several eligible items were dispensed in it.
 export class MysqlHosCandidateRepository implements HosCandidateRepository {
   constructor(
@@ -77,7 +86,27 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
       bangkokDateString(on),
     ]);
 
-    return (rows as HosCandidateRow[]).map(mapCandidate);
+    const villages = await this.villageNames();
+    return (rows as HosCandidateRow[]).map(mapCandidate).map((candidate) => ({
+      ...candidate,
+      deliveryAddress: withVillageName(candidate.deliveryAddress, villages.get(villageKey(candidate.subdistrictCode, candidate.villageCode))),
+    }));
+  }
+
+  // hosp_moo_control is not in every HOSxP install; without it addresses simply go without village names.
+  async villageNames(): Promise<Map<string, string>> {
+    if (villageCache && Date.now() - villageCache.at < villageCacheMs) return villageCache.names;
+    let names = new Map<string, string>();
+    try {
+      const [rows] = await this.connection.execute('SELECT CONCAT(chwpart, amppart, tmbpart) AS subdistrict_code, moopart AS village_code, banname AS village_name FROM hosp_moo_control', []);
+      names = new Map((rows as Array<{ subdistrict_code: string | number | null; village_code: string | number | null; village_name: string | Buffer | null }>)
+        .map((row) => [villageKey(String(row.subdistrict_code ?? '').trim(), normaliseVillageCode(row.village_code)), decodeLegacyText(row.village_name)] as const)
+        .filter(([, name]) => name !== ''));
+    } catch (error) {
+      console.warn('HOSxP village names unavailable:', error instanceof Error ? error.message : error);
+    }
+    villageCache = { at: Date.now(), names };
+    return names;
   }
 
   // Eligible visits between two Thai dates, inclusive.

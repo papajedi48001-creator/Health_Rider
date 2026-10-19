@@ -1,5 +1,7 @@
-import { expect, test, vi } from 'vitest';
-import { MysqlHosCandidateRepository } from '@/hos/mysql-candidate-repository';
+import { beforeEach, expect, test, vi } from 'vitest';
+
+beforeEach(() => clearVillageNameCache());
+import { clearVillageNameCache, MysqlHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 
 test('maps a legacy HOSxP row into a read-only candidate DTO', async () => {
   const repository = new MysqlHosCandidateRepository({
@@ -98,4 +100,29 @@ test('lists eligible visits between two Thai dates with the date read as text', 
 
   await expect(repository.visitsBetween('2026-10-01', '2026-10-31')).resolves.toEqual([{ date: '2026-10-16', visitNumber: '661016001' }]);
   expect(execute).toHaveBeenCalledWith(expect.stringContaining("DATE_FORMAT(o.vstdate, '%Y-%m-%d') AS visit_date"), ['100001', '2026-10-01', '2026-10-31']);
+});
+
+const visitRow = { visit_number: 'VN-1', hn: '450014298', patient_name: 'นางสมร ศาลารักษ์', patient_age: 70, telephone: null,
+  delivery_address: '154 หมู่ 2 ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', subdistrict_code: '470602', subdistrict_name: 'ต.ปลาโหล', village_code: '2' };
+
+test('adds the village name from hosp_moo_control to the address', async () => {
+  const execute = vi.fn(async (sql: string): Promise<[unknown]> => (sql.includes('hosp_moo_control')
+    ? [[{ subdistrict_code: '470602', village_code: '02', village_name: Buffer.from('จิ๋ว', 'utf8') }, { subdistrict_code: '470602', village_code: '03', village_name: 'ดอนยานาง' }]]
+    : [[visitRow]]));
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  const [candidate] = await repository.eligibleFor(new Date('2026-10-19T03:00:00Z'));
+  expect(candidate?.deliveryAddress).toBe('154 หมู่ 2 บ้านจิ๋ว ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร');
+  await expect(repository.villageNames()).resolves.toEqual(new Map([['470602/02', 'จิ๋ว'], ['470602/03', 'ดอนยานาง']]));
+});
+
+test('without hosp_moo_control the address is shown as HOSxP has it', async () => {
+  const execute = vi.fn(async (sql: string): Promise<[unknown]> => {
+    if (sql.includes('hosp_moo_control')) throw new Error("Table 'hos.hosp_moo_control' doesn't exist");
+    return [[visitRow]];
+  });
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  const [candidate] = await repository.eligibleFor(new Date('2026-10-19T03:00:00Z'));
+  expect(candidate?.deliveryAddress).toBe('154 หมู่ 2 ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร');
 });
