@@ -94,19 +94,20 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
   }
 
   // hosp_moo_control is not in every HOSxP install; without it addresses simply go without village names.
+  // Only a successful read is cached, so a failed one is tried again on the next page load.
   async villageNames(): Promise<Map<string, string>> {
     if (villageCache && Date.now() - villageCache.at < villageCacheMs) return villageCache.names;
-    let names = new Map<string, string>();
     try {
       const [rows] = await this.connection.execute('SELECT CONCAT(chwpart, amppart, tmbpart) AS subdistrict_code, moopart AS village_code, banname AS village_name FROM hosp_moo_control', []);
-      names = new Map((rows as Array<{ subdistrict_code: string | number | null; village_code: string | number | null; village_name: string | Buffer | null }>)
+      const names = new Map((rows as Array<{ subdistrict_code: string | number | null; village_code: string | number | null; village_name: string | Buffer | null }>)
         .map((row) => [villageKey(String(row.subdistrict_code ?? '').trim(), normaliseVillageCode(row.village_code)), decodeLegacyText(row.village_name)] as const)
         .filter(([, name]) => name !== ''));
+      villageCache = { at: Date.now(), names };
+      return names;
     } catch (error) {
       console.warn('HOSxP village names unavailable:', error instanceof Error ? error.message : error);
+      return new Map();
     }
-    villageCache = { at: Date.now(), names };
-    return names;
   }
 
   // Eligible visits between two Thai dates, inclusive.
@@ -222,7 +223,7 @@ export type HosConnectionTest = {
   items: Array<{ code: string; name: string | null }>;
 };
 
-const requiredTables = ['opitemrece', 'patient', 'thaiaddress'];
+const requiredTables = ['opitemrece', 'patient', 'thaiaddress', 'hosp_moo_control'];
 
 // Checks a HOSxP connection the way the app uses it: can log in, read the tables it needs, and find the item codes.
 export async function testHosConnection(connection: HosConnection, eligibleItemCodes: readonly string[]): Promise<HosConnectionTest> {
