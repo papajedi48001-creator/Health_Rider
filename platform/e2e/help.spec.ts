@@ -6,7 +6,8 @@ test('pharmacy opens the manual from the menu with its own section first', async
   await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'คู่มือการใช้งาน' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'คู่มือการใช้งาน' })).toBeVisible();
   const toc = page.getByRole('navigation', { name: 'สารบัญคู่มือ' }).getByRole('link');
-  await expect(toc.nth(2)).toHaveText('สำหรับเภสัชกรรม');
+  await expect(toc.nth(2)).toContainText('สำหรับเภสัชกรรม');
+  await expect(page.getByRole('link', { name: 'ดาวน์โหลดคู่มือ PDF' })).toHaveAttribute('href', /health-rider-user-manual\.pdf$/);
 });
 
 test('a rider reaches the manual from their account page', async ({ page }) => {
