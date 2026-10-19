@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole } from '@/auth/require-role';
 import { userRoles, type UserRole } from '@/auth/roles';
-import { refreshPatientNames } from '@/domain/delivery/refresh-patient-names';
+import { refreshJobsFromHos } from '@/domain/delivery/refresh-from-hos';
 import { getHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 import { db } from '@/lib/db';
 import { handleRoute } from '@/lib/route';
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     const session = requireRole(await getSessionFromRequest(request), ...userRoles);
     const counts: Record<string, number> = {};
-    // Every signed-in page asks for counts, so this is where jobs saved before names carried a title catch up after an update.
-    void refreshPatientNames(async (hns) => (await getHosCandidateRepository()).patientNames(hns), db);
+    // Every signed-in page asks for counts, so this is where jobs saved without name titles or village names catch up after an update.
+    void refreshJobsFromHos(getHosCandidateRepository, db);
 
     if (can(session.role, 'pharmacy', 'admin')) {
       const [candidates, queues] = await Promise.all([pendingCandidates(), packageQueues()]);
