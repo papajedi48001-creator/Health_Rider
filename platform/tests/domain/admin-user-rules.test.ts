@@ -21,3 +21,12 @@ test('normalises HOSxP zone codes', () => {
   expect(parseZone({ subdistrictCode: '470907', villageCode: '3', displayName: 'หมู่ 3' })).toEqual({ subdistrictCode: '470907', subdistrictName: null, villageCode: '03', displayName: 'หมู่ 3' });
   expect(() => parseZone({ subdistrictCode: '46', villageCode: '3', displayName: 'x' })).toThrow('6 หลัก');
 });
+
+test('staff accounts take a phone and รพ.สต.; riders never have a รพ.สต.', () => {
+  expect(parseNewUser({ username: 'nurse.a', displayName: 'พยาบาล', role: 'coordinator', password: 'long-enough-password', phone: '081-234-5678', healthCenter: ' รพ.สต.ปลาโหล ' }))
+    .toMatchObject({ phone: '0812345678', healthCenter: 'รพ.สต.ปลาโหล' });
+  expect(parseNewUser({ username: 'rider.b', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password', employmentCategory: 'internal', healthCenter: 'รพ.สต.ปลาโหล' }))
+    .toMatchObject({ healthCenter: null });
+  expect(parseUserChanges({ displayName: 'ชื่อใหม่', phone: '', healthCenter: '' }, 'admin-1', 'user-1')).toEqual({ displayName: 'ชื่อใหม่', phone: null, healthCenter: null });
+  expect(() => parseUserChanges({ phone: '12345' }, 'admin-1', 'user-1')).toThrow('เบอร์โทร');
+});
