@@ -66,9 +66,21 @@ test('finds a patient to prepare by HN or name, and select-all ticks only the ma
   expect(screen.getByText('ไม่พบคนไข้ที่ตรงกับคำค้นหา')).toBeInTheDocument();
 });
 
-test('the search box only appears on the packages-to-prepare queue', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ toPrepare: [], awaitingRider: [], returnRequired: [] }), { status: 200 })));
+test('the waiting-for-rider and take-back queues can be searched by HN or name too', async () => {
+  const plaLo6 = zone('z-6', 'ปลาโหล ม.6', '470603', 'ต.ปลาโหล');
+  const prepared = (id: string, patientName: string) => ({ ...row(id, patientName, plaLo6), latestAttempt: { id: `a-${id}`, status: 'prepared', failureReason: null, failedAt: null } });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    toPrepare: [], awaitingRider: [prepared('450014298', 'นางสมร ศาลารักษ์'), prepared('450003368', 'นายสรรเพชร ศิรินา')], returnRequired: [],
+  }), { status: 200 })));
   render(<PharmacyPackageBoard view="awaiting" />);
-  expect(await screen.findByText('รอไรเดอร์รับงาน (0)')).toBeInTheDocument();
-  expect(screen.queryByLabelText('ค้นหา HN / ชื่อคนไข้')).not.toBeInTheDocument();
+
+  expect(await screen.findByText('รอไรเดอร์รับงาน (2)')).toBeInTheDocument();
+  const search = screen.getByLabelText('ค้นหา HN / ชื่อคนไข้');
+  expect([...document.querySelectorAll('#package-patients option')].map((option) => option.getAttribute('value')))
+    .toEqual(['นางสมร ศาลารักษ์ HN-450014298', 'นายสรรเพชร ศิรินา HN-450003368']);
+  fireEvent.change(search, { target: { value: 'สรรเพชร' } });
+  expect(screen.getByText('รอไรเดอร์รับงาน (1)')).toBeInTheDocument();
+  expect(screen.queryByText('นางสมร ศาลารักษ์')).not.toBeInTheDocument();
+  fireEvent.change(search, { target: { value: 'ไม่มีคนนี้' } });
+  expect(screen.getByText('ไม่พบคนไข้ที่ตรงกับคำค้นหา')).toBeInTheDocument();
 });
