@@ -4,6 +4,7 @@ import { requireRole } from '@/auth/require-role';
 import { parseZone } from '@/domain/admin/user-rules';
 import { audit } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
+import { villageKey, withVillageName } from '@/domain/delivery/village-address';
 import { getHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
@@ -18,14 +19,17 @@ export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'admin');
     const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
-    const villages = await (await getHosCandidateRepository()).villagesSince(since);
+    const hos = await getHosCandidateRepository();
+    const villages = await hos.villagesSince(since);
+    const villageNames = await hos.villageNames();
     const zones = await db.deliveryZone.findMany({ select: { subdistrictCode: true, villageCode: true } });
     const existing = new Set(zones.map((zone) => `${zone.subdistrictCode}/${zone.villageCode}`));
     return NextResponse.json({
       lookbackDays: LOOKBACK_DAYS,
       villages: villages.map((village) => ({
         ...village,
-        displayName: zoneName(village.villageCode, village.subdistrictName, village.subdistrictCode),
+        displayName: withVillageName(zoneName(village.villageCode, village.subdistrictName, village.subdistrictCode),
+          villageNames.get(villageKey(village.subdistrictCode, village.villageCode))),
         exists: existing.has(`${village.subdistrictCode}/${village.villageCode}`),
       })),
     });

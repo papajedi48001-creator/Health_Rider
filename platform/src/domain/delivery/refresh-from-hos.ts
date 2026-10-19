@@ -2,7 +2,8 @@ import { villageKey, withVillageName } from '@/domain/delivery/village-address';
 
 // Jobs confirmed before names carried the HOSxP title (นาย, นาง, ด.ช.) and addresses the village name were saved
 // without them. Once per server process every job is looked up and saved with its current HOSxP name and its
-// village name, so every page and label shows them. Jobs confirmed later already carry both.
+// village name, and every zone name gains its village name too, since most pages show the zone in place of the
+// address. Jobs confirmed later already carry both.
 type Row = {
   id: string; hn: string; patientName: string; deliveryAddress: string;
   deliveryZone: { subdistrictCode: string; villageCode: string };
@@ -14,6 +15,10 @@ type Store = {
       select: { id: true; hn: true; patientName: true; deliveryAddress: true; deliveryZone: { select: { subdistrictCode: true; villageCode: true } } };
     }): Promise<Row[]>;
     update(args: { where: { id: string }; data: { patientName?: string; deliveryAddress?: string } }): Promise<unknown>;
+  };
+  deliveryZone: {
+    findMany(args: { select: { id: true; subdistrictCode: true; villageCode: true; displayName: true } }): Promise<Array<{ id: string; subdistrictCode: string; villageCode: string; displayName: string }>>;
+    update(args: { where: { id: string }; data: { displayName: string } }): Promise<unknown>;
   };
 };
 export type JobDetails = { patientName: string; deliveryAddress: string };
@@ -38,6 +43,11 @@ export function createJobRefresher() {
       for (const [hn, name] of await source.patientNames(hns.slice(index, index + hnsPerQuery))) names.set(hn, name);
     }
     const villages = await source.villageNames();
+    const zones = await store.deliveryZone.findMany({ select: { id: true, subdistrictCode: true, villageCode: true, displayName: true } });
+    for (const zone of zones) {
+      const displayName = withVillageName(zone.displayName, villages.get(villageKey(zone.subdistrictCode, zone.villageCode)));
+      if (displayName !== zone.displayName) await store.deliveryZone.update({ where: { id: zone.id }, data: { displayName } });
+    }
     const changed = new Map<string, JobDetails>();
     for (const row of rows) {
       const patientName = names.get(row.hn)?.trim() || row.patientName;
@@ -49,6 +59,9 @@ export function createJobRefresher() {
       });
       changed.set(row.id, { patientName, deliveryAddress });
     }
+    // No village names means hosp_moo_control could not be read this time; the names already saved stay, and the
+    // sweep runs again a few minutes later instead of never.
+    if (villages.size === 0) throw new Error('HOSxP village names unavailable');
     return changed;
   }
 
@@ -57,7 +70,11 @@ export function createJobRefresher() {
     if (swept || now < retryAt) return new Map();
     running ??= sweep(hos, store)
       .then((changed) => { swept = true; return changed; })
-      .catch(() => { retryAt = now + retryAfterMs; return new Map<string, JobDetails>(); })
+      .catch((error: unknown) => {
+        retryAt = now + retryAfterMs;
+        console.warn('Refreshing jobs from HOSxP failed:', error instanceof Error ? error.message : error);
+        return new Map<string, JobDetails>();
+      })
       .finally(() => { running = null; });
     return running;
   };

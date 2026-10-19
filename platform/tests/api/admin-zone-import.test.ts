@@ -7,7 +7,7 @@ const { findZones, createZone, nameZones, createAudit, villagesSince, currentSes
 const tx = { deliveryZone: { findMany: findZones, create: createZone, updateMany: nameZones }, auditEvent: { create: createAudit } };
 
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
-vi.mock('@/hos/mysql-candidate-repository', () => ({ getHosCandidateRepository: () => ({ villagesSince }) }));
+vi.mock('@/hos/mysql-candidate-repository', () => ({ getHosCandidateRepository: () => ({ villagesSince, villageNames: async () => new Map([['470603/06', 'นาบ่อ']]) }) }));
 vi.mock('@/lib/db', () => ({ db: { deliveryZone: { findMany: findZones }, $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
 
 const admin = { id: 'admin-1', role: 'admin', displayName: 'ผู้ดูแล' };
@@ -31,7 +31,7 @@ test('previews HOSxP villages with names and which ones already have a zone', as
   expect(response.status).toBe(200);
   const body = await response.json();
   expect(body.villages).toEqual([
-    expect.objectContaining({ villageCode: '06', displayName: 'หมู่ 6 ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', exists: true }),
+    expect.objectContaining({ villageCode: '06', displayName: 'หมู่ 6 บ้านนาบ่อ ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', exists: true }),
     expect.objectContaining({ villageCode: '07', displayName: 'หมู่ 7 ตำบล 470603', exists: false }),
   ]);
 });

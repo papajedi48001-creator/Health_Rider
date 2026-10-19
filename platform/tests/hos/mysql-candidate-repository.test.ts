@@ -126,3 +126,19 @@ test('without hosp_moo_control the address is shown as HOSxP has it', async () =
   const [candidate] = await repository.eligibleFor(new Date('2026-10-19T03:00:00Z'));
   expect(candidate?.deliveryAddress).toBe('154 หมู่ 2 ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร');
 });
+
+test('a failed read of hosp_moo_control is tried again on the next page load', async () => {
+  let fail = true;
+  const execute = vi.fn(async (sql: string): Promise<[unknown]> => {
+    if (sql.includes('hosp_moo_control')) {
+      if (fail) throw new Error('SELECT command denied');
+      return [[{ subdistrict_code: '470602', village_code: '2', village_name: 'จิ๋ว' }]];
+    }
+    return [[visitRow]];
+  });
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await expect(repository.villageNames()).resolves.toEqual(new Map());
+  fail = false;
+  await expect(repository.villageNames()).resolves.toEqual(new Map([['470602/02', 'จิ๋ว']]));
+});

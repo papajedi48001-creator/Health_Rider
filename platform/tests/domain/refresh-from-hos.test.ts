@@ -12,7 +12,14 @@ const hosWith = (names: Map<string, string>, villages = new Map([['470602/02', '
   const hos = { patientNames: vi.fn().mockResolvedValue(names), villageNames: vi.fn().mockResolvedValue(villages) };
   return { hos, open: vi.fn().mockResolvedValue(hos) };
 };
-const storeWith = () => ({ deliveryRequest: { findMany: vi.fn().mockResolvedValue(rows), update: vi.fn().mockResolvedValue({}) } });
+const zones = [
+  { id: 'z2', ...zone2, displayName: 'หมู่ 2 ต.ปลาโหล' },
+  { id: 'z9', ...zone9, displayName: 'หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล' },
+];
+const storeWith = () => ({
+  deliveryRequest: { findMany: vi.fn().mockResolvedValue(rows), update: vi.fn().mockResolvedValue({}) },
+  deliveryZone: { findMany: vi.fn().mockResolvedValue(zones), update: vi.fn().mockResolvedValue({}) },
+});
 
 test('every job picks up its name title and village name from HOSxP, once per server start', async () => {
   const { hos, open } = hosWith(new Map([['450014298', 'นางสมร ศาลารักษ์'], ['450003368', 'นายประเสริฐ จันทะฝ่าย'], ['490039502', '']]));
@@ -54,4 +61,24 @@ test('when HOSxP cannot be reached pages still load, and it is tried again a few
   await refresh(open, store, start + 6 * 60_000);
   expect(open).toHaveBeenCalledTimes(2);
   expect(store.deliveryRequest.update).not.toHaveBeenCalled();
+});
+
+test('zone names gain the village name, since most pages show the zone in place of the address', async () => {
+  const { open } = hosWith(new Map());
+  const store = storeWith();
+  await createJobRefresher()(open, store);
+  expect(store.deliveryZone.update.mock.calls).toEqual([[{ where: { id: 'z2' }, data: { displayName: 'หมู่ 2 บ้านจิ๋ว ต.ปลาโหล' } }]]);
+});
+
+test('when village names cannot be read, the sweep runs again a few minutes later', async () => {
+  const { hos, open } = hosWith(new Map(), new Map());
+  const store = storeWith();
+  const refresh = createJobRefresher();
+  const start = Date.parse('2026-10-19T03:00:00Z');
+
+  await refresh(open, store, start);
+  await refresh(open, store, start + 60_000);
+  expect(hos.villageNames).toHaveBeenCalledTimes(1);
+  await refresh(open, store, start + 6 * 60_000);
+  expect(hos.villageNames).toHaveBeenCalledTimes(2);
 });
