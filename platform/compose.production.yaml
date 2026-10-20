@@ -12,6 +12,10 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL, e.g. mysql://health_rider:<password>@192.168.1.254:3306/health_rider}
+      # For one-off maintenance scripts run in this image, such as scripts/purge-test-data.mts.
+      EVIDENCE_STORAGE_PATH: /app/data/evidence
+    volumes:
+      - health-rider-evidence:/app/data/evidence
 
   web:
     build:
