@@ -328,7 +328,7 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .parcel-qr { display: grid; justify-items: center; gap: 0.1em; }
 .parcel-qr img { width: 7.5em; height: 7.5em; }
 .parcel-qr strong { max-width: 8.5em; font-size: 0.9em; letter-spacing: 0.02em; text-align: center; overflow-wrap: anywhere; }
-.parcel-foot { padding-top: 0.35em; border-top: 1px solid #d5dae1; text-align: center; font-size: 0.78em; font-weight: 700; }
+.parcel-foot { padding-top: 0.35em; text-align: center; font-size: 0.78em; font-weight: 700; }
 .parcel-label .qr-token { font-size: 0.62em; color: #555; text-align: center; }
 
 @media print {
