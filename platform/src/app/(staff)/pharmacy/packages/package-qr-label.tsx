@@ -26,7 +26,7 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
     <article className="parcel-label" style={labelStyle(layout)} aria-label={`ฉลากพัสดุ ${shortCode(label.attemptId)}`}>
       <div className="parcel-head">
         <strong>กรุณาส่ง</strong>
-        <code className="parcel-code">CODE: {label.subdistrictCode}-{label.villageCode}</code>
+        <code className="parcel-code">HN: {label.hn}</code>
       </div>
       <div className="parcel-body">
         <div className="parcel-to">
