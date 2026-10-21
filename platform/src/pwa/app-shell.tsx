@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { appVersion } from '@/lib/app-version';
 import { withBasePath } from '@/lib/base-path';
-
-type InstallPromptEvent = Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
+import { installPlatform, isInstalledApp, promptInstall, useInstallState } from '@/pwa/install-prompt';
 
 const installDismissedKey = 'health-rider-install-dismissed';
 const reloadedForKey = 'health-rider-reloaded-for';
@@ -18,15 +17,10 @@ function storage(): Storage | null {
   }
 }
 
-function isInstalledApp(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-}
-
 // On every page: registers the service worker, invites Android browsers to install the app each time
 // it is opened outside the app, and checks for a newer deployed version before and while it is used.
 export function AppShell() {
-  const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null);
+  const { installed, canPrompt } = useInstallState();
   const [showInstall, setShowInstall] = useState(false);
   const [newVersion, setNewVersion] = useState(false);
   const lastCheck = useRef(0);
@@ -36,20 +30,9 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    if (!/Android/i.test(navigator.userAgent) || isInstalledApp()) return;
+    if (installPlatform() !== 'android' || isInstalledApp()) return;
     // Dismissing hides the invitation until the app is opened again in a new tab.
     if (storage()?.getItem(installDismissedKey) !== '1') setShowInstall(true);
-    const capture = (event: Event) => {
-      event.preventDefault();
-      setInstallEvent(event as InstallPromptEvent);
-    };
-    const installed = () => setShowInstall(false);
-    window.addEventListener('beforeinstallprompt', capture);
-    window.addEventListener('appinstalled', installed);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', capture);
-      window.removeEventListener('appinstalled', installed);
-    };
   }, []);
 
   const reload = useCallback(async () => {
@@ -94,11 +77,7 @@ export function AppShell() {
   }, [check]);
 
   async function install() {
-    if (!installEvent) return;
-    await installEvent.prompt();
-    const { outcome } = await installEvent.userChoice;
-    setInstallEvent(null);
-    if (outcome === 'accepted') setShowInstall(false);
+    if (await promptInstall() === 'accepted') setShowInstall(false);
   }
 
   function dismissInstall() {
@@ -106,7 +85,8 @@ export function AppShell() {
     setShowInstall(false);
   }
 
-  if (!newVersion && !showInstall) return null;
+  const inviteInstall = showInstall && !installed;
+  if (!newVersion && !inviteInstall) return null;
 
   return (
     <div className="app-banners">
@@ -116,14 +96,14 @@ export function AppShell() {
           <button type="button" className="btn btn-primary" onClick={() => void reload()}>อัปเดตเลย</button>
         </div>
       )}
-      {showInstall && !newVersion && (
+      {inviteInstall && !newVersion && (
         <div className="app-banner" role="region" aria-label="ติดตั้งแอป">
-          {installEvent ? (
+          {canPrompt ? (
             <span>ติดตั้ง Health Rider ไว้ที่หน้าจอหลัก เปิดได้เร็วและใช้งานแบบแอป</span>
           ) : (
             <span>ติดตั้งแอป: กดเมนู ⋮ ของ Chrome แล้วเลือก &quot;ติดตั้งแอป&quot; หรือ &quot;เพิ่มลงในหน้าจอหลัก&quot; ถ้าติดตั้งแล้ว ให้เปิดจากไอคอน Health Rider</span>
           )}
-          {installEvent && <button type="button" className="btn btn-primary" onClick={() => void install()}>ติดตั้ง</button>}
+          {canPrompt && <button type="button" className="btn btn-primary" onClick={() => void install()}>ติดตั้ง</button>}
           <button type="button" className="btn btn-secondary" onClick={dismissInstall}>ไว้ทีหลัง</button>
         </div>
       )}
