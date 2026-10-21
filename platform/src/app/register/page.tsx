@@ -16,7 +16,7 @@ export default async function RegisterPage() {
     <main className="login-page">
       <div className="login-shell">
         <div className="login-hero">
-          <Mascot width={260} variant="full" alt={`${mascotName} มาสคอต Health Rider`} />
+          <Mascot width={260} variant="full" alt={`${mascotName} มาสคอต ภูไทไรเดอร์`} />
           <h2>สมัครเข้าใช้งาน</h2>
           <p>กรอกข้อมูลให้ครบ ผู้ดูแลระบบจะตรวจสอบและอนุมัติก่อนเข้าใช้งานได้</p>
         </div>

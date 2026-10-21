@@ -19,7 +19,7 @@ export default async function SelectRolePage({ searchParams }: { searchParams: P
     <main className="login-page">
       <div className="login-shell">
         <div className="login-hero">
-          <Mascot width={260} variant="full" alt={`${mascotName} มาสคอต Health Rider`} />
+          <Mascot width={260} variant="full" alt={`${mascotName} มาสคอต ภูไทไรเดอร์`} />
           <h2>สวัสดีครับ คุณ{session.displayName}</h2>
           <p>บัญชีนี้มีหลายบทบาท เลือกบทบาทที่จะใช้งานตอนนี้ เปลี่ยนได้ภายหลังจากเมนูผู้ใช้</p>
         </div>

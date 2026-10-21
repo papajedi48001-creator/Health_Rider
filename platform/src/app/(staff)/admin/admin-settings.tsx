@@ -148,7 +148,7 @@ export function AdminSettings() {
         <p>ค่าเหล่านี้ตั้งในไฟล์ <code>.env.production</code> บนเครื่องแอป แก้แล้วต้องรัน <code>docker compose ... up -d</code> ใหม่ ส่วน path ของเว็บต้อง build image ใหม่</p>
         <table>
           <tbody>
-            <tr><th scope="row">ฐานข้อมูล Health Rider</th><td>
+            <tr><th scope="row">ฐานข้อมูล ภูไทไรเดอร์</th><td>
               <code>{system.database.host}/{system.database.name}</code>{' '}
               {system.database.error ?? `MariaDB ${system.database.version} · migration ${system.database.migrations} รายการ`}
             </td></tr>

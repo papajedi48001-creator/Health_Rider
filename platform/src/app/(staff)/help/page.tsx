@@ -38,7 +38,7 @@ export default async function HelpPage() {
       <header className="manual-cover">
         <div>
           <span className="manual-kicker">ระบบส่งยาถึงบ้าน · ปรับปรุง {manualUpdated}</span>
-          <h1>คู่มือการใช้งาน Health Rider</h1>
+          <h1>คู่มือการใช้งาน ภูไทไรเดอร์</h1>
           <p>สำหรับเภสัชกรรม ไรเดอร์ ผู้ประสานงาน และผู้ดูแลระบบ หัวข้อของบทบาทคุณอยู่ด้านบน</p>
           <a className="btn manual-download" href={withBasePath('/manual/health-rider-user-manual.pdf')} download>
             <Icon name="download" /> ดาวน์โหลดคู่มือ PDF

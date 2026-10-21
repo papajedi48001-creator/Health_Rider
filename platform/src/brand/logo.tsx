@@ -23,7 +23,7 @@ export function Brand({ size = 36 }: { size?: number }) {
   return (
     <>
       <LogoMark size={size} />
-      <span className="brand-text"><strong>Health Rider</strong><small>โรงพยาบาลวาริชภูมิ</small></span>
+      <span className="brand-text"><strong>ภูไทไรเดอร์</strong><small>โรงพยาบาลวาริชภูมิ</small></span>
     </>
   );
 }
