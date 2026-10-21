@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
 beforeEach(() => clearVillageNameCache());
-import { clearVillageNameCache, MysqlHosCandidateRepository } from '@/hos/mysql-candidate-repository';
+import { clearVillageNameCache, MysqlHosCandidateRepository, registeredAddress } from '@/hos/mysql-candidate-repository';
 
 test('maps a legacy HOSxP row into a read-only candidate DTO', async () => {
   const repository = new MysqlHosCandidateRepository({
@@ -13,7 +13,7 @@ test('maps a legacy HOSxP row into a read-only candidate DTO', async () => {
           patient_name: Buffer.from('ทดสอบ', 'utf8'),
           patient_age: 64,
           telephone: '0800000000',
-          delivery_address: 'บ้านทดสอบ',
+          house_number: '35',
           subdistrict_code: '470907',
           subdistrict_name: 'ต.ปลาโหล',
           village_code: '1',
@@ -29,7 +29,7 @@ test('maps a legacy HOSxP row into a read-only candidate DTO', async () => {
       patientName: 'ทดสอบ',
       patientAge: 64,
       telephone: '0800000000',
-      deliveryAddress: 'บ้านทดสอบ',
+      deliveryAddress: '35 หมู่ 1 ต.ปลาโหล',
       subdistrictCode: '470907',
       subdistrictName: 'ต.ปลาโหล',
       villageCode: '01',
@@ -66,16 +66,47 @@ test('reads the patient name with its title', async () => {
   expect(execute.mock.calls[0]?.[0]).toContain("CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name");
 });
 
-test('looks up current names with their title by HN', async () => {
-  const execute = vi.fn().mockResolvedValue([[{ hn: '450014298', patient_name: Buffer.from('นางสมร ศาลารักษ์', 'utf8') }]]);
+test('looks up current names with their title and registered address by HN', async () => {
+  const execute = vi.fn()
+    .mockResolvedValueOnce([[{
+      hn: '610074046', patient_name: Buffer.from('นางละไม สิมพานดง', 'utf8'),
+      house_number: '402', village_code: '18', subdistrict_code: '470601', subdistrict_name: Buffer.from('ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร', 'utf8'),
+    }]])
+    .mockResolvedValueOnce([[{ subdistrict_code: '470601', village_code: '18', village_name: 'ดาดโพนไผ่' }]]);
   const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
 
-  await expect(repository.patientNames(['450014298', '450003368'])).resolves.toEqual(new Map([['450014298', 'นางสมร ศาลารักษ์']]));
+  await expect(repository.patients(['610074046', '450003368'])).resolves.toEqual(new Map([
+    ['610074046', { name: 'นางละไม สิมพานดง', address: '402 หมู่ 18 บ้านดาดโพนไผ่ ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร' }],
+  ]));
   expect(execute.mock.calls[0]?.[0]).toContain("CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname) AS patient_name");
   expect(execute.mock.calls[0]?.[0]).toContain('WHERE p.hn IN (?, ?)');
-  expect(execute.mock.calls[0]?.[1]).toEqual(['450014298', '450003368']);
-  await expect(repository.patientNames([])).resolves.toEqual(new Map());
-  expect(execute).toHaveBeenCalledTimes(1);
+  expect(execute.mock.calls[0]?.[0]).not.toContain('informaddr');
+  expect(execute.mock.calls[0]?.[1]).toEqual(['610074046', '450003368']);
+  await expect(repository.patients([])).resolves.toEqual(new Map());
+  expect(execute).toHaveBeenCalledTimes(2);
+});
+
+// informaddr is the contact person's address. A label printed from it sent a parcel for a patient registered at
+// 402 หมู่ 18 ต.วาริชภูมิ to 35 หมู่ 7 ต.นิคมน้ำอูน, where HOSxP's own slip showed the registered address.
+test('the delivery address is the patient registered address HOSxP prints, never the contact person address', async () => {
+  const execute = vi.fn().mockResolvedValue([[]]);
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await repository.eligibleFor(new Date('2026-10-13T18:30:00.000Z'));
+
+  const sql = String(execute.mock.calls[0]?.[0]);
+  expect(sql).not.toContain('informaddr');
+  expect(sql).toContain('p.addrpart AS house_number');
+  expect(sql).toContain('p.moopart AS village_code');
+  expect(sql).toContain('t.full_name AS subdistrict_name');
+});
+
+test('builds the address from house number, village number and subdistrict, dropping blank parts', () => {
+  const subdistrict = 'ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร';
+  expect(registeredAddress({ house_number: '402', village_code: '18', subdistrict_name: subdistrict })).toBe(`402 หมู่ 18 ${subdistrict}`);
+  expect(registeredAddress({ house_number: Buffer.from(' 12/3 ', 'utf8'), village_code: '07', subdistrict_name: subdistrict })).toBe(`12/3 หมู่ 7 ${subdistrict}`);
+  expect(registeredAddress({ house_number: '9', village_code: '0', subdistrict_name: subdistrict })).toBe(`9 ${subdistrict}`);
+  expect(registeredAddress({ house_number: null, village_code: null, subdistrict_name: null })).toBe('');
 });
 
 test('lists HOSxP villages once per normalised code with their visit counts', async () => {
@@ -103,7 +134,7 @@ test('lists eligible visits between two Thai dates with the date read as text', 
 });
 
 const visitRow = { visit_number: 'VN-1', hn: '450014298', patient_name: 'นางสมร ศาลารักษ์', patient_age: 70, telephone: null,
-  delivery_address: '154 หมู่ 2 ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', subdistrict_code: '470602', subdistrict_name: 'ต.ปลาโหล', village_code: '2' };
+  house_number: '154', subdistrict_code: '470602', subdistrict_name: 'ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', village_code: '2' };
 
 test('adds the village name from hosp_moo_control to the address', async () => {
   const execute = vi.fn(async (sql: string): Promise<[unknown]> => (sql.includes('hosp_moo_control')
