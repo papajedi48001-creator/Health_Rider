@@ -39,8 +39,8 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
         </div>
       </div>
       <div className="parcel-foot">(หากไม่มีผู้รับกรุณานำส่งคืน รพ.วาริชภูมิ)</div>
-      {/* Printed small so a rider whose camera cannot read the QR can type the same opaque token. */}
-      <div className="qr-token">รหัสใต้ QR: <code>{label.token}</code></div>
+      {/* Printed small so a rider whose camera cannot read the QR can type the VN, or the opaque token when there is no VN. */}
+      <div className="qr-token">{label.visitNumber ? <>สแกนไม่ได้ให้กรอก VN: <code>{label.visitNumber}</code></> : <>รหัสใต้ QR: <code>{label.token}</code></>}</div>
     </article>
   );
 }
