@@ -92,16 +92,16 @@ export function AppShell() {
     <div className="app-banners">
       {newVersion && (
         <div className="app-banner" role="status">
-          <span>มี Health Rider เวอร์ชันใหม่ กดอัปเดตก่อนใช้งานต่อ</span>
+          <span>มี ภูไทไรเดอร์ เวอร์ชันใหม่ กดอัปเดตก่อนใช้งานต่อ</span>
           <button type="button" className="btn btn-primary" onClick={() => void reload()}>อัปเดตเลย</button>
         </div>
       )}
       {inviteInstall && !newVersion && (
         <div className="app-banner" role="region" aria-label="ติดตั้งแอป">
           {canPrompt ? (
-            <span>ติดตั้ง Health Rider ไว้ที่หน้าจอหลัก เปิดได้เร็วและใช้งานแบบแอป</span>
+            <span>ติดตั้ง ภูไทไรเดอร์ ไว้ที่หน้าจอหลัก เปิดได้เร็วและใช้งานแบบแอป</span>
           ) : (
-            <span>ติดตั้งแอป: กดเมนู ⋮ ของ Chrome แล้วเลือก &quot;ติดตั้งแอป&quot; หรือ &quot;เพิ่มลงในหน้าจอหลัก&quot; ถ้าติดตั้งแล้ว ให้เปิดจากไอคอน Health Rider</span>
+            <span>ติดตั้งแอป: กดเมนู ⋮ ของ Chrome แล้วเลือก &quot;ติดตั้งแอป&quot; หรือ &quot;เพิ่มลงในหน้าจอหลัก&quot; ถ้าติดตั้งแล้ว ให้เปิดจากไอคอน ภูไทไรเดอร์</span>
           )}
           {canPrompt && <button type="button" className="btn btn-primary" onClick={() => void install()}>ติดตั้ง</button>}
           <button type="button" className="btn btn-secondary" onClick={dismissInstall}>ไว้ทีหลัง</button>

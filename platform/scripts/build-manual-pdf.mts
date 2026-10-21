@@ -94,9 +94,9 @@ tr { break-inside:avoid; }
 td:first-child { font-weight:600; color:var(--navy); }
 </style></head><body>
 <div class="cover">
-  <div class="brand"><i></i> Health Rider · โรงพยาบาลวาริชภูมิ</div>
+  <div class="brand"><i></i> ภูไทไรเดอร์ · โรงพยาบาลวาริชภูมิ</div>
   <div class="cover-kicker">ระบบส่งยาถึงบ้าน</div>
-  <div class="cover-title">คู่มือการใช้งาน<br>Health Rider</div>
+  <div class="cover-title">คู่มือการใช้งาน<br>ภูไทไรเดอร์</div>
   <div class="cover-sub">สำหรับเภสัชกรรม ไรเดอร์ ผู้ประสานงาน และผู้ดูแลระบบ</div>
   <img src="${mascot}" alt="">
   <div class="cover-meta"><b>ฉบับปรับปรุง ${manualUpdated}</b>เปิดอ่านในโปรแกรมได้ที่เมนู คู่มือการใช้งาน</div>
@@ -112,7 +112,7 @@ await page.evaluate(() => document.fonts.ready);
 await page.pdf({
   path: `${out}health-rider-user-manual.pdf`, format: 'A4', printBackground: true, preferCSSPageSize: true, displayHeaderFooter: true,
   headerTemplate: '<span></span>',
-  footerTemplate: '<div style="width:100%;font-size:8px;color:#5a6782;padding:0 16mm;display:flex;justify-content:space-between;font-family:sans-serif"><span>Health Rider User Manual</span><span class="pageNumber"></span></div>',
+  footerTemplate: '<div style="width:100%;font-size:8px;color:#5a6782;padding:0 16mm;display:flex;justify-content:space-between;font-family:sans-serif"><span>ภูไทไรเดอร์ · คู่มือการใช้งาน</span><span class="pageNumber"></span></div>',
 });
 await browser.close();
 writeFileSync(`${out}manual-source.sha256`, `${createHash('sha256').update(readFileSync(`${root}src/help/manual.ts`)).digest('hex')}\n`);
