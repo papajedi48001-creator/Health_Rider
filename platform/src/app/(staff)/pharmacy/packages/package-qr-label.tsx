@@ -28,9 +28,10 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
         <strong>กรุณาส่ง</strong>
         <code className="parcel-code">HN: {label.hn}</code>
       </div>
+      {/* The name gets its own full-width line so it never wraps beside the QR. */}
+      <strong className="parcel-name" style={{ fontSize: `${sizes.namePt}pt` }}>{label.patientName}</strong>
       <div className="parcel-body">
         <div className="parcel-to">
-          <strong className="parcel-name" style={{ fontSize: `${sizes.namePt}pt` }}>{label.patientName}</strong>
           <span className="parcel-address" style={{ fontSize: `${sizes.addressPt}pt` }}>{label.deliveryAddress}</span>
         </div>
         <div className="parcel-qr">
@@ -39,8 +40,8 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
         </div>
       </div>
       <div className="parcel-foot">(หากไม่มีผู้รับกรุณานำส่งคืน รพ.วาริชภูมิ)</div>
-      {/* Printed small so a rider whose camera cannot read the QR can type the VN, or the opaque token when there is no VN. */}
-      <div className="qr-token">{label.visitNumber ? <>สแกนไม่ได้ให้กรอก VN: <code>{label.visitNumber}</code></> : <>รหัสใต้ QR: <code>{label.token}</code></>}</div>
+      {/* A rider whose camera cannot read the QR types the VN printed under it; without a VN only the opaque token can claim the job. */}
+      {label.visitNumber ? null : <div className="qr-token">รหัสใต้ QR: <code>{label.token}</code></div>}
     </article>
   );
 }
