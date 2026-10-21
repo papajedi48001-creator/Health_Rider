@@ -45,9 +45,9 @@ export default function RiderScanPage() {
 
   // Prefers the browser's built-in QR detector (Chrome on Android) and falls back to jsQR elsewhere, such as iPhone Safari.
   async function startCamera() {
-    if (!navigator.mediaDevices?.getUserMedia) return setMessage('อุปกรณ์นี้เปิดกล้องในเบราว์เซอร์ไม่ได้ โปรดกรอกรหัสใต้ QR');
+    if (!navigator.mediaDevices?.getUserMedia) return setMessage('อุปกรณ์นี้เปิดกล้องในเบราว์เซอร์ไม่ได้ โปรดกรอกเลข VN บนฉลาก');
     const readCode = await qrReader().catch(() => null);
-    if (!readCode) return setMessage('โหลดตัวอ่าน QR ไม่ได้ โปรดกรอกรหัสใต้ QR');
+    if (!readCode) return setMessage('โหลดตัวอ่าน QR ไม่ได้ โปรดกรอกเลข VN บนฉลาก');
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).catch(() => null);
     if (!stream || !videoRef.current) return setMessage('เปิดกล้องไม่ได้ โปรดอนุญาตการใช้กล้อง');
     videoRef.current.srcObject = stream;
@@ -94,10 +94,10 @@ export default function RiderScanPage() {
             <Icon name="scan" size={26} /> สแกน QR รับงาน
           </button>
         )}
-        <p className="divider"><span>หรือกรอกรหัสใต้ QR</span></p>
+        <p className="divider"><span>หรือกรอกเลข VN บนฉลาก</span></p>
         <form className="inline-form" onSubmit={(event) => { event.preventDefault(); void claim(token); }}>
           <label>
-            รหัสใต้ QR
+            เลข VN (หรือรหัสใต้ QR)
             <input value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
           </label>
           <button type="submit" className="btn btn-secondary btn-block" disabled={!token.trim()}>ยืนยันรหัส</button>

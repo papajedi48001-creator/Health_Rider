@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { requireRole } from '@/auth/require-role';
 import { getSessionFromRequest } from '@/auth/current-session';
 import { audit } from '@/domain/audit/write-audit-event';
-import { claimPackageQr } from '@/domain/delivery/claim-package-qr';
+import { claimPackageQr, isVisitNumber } from '@/domain/delivery/claim-package-qr';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute, invalidInput } from '@/lib/route';
@@ -12,14 +12,19 @@ export async function POST(request: NextRequest) {
   return handleRoute(async () => {
     const rider = requireRole(await getSessionFromRequest(request), 'rider');
     const body = await readJsonBody(request) as { token?: unknown } | undefined;
-    if (!body || typeof body.token !== 'string' || body.token.length < 20) return invalidInput('รหัส QR ไม่ถูกต้อง');
-    const token = body.token;
+    const token = typeof body?.token === 'string' ? body.token.trim() : '';
+    if (token.length < 20 && !isVisitNumber(token)) return invalidInput('รหัส QR หรือเลข VN ไม่ถูกต้อง');
 
     const result = await db.$transaction(async (tx) => {
       const claim = await claimPackageQr(token, rider.id, new Date(), {
         transaction: (work) => work({
           findToken: (tokenHash) => tx.packageQrToken.findUnique({
             where: { tokenHash },
+            select: { deliveryAttemptId: true, expiresAt: true, invalidatedAt: true },
+          }).then((record) => record && ({ attemptId: record.deliveryAttemptId, expiresAt: record.expiresAt, invalidatedAt: record.invalidatedAt })),
+          findTokenByVisitNumber: (visitNumber) => tx.packageQrToken.findFirst({
+            where: { deliveryAttempt: { deliveryRequest: { hosVisitNumber: visitNumber } } },
+            orderBy: { createdAt: 'desc' },
             select: { deliveryAttemptId: true, expiresAt: true, invalidatedAt: true },
           }).then((record) => record && ({ attemptId: record.deliveryAttemptId, expiresAt: record.expiresAt, invalidatedAt: record.invalidatedAt })),
           claimPreparedAttempt: async (attemptId, riderId, claimedAt) => (await tx.deliveryAttempt.updateMany({
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest) {
       return claim;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
 
-    if (result.kind === 'invalid') return invalidInput('รหัส QR ไม่ถูกต้องหรือหมดอายุ');
+    if (result.kind === 'invalid') return invalidInput('รหัส QR หรือเลข VN ไม่ถูกต้อง หรือหมดอายุ');
     if (result.kind === 'conflict') return NextResponse.json({ message: 'พัสดุนี้ถูกรับงานแล้ว' }, { status: 409 });
     if (result.kind === 'taken') return NextResponse.json({ message: `พัสดุนี้ ${result.riderName} รับงานไปแล้ว` }, { status: 409 });
     if (result.kind === 'already_mine') {
