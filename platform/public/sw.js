@@ -1,6 +1,6 @@
 // Health Rider service worker: keeps the rider app shell available without signal.
 // API responses are never cached; patient data stays in the encrypted IndexedDB store.
-const shellCache = 'health-rider-shell-v4';
+const shellCache = 'health-rider-shell-v5';
 // The app may be served under a path such as /health-rider; the worker's scope is that path.
 const base = new URL(self.registration.scope).pathname.replace(/\/$/, '');
 

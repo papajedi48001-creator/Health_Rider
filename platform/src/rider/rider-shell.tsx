@@ -24,7 +24,7 @@ export async function RiderShell({ children }: { children: ReactNode }) {
   return (
     <div className="rider-app">
       <header className="rider-topbar">
-        <span className="rider-brand"><LogoMark size={30} /> Health Rider</span>
+        <span className="rider-brand"><LogoMark size={30} /> ภูไทไรเดอร์</span>
         <Link href="/rider/profile" className="rider-user" aria-label={`ข้อมูลผู้ใช้ ${session.displayName}`}>
           <UserAvatar userId={session.id} name={session.displayName} version={session.avatarVersion} small />
           <span className="rider-user-name">{session.displayName}</span>

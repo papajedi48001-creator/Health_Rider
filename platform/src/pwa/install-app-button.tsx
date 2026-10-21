@@ -13,11 +13,11 @@ const steps: Record<InstallPlatform, string[]> = {
   android: [
     'เปิดหน้านี้ด้วย Chrome',
     'แตะเมนู ⋮ ที่มุมขวาบน',
-    'เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอหลัก" ถ้าติดตั้งแล้ว ให้เปิดจากไอคอน Health Rider',
+    'เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอหลัก" ถ้าติดตั้งแล้ว ให้เปิดจากไอคอน ภูไทไรเดอร์',
   ],
   other: [
     'เปิดหน้านี้ด้วย Chrome หรือ Edge',
-    'กดไอคอนติดตั้งที่ท้ายช่องที่อยู่เว็บ หรือเมนู ⋮ แล้วเลือก "ติดตั้ง Health Rider"',
+    'กดไอคอนติดตั้งที่ท้ายช่องที่อยู่เว็บ หรือเมนู ⋮ แล้วเลือก "ติดตั้ง ภูไทไรเดอร์"',
   ],
 };
 
@@ -39,7 +39,7 @@ export function InstallAppButton() {
 
   return (
     <section className="rider-card install-card" aria-label="ติดตั้งแอป">
-      <h2><Icon name="download" /> ติดตั้งแอป Health Rider</h2>
+      <h2><Icon name="download" /> ติดตั้งแอป ภูไทไรเดอร์</h2>
       <p className="muted">ติดตั้งไว้ที่หน้าจอหลัก เปิดได้เร็ว เต็มจอเหมือนแอป และเปิดงานที่รับไว้ได้แม้สัญญาณไม่ดี</p>
       <button type="button" className="btn btn-primary btn-block" aria-expanded={canPrompt ? undefined : showSteps} onClick={() => void install()}>
         <Icon name="download" /> ติดตั้งแอป
