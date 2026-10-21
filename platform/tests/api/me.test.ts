@@ -23,7 +23,7 @@ beforeEach(() => {
 test('updates only the signed-in user’s name and phone and audits old and new values', async () => {
   const { PATCH } = await import('@/app/api/me/route');
   findUser.mockResolvedValue({ displayName: 'ไรเดอร์', phone: null });
-  updateUser.mockResolvedValue({ username: 'rider.one', displayName: 'ไรเดอร์', phone: '0812345678', role: 'rider', riderProfile: null });
+  updateUser.mockResolvedValue({ username: 'rider.one', displayName: 'ไรเดอร์', phone: '0812345678', role: 'rider', riderProfile: null, roleGrants: [{ role: 'rider' }] });
 
   const response = await PATCH(json('/api/me', 'PATCH', { phone: '081-234-5678', role: 'admin' }));
 

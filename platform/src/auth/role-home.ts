@@ -12,6 +12,11 @@ export function roleHome(role: UserRole): string {
   return roleHomes[role];
 }
 
+// Where an account with several roles picks the one to work in; `next` is where to go once it has.
+export function chooseRolePath(next?: string | null): string {
+  return next ? `/select-role?next=${encodeURIComponent(next)}` : '/select-role';
+}
+
 const placeholderOrigin = 'http://health-rider.invalid';
 
 // Only same-site relative paths are accepted so a login link cannot redirect elsewhere. Browsers drop

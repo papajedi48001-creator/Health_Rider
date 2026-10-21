@@ -7,7 +7,8 @@ import { handleRoute } from '@/lib/route';
 
 export const dynamic = 'force-dynamic';
 
-const accountActions = ['user.created', 'user.updated', 'user.profile_updated', 'user.password_changed', 'user.avatar_updated', 'user.avatar_removed'];
+const accountActions = ['user.created', 'user.updated', 'user.profile_updated', 'user.password_changed', 'user.avatar_updated', 'user.avatar_removed',
+  'user.roles_changed', 'user.role_requested', 'user.role_request_approved', 'user.role_request_rejected'];
 
 // The audit trail of the signed-in user's own account: their edits and an admin's, newest first.
 export async function GET(request: NextRequest) {

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sessionCookieOptions, sessionStore } from '@/auth/current-session';
 import { LoginThrottle } from '@/auth/login-throttle';
-import { roleHome, safeNextPath } from '@/auth/role-home';
-import { sessionCookieName, endedSessionCutoff, startSession, verifyLoginPassword } from '@/auth/session';
+import { chooseRolePath, roleHome, safeNextPath } from '@/auth/role-home';
+import type { UserRole } from '@/auth/roles';
+import { sessionCookieName, endedSessionCutoff, heldRoles, startSession, verifyLoginPassword } from '@/auth/session';
 import { writeAuditEvent } from '@/domain/audit/write-audit-event';
 import { newPublicId } from '@/domain/delivery/status';
 import { withBasePath } from '@/lib/base-path';
@@ -44,12 +45,16 @@ export async function POST(request: NextRequest) {
 
   const user = await db.user.findUnique({
     where: { username },
-    select: { id: true, role: true, active: true, pendingApproval: true, passwordHash: true, healthCenter: true, mustChangePassword: true },
+    select: {
+      id: true, role: true, active: true, pendingApproval: true, passwordHash: true, healthCenter: true, mustChangePassword: true,
+      roleGrants: { select: { role: true } },
+    },
   });
   const passwordMatches = await verifyLoginPassword(body.password, user?.passwordHash ?? null);
   // Only someone who knows the password learns that the application is still waiting.
   if (user && passwordMatches && user.pendingApproval) return fail('บัญชีนี้รอผู้ดูแลระบบอนุมัติ เมื่ออนุมัติแล้วจะเข้าสู่ระบบได้', 403);
-  if (!user || !passwordMatches || !user.active) {
+  const roles = user ? heldRoles(user) : [];
+  if (!user || !passwordMatches || !user.active || roles.length === 0) {
     usernameThrottle.recordFailure(username, now.getTime());
     if (address) addressThrottle.recordFailure(address, now.getTime());
     return fail(invalidCredentials, 401);
@@ -72,20 +77,25 @@ export async function POST(request: NextRequest) {
   await db.session.deleteMany({ where: { OR: [{ expiresAt: { lt: cutoff } }, { revokedAt: { lt: cutoff } }] } })
     .catch((error: unknown) => console.error('Could not delete old sessions', error));
 
-  // Someone without a รพ.สต. is warned and sent to pick one before anything else.
+  // Someone without a รพ.สต. is warned and sent to pick one before anything else. An account with several roles
+  // picks the one to work in first, and then goes on to wherever it was headed.
   const missingHealthCenter = !user.healthCenter;
+  const role = roles.length === 1 ? roles[0] : null;
+  const destination = missingHealthCenter ? profilePath(role) : next;
+  const home = role ? roleHome(role) : chooseRolePath(destination);
   const response = isFormPost
-    ? redirectTo(missingHealthCenter ? profilePath(user.role) : next ?? roleHome(user.role))
+    ? redirectTo(role ? destination ?? home : home)
     : NextResponse.json({
-      redirectTo: roleHome(user.role),
-      ...(missingHealthCenter ? { missingHealthCenter, profilePath: profilePath(user.role) } : {}),
+      redirectTo: home,
+      ...(role ? {} : { chooseRole: true }),
+      ...(missingHealthCenter ? { missingHealthCenter, profilePath: role ? profilePath(role) : home } : {}),
       ...(user.mustChangePassword ? { mustChangePassword: true } : {}),
     });
-  response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.expiresAt, user.role));
+  response.cookies.set(sessionCookieName, session.token, sessionCookieOptions(session.expiresAt, role));
   return response;
 }
 
-function profilePath(role: string) {
+function profilePath(role: UserRole | null) {
   return role === 'rider' ? '/rider/profile' : '/account';
 }
 

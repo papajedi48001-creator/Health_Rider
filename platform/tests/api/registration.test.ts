@@ -1,15 +1,16 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { currentSession, countCenters, countUsers, findUser, createUser, updateUsers, findUserOrThrow, createRider, findRider, findRiders, createAudit } = vi.hoisted(() => ({
+const { currentSession, createGrants, countCenters, countUsers, findUser, createUser, updateUsers, findUserOrThrow, createRider, findRider, findRiders, createAudit } = vi.hoisted(() => ({
   currentSession: vi.fn(), countUsers: vi.fn(), findUser: vi.fn(), createUser: vi.fn(), updateUsers: vi.fn(), findUserOrThrow: vi.fn(), createRider: vi.fn(),
-  findRider: vi.fn(), findRiders: vi.fn(), createAudit: vi.fn(), countCenters: vi.fn().mockResolvedValue(1),
+  findRider: vi.fn(), findRiders: vi.fn(), createAudit: vi.fn(), countCenters: vi.fn().mockResolvedValue(1), createGrants: vi.fn(),
 }));
 const tx = {
   user: { count: countUsers, findUnique: findUser, create: createUser, updateMany: updateUsers, findUniqueOrThrow: findUserOrThrow },
   riderProfile: { create: createRider, findUnique: findRider, findMany: findRiders },
   auditEvent: { create: createAudit },
   healthCenter: { count: countCenters },
+  userRoleGrant: { createMany: createGrants },
 };
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({ db: { ...tx, $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
@@ -72,6 +73,7 @@ test('only an admin approves, and a rider gets a profile with the approval', asy
   expect(response.status).toBe(200);
   expect(updateUsers).toHaveBeenCalledWith({ where: { id: 'user-9', pendingApproval: true }, data: { pendingApproval: false, active: true, role: 'rider', healthCenter: 'รพ.สต.ปลาโหล' } });
   expect(createRider).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'user-9', riderCode: 'INT-001', employmentCategory: 'internal' }) });
+  expect(createGrants).toHaveBeenCalledWith({ data: [{ userId: 'user-9', role: 'rider' }], skipDuplicates: true });
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.registration_approved' }) }));
 });
 

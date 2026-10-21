@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ u
     const passwordHash = password ? await hashPassword(password) : undefined;
 
     const updated = await db.$transaction(async (tx) => {
-      const before = await tx.user.findUnique({ where: { id: userId }, select: { displayName: true, phone: true, healthCenter: true, role: true, active: true, pendingApproval: true } });
+      const before = await tx.user.findUnique({ where: { id: userId }, select: { displayName: true, phone: true, healthCenter: true, active: true, pendingApproval: true } });
       if (!before) throw new DomainError('ไม่พบบัญชีผู้ใช้', 404);
       if (before.pendingApproval && changes.active === true) throw new DomainError('บัญชีนี้รออนุมัติ โปรดใช้ปุ่มอนุมัติ');
       const after = await tx.user.update({

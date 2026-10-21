@@ -70,7 +70,11 @@ export async function GET(request: NextRequest) {
       counts['/operations/exceptions'] = returns + conflicts;
     }
     if (session.role === 'admin') {
-      counts['/admin'] = await db.user.count({ where: { pendingApproval: true } });
+      const [applications, roleRequests] = await Promise.all([
+        db.user.count({ where: { pendingApproval: true } }),
+        db.roleRequest.count({ where: { status: 'pending' } }),
+      ]);
+      counts['/admin'] = applications + roleRequests;
     }
     if (session.role === 'rider') {
       counts['/rider/scan'] = await db.deliveryAttempt.count({

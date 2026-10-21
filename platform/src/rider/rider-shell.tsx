@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { ForcedPasswordChange } from '@/account/forced-password-change';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
 import { UserAvatar } from '@/account/user-avatar';
+import { chooseRolePath } from '@/auth/role-home';
 import { isAdminView, viewCookieName } from '@/auth/view-as';
 import { ViewSwitcher } from '@/auth/view-switcher';
 import { RiderLogout } from '@/rider/rider-logout';
@@ -17,6 +18,7 @@ import { Mascot } from '@/brand/mascot';
 export async function RiderShell({ children }: { children: ReactNode }) {
   const session = await getSessionFromCookies();
   if (!session) redirect(await loginRedirectPath());
+  if (session.roleChoicePending) redirect(chooseRolePath());
   const view = (await cookies()).get(viewCookieName)?.value;
 
   return (

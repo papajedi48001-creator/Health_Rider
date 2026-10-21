@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { parseNewUser, parseUserChanges, parseZone } from '@/domain/admin/user-rules';
+import { parseRoleSet } from '@/domain/admin/user-roles';
 
 test('requires a category for a rider account, ignores any rider code sent because the server assigns it, and a long password for everyone', () => {
   expect(() => parseNewUser({ username: 'rider.new', displayName: 'ไรเดอร์', role: 'rider', password: 'long-enough-password', healthCenter: 'รพ.สต.คำบิด' })).toThrow('ประเภทไรเดอร์');
@@ -13,7 +14,7 @@ test('requires a category for a rider account, ignores any rider code sent becau
 
 test('does not let an admin deactivate or demote their own account', () => {
   expect(() => parseUserChanges({ active: false }, 'admin-1', 'admin-1')).toThrow('ของตัวเองไม่ได้');
-  expect(() => parseUserChanges({ role: 'auditor' }, 'admin-1', 'admin-1')).toThrow('ของตัวเองไม่ได้');
+  expect(() => parseRoleSet({ roles: ['auditor'] }, 'admin-1', 'admin-1')).toThrow('ของตัวเองไม่ได้');
   expect(parseUserChanges({ active: false }, 'admin-1', 'rider-1')).toEqual({ active: false });
 });
 

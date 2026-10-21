@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies, loginRedirectPath } from '@/auth/current-session';
-import { roleHome } from '@/auth/role-home';
+import { chooseRolePath, roleHome } from '@/auth/role-home';
 import type { UserRole } from '@/auth/roles';
 import { MainNav, type NavGroup } from '@/auth/main-nav';
 import { isAdminView, menuRole, viewCookieName } from '@/auth/view-as';
@@ -53,6 +53,7 @@ function groupsFor(role: UserRole): NavGroup[] {
 export async function RoleGate({ roles, children }: { roles: readonly UserRole[]; children: ReactNode }) {
   const session = await getSessionFromCookies();
   if (!session) redirect(await loginRedirectPath());
+  if (session.roleChoicePending) redirect(chooseRolePath());
   const accountHref = session.role === 'rider' ? '/rider/profile' : '/account';
   const view = (await cookies()).get(viewCookieName)?.value;
   const shownRole = menuRole(session.role, view);
@@ -74,6 +75,9 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
             <UserAvatar userId={session.id} name={session.displayName} version={session.avatarVersion} small />
             <span className="user-text"><strong>{session.displayName}</strong><small>{roleLabels[session.role]}</small></span>
           </Link>
+          {session.roles && (
+            <Link href="/select-role" className="icon-button" aria-label="เปลี่ยนบทบาท" title="เปลี่ยนบทบาท"><Icon name="swap" size={20} /></Link>
+          )}
           <form action={withBasePath('/api/auth/logout')} method="post">
             <button type="submit" className="icon-button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><Icon name="logout" size={20} /></button>
           </form>

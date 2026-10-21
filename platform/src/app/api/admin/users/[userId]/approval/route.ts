@@ -31,6 +31,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ us
           : { pendingApproval: false, active: false },
       });
       if (claimed.count !== 1) throw new DomainError('คำขอนี้ได้รับการพิจารณาไปแล้ว', 409);
+      if (decision.decision === 'approve') {
+        await tx.userRoleGrant.createMany({ data: [{ userId, role: decision.role }], skipDuplicates: true });
+      }
       let riderCode: string | null = null;
       if (decision.decision === 'approve' && decision.rider) {
         riderCode = await suggestRiderCode(tx, decision.rider.employmentCategory);

@@ -16,9 +16,9 @@ export function LoginForm({ next, initialMessage }: { next: string | null; initi
       const response = await fetch(withBasePath('/api/auth/login'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ username: form.get('username'), password: form.get('password') }),
+        body: JSON.stringify({ username: form.get('username'), password: form.get('password'), next }),
       });
-      const body = (await response.json()) as { message?: string; redirectTo?: string; missingHealthCenter?: boolean; profilePath?: string; mustChangePassword?: boolean };
+      const body = (await response.json()) as { message?: string; redirectTo?: string; chooseRole?: boolean; missingHealthCenter?: boolean; profilePath?: string; mustChangePassword?: boolean };
       if (!response.ok || !body.redirectTo) {
         setMessage(body.message ?? 'เข้าสู่ระบบไม่สำเร็จ');
         return;
@@ -28,6 +28,8 @@ export function LoginForm({ next, initialMessage }: { next: string | null; initi
         body.missingHealthCenter && 'บัญชีของท่านยังไม่ได้ระบุ รพ.สต. โปรดเลือก รพ.สต. ที่สังกัด',
       ].filter(Boolean);
       if (warnings.length > 0) window.alert(warnings.join('\n'));
+            // An account with several roles picks one first; the server already folded the destination into that page.
+      if (body.chooseRole) return window.location.assign(withBasePath(body.redirectTo));
       window.location.assign(withBasePath(body.missingHealthCenter && body.profilePath ? body.profilePath : next ?? body.redirectTo));
     } catch {
       setMessage('เชื่อมต่อระบบไม่ได้ โปรดตรวจสอบสัญญาณแล้วลองใหม่');

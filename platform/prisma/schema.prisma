@@ -32,28 +32,32 @@ enum DeliveryAttemptStatus {
 }
 
 model User {
-  id              String            @id @db.Char(26)
-  username        String            @unique @db.VarChar(100)
-  passwordHash    String            @db.VarChar(255)
-  displayName     String            @db.VarChar(255)
-  phone           String?           @db.VarChar(20)
+  id                  String            @id @db.Char(26)
+  username            String            @unique @db.VarChar(100)
+  passwordHash        String            @db.VarChar(255)
+  displayName         String            @db.VarChar(255)
+  phone               String?           @db.VarChar(20)
   // The name of the user's รพ.สต. from health_centers; coordinators see only riders of their own.
-  healthCenter    String?           @db.VarChar(255)
-  role            UserRole
-  active          Boolean           @default(true)
+  healthCenter        String?           @db.VarChar(255)
+  // The role asked for at registration, and the one shown first; what the account may do is in roleGrants.
+  role                UserRole
+  active              Boolean           @default(true)
   // Set for a self-registered account until an admin approves or rejects it; such an account stays inactive.
-  pendingApproval Boolean           @default(false)
+  pendingApproval     Boolean           @default(false)
   // Set when an admin chooses the password; cleared once the user picks their own.
-  mustChangePassword Boolean        @default(false)
+  mustChangePassword  Boolean           @default(false)
   // Set when the user uploads a profile photo; also tells browsers to fetch the new one.
-  avatarUpdatedAt DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  riderProfile    RiderProfile?
-  claimedAttempts DeliveryAttempt[] @relation("ClaimedAttempts")
-  createdRequests DeliveryRequest[] @relation("CreatedRequests")
-  createdRates    ServiceRate[]     @relation("CreatedServiceRates")
-  sessions        Session[]
+  avatarUpdatedAt     DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  riderProfile        RiderProfile?
+  claimedAttempts     DeliveryAttempt[] @relation("ClaimedAttempts")
+  createdRequests     DeliveryRequest[] @relation("CreatedRequests")
+  createdRates        ServiceRate[]     @relation("CreatedServiceRates")
+  sessions            Session[]
+  roleGrants          UserRoleGrant[]
+  roleRequests        RoleRequest[]     @relation("RequestedRoles")
+  decidedRoleRequests RoleRequest[]     @relation("DecidedRoleRequests")
 
   @@map("users")
 }
@@ -65,11 +69,48 @@ model Session {
   expiresAt  DateTime
   lastSeenAt DateTime  @default(now())
   revokedAt  DateTime?
+  // The role picked for this sign-in; empty until an account with several roles picks one.
+  activeRole UserRole?
   createdAt  DateTime  @default(now())
   user       User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("sessions")
+}
+
+// One role an account holds; an account may hold several and picks one to work in after signing in.
+model UserRoleGrant {
+  userId    String   @db.Char(26)
+  role      UserRole
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+  @@map("user_roles")
+}
+
+enum RoleRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+// A user's request, from their profile, for another role; an admin approves or rejects it.
+model RoleRequest {
+  id          String            @id @db.Char(26)
+  userId      String            @db.Char(26)
+  role        UserRole
+  reason      String?           @db.VarChar(500)
+  status      RoleRequestStatus @default(pending)
+  decidedById String?           @db.Char(26)
+  decidedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  user        User              @relation("RequestedRoles", fields: [userId], references: [id])
+  decidedBy   User?             @relation("DecidedRoleRequests", fields: [decidedById], references: [id])
+
+  @@index([userId, status])
+  @@index([status])
+  @@map("role_requests")
 }
 
 model RiderProfile {
