@@ -596,6 +596,11 @@ a.stat-link:hover { border-color: var(--primary); }
 .app-banner span { flex: 1 1 220px; }
 .app-banner .btn { padding: 8px 14px; }
 
+/* Install button on the rider screens. */
+.install-card { margin-top: 20px; }
+.install-steps { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+.install-steps li { padding: 0; border: 0; background: none; box-shadow: none; }
+
 /* Delivery details pop-up on the operations overview. */
 .row-actions { white-space: nowrap; }
 .row-actions > * { vertical-align: middle; }

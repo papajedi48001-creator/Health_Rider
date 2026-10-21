@@ -10,6 +10,7 @@ import { EmptyState } from '@/brand/empty-state';
 import { HeroBanner } from '@/brand/hero-banner';
 import { mascotName } from '@/brand/mascot';
 import { Icon } from '@/brand/icons';
+import { InstallAppButton } from '@/pwa/install-app-button';
 import { statusTone } from '@/lib/status-tone';
 
 type BarcodeDetectorLike = { detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>> };
@@ -122,6 +123,8 @@ export default function RiderScanPage() {
           ))}
         </ul>
       )}
+
+      <InstallAppButton />
     </main>
   );
 }
