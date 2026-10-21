@@ -792,3 +792,21 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .view-switcher select { min-height: 36px; margin: 0; }
 @media (max-width: 959px) { .staff-sidebar .view-switcher { grid-column: 1 / -1; margin: 0 12px 8px; padding: 0; } }
 .rider-view-switcher { padding: 8px 16px 0; }
+
+/* Picking a role after sign-in, and the role list on the profile and admin pages. */
+.role-choice { display: grid; gap: 8px; }
+.role-choice p:empty { display: none; }
+.login-card .role-option { display: grid; gap: 2px; text-align: left; min-height: 64px; padding: 10px 16px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.login-card .role-option small { color: var(--muted); font-weight: 400; }
+.login-card .role-option:hover:not(:disabled) { background: var(--primary-soft); color: var(--ink); border-color: var(--primary); }
+.login-card .role-option.current { border-color: var(--primary); box-shadow: inset 4px 0 0 var(--primary); }
+.role-choice-logout { margin: 8px 0 0; padding: 0; border: 0; box-shadow: none; text-align: center; }
+.role-choice-logout button { width: auto; min-height: 0; background: none; color: var(--muted); border: 0; text-decoration: underline; }
+.role-choice-logout button:hover:not(:disabled) { background: none; color: var(--ink); }
+.role-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.role-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-dark); font-size: 0.85rem; white-space: nowrap; }
+.role-checks { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 0; }
+.role-checks label { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.user-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 8px 0; }
+.user-filters label { flex: 1 1 180px; }
+.user-filters .btn { flex: 0 0 auto; }

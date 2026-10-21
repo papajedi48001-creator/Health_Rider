@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
-import { roleHome, safeNextPath } from '@/auth/role-home';
+import { chooseRolePath, roleHome, safeNextPath } from '@/auth/role-home';
 import { LoginForm } from '@/app/login/login-form';
 import { Brand } from '@/brand/logo';
 import { Mascot, mascotName } from '@/brand/mascot';
@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const session = await getSessionFromCookies();
   const params = await searchParams;
   const next = safeNextPath(params.next);
-  if (session) redirect(next ?? roleHome(session.role));
+  if (session) redirect(session.roleChoicePending ? chooseRolePath(next) : next ?? roleHome(session.role));
 
   return (
     <main className="login-page">

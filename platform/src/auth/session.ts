@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { createHmac, randomBytes } from 'node:crypto';
 import type { SessionUser } from '@/auth/require-role';
-import type { UserRole } from '@/auth/roles';
+import { userRoles, type UserRole } from '@/auth/roles';
 import { newPublicId } from '@/domain/delivery/status';
 
 export { sessionCookieName } from '@/auth/session-cookie';
@@ -12,7 +12,7 @@ export const staffIdleTimeoutMs = 30 * 60 * 1000;
 // Activity is written back at most once a minute, not on every request.
 const touchIntervalMs = 60 * 1000;
 
-export function idleTimeoutFor(role: UserRole): number | null {
+export function idleTimeoutFor(role: UserRole | null): number | null {
   return role === 'rider' ? null : staffIdleTimeoutMs;
 }
 
@@ -23,7 +23,11 @@ export type StoredSession = {
   expiresAt: Date;
   lastSeenAt: Date;
   revokedAt: Date | null;
-  user: { id: string; role: UserRole; displayName: string; active: boolean; avatarUpdatedAt?: Date | null; mustChangePassword?: boolean; healthCenter?: string | null };
+  activeRole?: UserRole | null;
+  user: {
+    id: string; role: UserRole; displayName: string; active: boolean; avatarUpdatedAt?: Date | null; mustChangePassword?: boolean; healthCenter?: string | null;
+    roleGrants?: Array<{ role: UserRole }>;
+  };
 };
 
 export type SessionStore = {
@@ -31,6 +35,7 @@ export type SessionStore = {
   findByTokenHash(tokenHash: string): Promise<StoredSession | null>;
   revoke(tokenHash: string, revokedAt: Date): Promise<unknown>;
   touch(tokenHash: string, lastSeenAt: Date): Promise<unknown>;
+  setActiveRole?(tokenHash: string, role: UserRole): Promise<unknown>;
 };
 
 export async function hashPassword(password: string): Promise<string> {
@@ -64,26 +69,50 @@ export async function startSession(userId: string, now: Date, secret: string, st
   return { token, expiresAt };
 }
 
+// The roles an account holds, in the usual order; an account saved before roles were separate holds just its own.
+export function heldRoles(user: { role: UserRole; roleGrants?: Array<{ role: UserRole }> }): UserRole[] {
+  const granted = user.roleGrants?.map((grant) => grant.role) ?? [user.role];
+  return userRoles.filter((role) => granted.includes(role));
+}
+
+// The role this sign-in works in: the one picked, or the only one held. Null while a choice is still owed,
+// including when the picked role has since been taken away and more than one remains.
+export function workingRole(activeRole: UserRole | null | undefined, roles: readonly UserRole[]): UserRole | null {
+  if (activeRole && roles.includes(activeRole)) return activeRole;
+  return roles.length === 1 ? roles[0] : null;
+}
+
 export async function resolveSession(token: string, now: Date, secret: string, store: SessionStore): Promise<SessionUser | null> {
   const tokenHash = hashSessionToken(token, secret);
   const session = await store.findByTokenHash(tokenHash);
   if (!session || session.revokedAt || session.expiresAt <= now || !session.user.active) {
     return null;
   }
-  const idleLimit = idleTimeoutFor(session.user.role);
+  const roles = heldRoles(session.user);
+  if (roles.length === 0) return null;
+  const role = workingRole(session.activeRole, roles);
+  const idleLimit = idleTimeoutFor(role);
   if (idleLimit !== null && now.getTime() - session.lastSeenAt.getTime() >= idleLimit) {
     await store.revoke(tokenHash, now);
     return null;
   }
   if (now.getTime() - session.lastSeenAt.getTime() >= touchIntervalMs) await store.touch(tokenHash, now);
 
-  const { id, role, displayName, avatarUpdatedAt, mustChangePassword, healthCenter } = session.user;
+  const { id, displayName, avatarUpdatedAt, mustChangePassword, healthCenter } = session.user;
   return {
-    id, role, displayName,
+    id, role: role ?? roles[0], displayName,
+    ...(roles.length > 1 ? { roles } : {}),
+    ...(role === null ? { roleChoicePending: true } : {}),
     ...(avatarUpdatedAt ? { avatarVersion: avatarUpdatedAt.getTime() } : {}),
     ...(mustChangePassword ? { mustChangePassword } : {}),
     ...(role === 'coordinator' ? { healthCenter: healthCenter ?? null } : {}),
   };
+}
+
+// Records which of the account's roles this sign-in works in.
+export async function chooseSessionRole(token: string, role: UserRole, secret: string, store: SessionStore): Promise<void> {
+  if (!store.setActiveRole) throw new Error('This session store cannot record a role');
+  await store.setActiveRole(hashSessionToken(token, secret), role);
 }
 
 export async function endSession(token: string, now: Date, secret: string, store: SessionStore): Promise<void> {

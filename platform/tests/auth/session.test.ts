@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { endSession, resolveSession, staffIdleTimeoutMs, startSession, verifyLoginPassword, type SessionStore, type StoredSession } from '@/auth/session';
+import { RoleChoiceRequiredError, UnauthorizedError, requireRole } from '@/auth/require-role';
+import { chooseSessionRole, endSession, heldRoles, resolveSession, staffIdleTimeoutMs, startSession, verifyLoginPassword, workingRole, type SessionStore, type StoredSession } from '@/auth/session';
 
 const secret = 'test-session-secret-that-is-long-enough';
 const now = new Date('2026-10-14T03:00:00.000Z');
@@ -67,4 +68,33 @@ test('carries a pending forced password change with the session', async () => {
   const { store } = memoryStore({ ...rider, mustChangePassword: true });
   const { token } = await startSession(rider.id, now, secret, store);
   await expect(resolveSession(token, now, secret, store)).resolves.toMatchObject({ id: 'rider-1', mustChangePassword: true });
+});
+
+test('an account with several roles must pick one, then works in the role it picked', async () => {
+  const user = { id: 'staff-1', role: 'pharmacy' as const, displayName: 'เจ้าหน้าที่', active: true, healthCenter: 'รพ.สต.ปลาโหล', roleGrants: [{ role: 'coordinator' as const }, { role: 'pharmacy' as const }] };
+  const { sessions, store } = memoryStore(user);
+  store.setActiveRole = async (tokenHash, role) => { const session = sessions.get(tokenHash); if (session) session.activeRole = role; };
+  const { token } = await startSession(user.id, now, secret, store);
+
+  const pending = await resolveSession(token, now, secret, store);
+  expect(pending).toMatchObject({ roles: ['pharmacy', 'coordinator'], roleChoicePending: true });
+  expect(() => requireRole(pending, 'pharmacy', 'coordinator')).toThrow(RoleChoiceRequiredError);
+
+  await chooseSessionRole(token, 'coordinator', secret, store);
+  const chosen = await resolveSession(token, now, secret, store);
+  expect(chosen).toEqual({ id: 'staff-1', role: 'coordinator', roles: ['pharmacy', 'coordinator'], displayName: 'เจ้าหน้าที่', healthCenter: 'รพ.สต.ปลาโหล' });
+  expect(requireRole(chosen, 'coordinator').role).toBe('coordinator');
+  expect(() => requireRole(chosen, 'pharmacy')).toThrow(UnauthorizedError);
+});
+
+test('a session whose picked role was taken away falls back to the only role left, or asks again', async () => {
+  expect(workingRole('rider', ['pharmacy'])).toBe('pharmacy');
+  expect(workingRole('rider', ['pharmacy', 'coordinator'])).toBeNull();
+  expect(workingRole(null, ['admin'])).toBe('admin');
+  expect(heldRoles({ role: 'rider' })).toEqual(['rider']);
+  expect(heldRoles({ role: 'rider', roleGrants: [{ role: 'admin' }, { role: 'rider' }] })).toEqual(['rider', 'admin']);
+
+  const { store } = memoryStore({ ...rider, roleGrants: [] });
+  const { token } = await startSession(rider.id, now, secret, store);
+  await expect(resolveSession(token, now, secret, store)).resolves.toBeNull();
 });

@@ -2,7 +2,12 @@ import type { UserRole } from '@/auth/roles';
 
 export type SessionUser = {
   id: string;
+  // The role this sign-in works in; every permission check reads it.
   role: UserRole;
+  // Every role the account holds, present only when there is more than one to switch between.
+  roles?: UserRole[];
+  // The account holds several roles and has not picked one yet; nothing but the role choice is allowed.
+  roleChoicePending?: boolean;
   displayName: string;
   // Present once the user has uploaded a profile photo; changes whenever they replace it.
   avatarVersion?: number;
@@ -26,8 +31,16 @@ export class UnauthenticatedError extends UnauthorizedError {
   }
 }
 
+export class RoleChoiceRequiredError extends UnauthorizedError {
+  constructor() {
+    super();
+    this.message = 'กรุณาเลือกบทบาทก่อนใช้งาน';
+  }
+}
+
 export function requireRole(session: SessionUser | null, ...roles: UserRole[]): SessionUser {
   if (!session) throw new UnauthenticatedError();
+  if (session.roleChoicePending) throw new RoleChoiceRequiredError();
   if (!roles.includes(session.role)) {
     throw new UnauthorizedError();
   }

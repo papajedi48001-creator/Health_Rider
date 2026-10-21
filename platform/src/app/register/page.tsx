@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getSessionFromCookies } from '@/auth/current-session';
-import { roleHome } from '@/auth/role-home';
+import { chooseRolePath, roleHome } from '@/auth/role-home';
 import { RegisterForm } from '@/app/register/register-form';
 import { Brand } from '@/brand/logo';
 import { Mascot, mascotName } from '@/brand/mascot';
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function RegisterPage() {
   const session = await getSessionFromCookies();
-  if (session) redirect(roleHome(session.role));
+  if (session) redirect(session.roleChoicePending ? chooseRolePath() : roleHome(session.role));
 
   return (
     <main className="login-page">

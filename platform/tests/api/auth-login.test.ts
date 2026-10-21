@@ -133,3 +133,26 @@ test('tells someone with the right password that their application is still wait
   expect((await POST(login({ username: 'new.rider2', password: 'wrong-password' }))).status).toBe(401);
   expect(createSession).not.toHaveBeenCalled();
 });
+
+test('sends an account with several roles to pick one, keeping where it was headed', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  findUser.mockResolvedValue({
+    id: 'staff-1', role: 'pharmacy', active: true, healthCenter: 'รพ.สต.ปลาโหล', passwordHash: await hashPassword('correct-password'),
+    roleGrants: [{ role: 'pharmacy' }, { role: 'coordinator' }],
+  });
+
+  const response = await POST(login({ username: 'staff.one', password: 'correct-password', next: '/reports/history' }));
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({ redirectTo: '/select-role?next=%2Freports%2Fhistory', chooseRole: true });
+  // Until a role is picked the cookie is a browser-session one, as for staff.
+  expect(response.headers.get('set-cookie')).not.toMatch(/expires=/i);
+});
+
+test('refuses an account that holds no role at all', async () => {
+  const { POST } = await import('@/app/api/auth/login/route');
+  findUser.mockResolvedValue({ id: 'u-1', role: 'pharmacy', active: true, healthCenter: 'x', passwordHash: await hashPassword('correct-password'), roleGrants: [] });
+
+  expect((await POST(login({ username: 'u.one', password: 'correct-password' }))).status).toBe(401);
+  expect(createSession).not.toHaveBeenCalled();
+});

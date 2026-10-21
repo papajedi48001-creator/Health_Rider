@@ -18,7 +18,7 @@ export type NewUserInput = {
 };
 
 export type UserChanges = {
-  displayName?: string; phone?: string | null; healthCenter?: string; role?: UserRole; active?: boolean; password?: string;
+  displayName?: string; phone?: string | null; healthCenter?: string; active?: boolean; password?: string;
 };
 
 export function parseNewUser(value: unknown): NewUserInput {
@@ -38,7 +38,7 @@ export function parseNewUser(value: unknown): NewUserInput {
   return { username, displayName, role, password, phone, healthCenter, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
 }
 
-// Admins cannot lock themselves out by deactivating or demoting their own account.
+// Admins cannot lock themselves out by deactivating their own account; roles change through parseRoleSet.
 export function parseUserChanges(value: unknown, actorId: string, targetId: string): UserChanges {
   const body = (value ?? {}) as Record<string, unknown>;
   const changes: UserChanges = {};
@@ -48,13 +48,12 @@ export function parseUserChanges(value: unknown, actorId: string, targetId: stri
   }
   if (body.phone !== undefined) changes.phone = parsePhone(body.phone);
   if (body.healthCenter !== undefined) changes.healthCenter = parseHealthCenter(body.healthCenter);
-  if (body.role !== undefined) changes.role = parseRole(body.role);
   if (body.active !== undefined) {
     if (typeof body.active !== 'boolean') throw new DomainError('สถานะบัญชีไม่ถูกต้อง');
     changes.active = body.active;
   }
   if (body.password !== undefined) changes.password = parsePassword(body.password);
-  if (actorId === targetId && (changes.active === false || (changes.role && changes.role !== 'admin'))) {
+  if (actorId === targetId && changes.active === false) {
     throw new DomainError('ปิดหรือลดสิทธิ์บัญชีของตัวเองไม่ได้');
   }
   if (Object.keys(changes).length === 0) throw new DomainError('ไม่มีข้อมูลที่เปลี่ยนแปลง');

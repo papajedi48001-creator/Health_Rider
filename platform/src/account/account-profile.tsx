@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { UserAvatar } from '@/account/user-avatar';
 import { toAvatarJpeg } from '@/account/avatar-image';
-import type { UserRole } from '@/auth/roles';
+import Link from 'next/link';
+import { userRoles, type UserRole } from '@/auth/roles';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
 import { HealthCenterSelect } from '@/account/health-center-select';
@@ -18,20 +19,29 @@ type Profile = {
   phone: string | null;
   healthCenter: string | null;
   role: UserRole;
+  roles: UserRole[];
+  activeRole: UserRole;
   riderProfile: { riderCode: string; employmentCategory: string } | null;
 };
 
+type RoleRequest = { id: string; role: UserRole; reason: string | null; status: 'pending' | 'approved' | 'rejected'; createdAt: string; decidedAt: string | null };
+
+const requestStatusLabels: Record<RoleRequest['status'], string> = { pending: 'รอผู้ดูแลระบบพิจารณา', approved: 'อนุมัติแล้ว', rejected: 'ไม่อนุมัติ' };
+
 type Change = { id: string; action: string; at: string; byMe: boolean; oldValues: Record<string, unknown> | null; newValues: Record<string, unknown> | null };
 
-const fieldLabels: Record<string, string> = { displayName: 'ชื่อที่แสดง', phone: 'เบอร์โทร', healthCenter: 'รพ.สต.', role: 'บทบาท', active: 'สถานะบัญชี' };
+const fieldLabels: Record<string, string> = { displayName: 'ชื่อที่แสดง', phone: 'เบอร์โทร', healthCenter: 'รพ.สต.', role: 'บทบาท', roles: 'บทบาท', requestedRole: 'บทบาทที่ขอ', active: 'สถานะบัญชี' };
 const actionLabels: Record<string, string> = {
   'user.avatar_updated': 'เปลี่ยนรูปโปรไฟล์', 'user.avatar_removed': 'ลบรูปโปรไฟล์',
   'user.created': 'สร้างบัญชี', 'user.updated': 'ผู้ดูแลระบบแก้ไขบัญชี', 'user.profile_updated': 'แก้ไขข้อมูลส่วนตัว', 'user.password_changed': 'เปลี่ยนรหัสผ่าน',
+  'user.roles_changed': 'ผู้ดูแลระบบเปลี่ยนบทบาท', 'user.role_requested': 'ขอเพิ่มบทบาท',
+  'user.role_request_approved': 'อนุมัติคำขอเพิ่มบทบาท', 'user.role_request_rejected': 'ไม่อนุมัติคำขอเพิ่มบทบาท',
 };
 
 function shown(field: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return '-';
-  if (field === 'role' && typeof value === 'string') return roleLabels[value as UserRole] ?? value;
+  if ((field === 'role' || field === 'requestedRole') && typeof value === 'string') return roleLabels[value as UserRole] ?? value;
+  if (field === 'roles' && Array.isArray(value)) return value.map((role) => roleLabels[role as UserRole] ?? String(role)).join(', ') || '-';
   if (field === 'active') return value ? 'ใช้งาน' : 'ปิดใช้งาน';
   return String(value);
 }
@@ -45,9 +55,12 @@ export function AccountProfile() {
   const [message, setMessage] = useState('กำลังโหลดข้อมูลผู้ใช้');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [changes, setChanges] = useState<Change[]>([]);
+  const [roleRequests, setRoleRequests] = useState<RoleRequest[]>([]);
+  const [roleMessage, setRoleMessage] = useState('');
   const photoInput = useRef<HTMLInputElement>(null);
 
   const loadChanges = () => void callApi<{ changes: Change[] }>('/api/me/changes').then((result) => result.ok && setChanges(result.data.changes));
+  const loadRoleRequests = () => void callApi<{ requests: RoleRequest[] }>('/api/me/role-requests').then((result) => result.ok && setRoleRequests(result.data.requests));
 
   useEffect(() => {
     void callApi<Profile>('/api/me').then((result) => {
@@ -57,7 +70,22 @@ export function AccountProfile() {
       if (!result.data.healthCenter) setEditing(true);
     });
     loadChanges();
+    loadRoleRequests();
   }, []);
+
+  async function requestRole(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const target = event.currentTarget;
+    const form = new FormData(target);
+    setSaving(true);
+    const result = await callApi('/api/me/role-requests', { json: { role: form.get('role'), reason: form.get('reason') } });
+    setSaving(false);
+    if (!result.ok) return setRoleMessage(result.message);
+    target.reset();
+    setRoleMessage('ส่งคำขอแล้ว เมื่อผู้ดูแลระบบอนุมัติ จะเลือกบทบาทนี้ได้ตอนเข้าสู่ระบบ');
+    loadRoleRequests();
+    loadChanges();
+  }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -121,6 +149,9 @@ export function AccountProfile() {
     setPasswordMessage('เปลี่ยนรหัสผ่านแล้ว อุปกรณ์อื่นที่เคยเข้าสู่ระบบจะต้องเข้าสู่ระบบใหม่');
   }
 
+  const pendingRoles = roleRequests.filter((request) => request.status === 'pending').map((request) => request.role);
+  const requestableRoles = profile ? userRoles.filter((role) => !profile.roles.includes(role) && !pendingRoles.includes(role)) : [];
+
   return (
     <div className="account">
       <h1>ข้อมูลผู้ใช้</h1>
@@ -139,7 +170,7 @@ export function AccountProfile() {
             <div>
               <h2>{profile.displayName}</h2>
               <p className="muted">
-                {roleLabels[profile.role]}
+                {roleLabels[profile.activeRole]}
                 {profile.riderProfile ? ` · ${employmentLabels[profile.riderProfile.employmentCategory] ?? profile.riderProfile.employmentCategory}` : ''}
               </p>
             </div>
@@ -170,13 +201,49 @@ export function AccountProfile() {
                   <dt>ชื่อที่แสดง</dt><dd>{profile.displayName}</dd>
                   <dt>เบอร์โทร</dt><dd>{profile.phone ?? '-'}</dd>
                   <dt>ชื่อผู้ใช้</dt><dd><code>{profile.username}</code></dd>
-                  <dt>บทบาท</dt><dd>{roleLabels[profile.role]}</dd>
+                  <dt>บทบาท</dt><dd>{profile.roles.map((role) => roleLabels[role]).join(', ')}</dd>
                   <dt>รพ.สต.</dt><dd>{profile.healthCenter ?? '-'}</dd>
                   {profile.riderProfile && <><dt>รหัสไรเดอร์</dt><dd><code>{profile.riderProfile.riderCode}</code></dd></>}
                 </dl>
                 <button type="button" className="btn btn-secondary btn-block" onClick={() => { setEditing(true); setMessage(''); }}>แก้ไขข้อมูล</button>
-                <p className="muted">ชื่อผู้ใช้ บทบาท และรหัสไรเดอร์ แก้ได้โดยผู้ดูแลระบบ</p>
+                <p className="muted">ชื่อผู้ใช้และรหัสไรเดอร์ แก้ได้โดยผู้ดูแลระบบ ส่วนบทบาทขอเพิ่มได้ด้านล่าง</p>
               </>
+            )}
+          </section>
+
+          <section className="rider-card" aria-label="บทบาท">
+            <h2>บทบาท</h2>
+            <div className="role-tags">
+              {profile.roles.map((role) => <span key={role} className="role-tag">{roleLabels[role]}{role === profile.activeRole ? ' (ใช้งานอยู่)' : ''}</span>)}
+            </div>
+            {profile.roles.length > 1 && <Link href="/select-role" className="btn btn-secondary btn-block">เปลี่ยนบทบาทที่ใช้งาน</Link>}
+            {requestableRoles.length > 0 && (
+              <form className="inline-form" aria-label="ขอเพิ่มบทบาท" onSubmit={(event) => void requestRole(event)}>
+                <label>
+                  บทบาทที่ต้องการ
+                  <select name="role" required defaultValue="">
+                    <option value="" disabled>เลือกบทบาท</option>
+                    {requestableRoles.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
+                  </select>
+                </label>
+                <label>
+                  เหตุผล (ถ้ามี)
+                  <input name="reason" maxLength={500} placeholder="เช่น ได้รับมอบหมายให้ช่วยงานเภสัชกรรม" />
+                </label>
+                <button type="submit" className="btn btn-primary btn-block" disabled={saving}>ส่งคำขอ</button>
+              </form>
+            )}
+            {roleMessage && <p className="notice" role="status">{roleMessage}</p>}
+            {roleRequests.length > 0 && (
+              <ol className="change-log" aria-label="คำขอเพิ่มบทบาท">
+                {roleRequests.map((request) => (
+                  <li key={request.id}>
+                    <strong>{roleLabels[request.role]} · {requestStatusLabels[request.status]}</strong>
+                    <span className="muted">ขอเมื่อ {formatThaiDateTime(request.createdAt)}{request.decidedAt ? ` · พิจารณาเมื่อ ${formatThaiDateTime(request.decidedAt)}` : ''}</span>
+                    {request.reason && <span>เหตุผล: {request.reason}</span>}
+                  </li>
+                ))}
+              </ol>
             )}
           </section>
 
