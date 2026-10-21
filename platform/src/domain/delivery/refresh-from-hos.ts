@@ -1,14 +1,16 @@
 import { villageKey, withVillageName } from '@/domain/delivery/village-address';
+import type { HosPatient } from '@/hos/types';
 
-// Jobs confirmed before names carried the HOSxP title (นาย, นาง, ด.ช.) and addresses the village name were saved
-// without them. Once per server process every job is looked up and saved with its current HOSxP name and its
-// village name, and every zone name gains its village name too, since most pages show the zone in place of the
-// address. Jobs confirmed later already carry both.
+// Jobs confirmed before names carried the HOSxP title (นาย, นาง, ด.ช.) were saved without it, and jobs confirmed
+// before the fix of 2026-10-21 were saved with the contact person's address (informaddr) instead of the patient's.
+// Once per server process every job is looked up and saved with its current HOSxP name and registered address
+// with the village name, and every zone name gains its village name too, since most pages show the zone in place
+// of the address. An address staff corrected by hand (an in-transit amendment) is kept.
 type Row = {
   id: string; hn: string; patientName: string; deliveryAddress: string;
   deliveryZone: { subdistrictCode: string; villageCode: string };
 };
-type Hos = { patientNames(hns: string[]): Promise<Map<string, string>>; villageNames(): Promise<Map<string, string>> };
+type Hos = { patients(hns: string[]): Promise<Map<string, HosPatient>>; villageNames(): Promise<Map<string, string>> };
 type Store = {
   deliveryRequest: {
     findMany(args: {
@@ -19,6 +21,9 @@ type Store = {
   deliveryZone: {
     findMany(args: { select: { id: true; subdistrictCode: true; villageCode: true; displayName: true } }): Promise<Array<{ id: string; subdistrictCode: string; villageCode: string; displayName: string }>>;
     update(args: { where: { id: string }; data: { displayName: string } }): Promise<unknown>;
+  };
+  auditEvent: {
+    findMany(args: { where: { action: string }; select: { auditableId: true } }): Promise<Array<{ auditableId: string }>>;
   };
 };
 export type JobDetails = { patientName: string; deliveryAddress: string };
@@ -38,10 +43,12 @@ export function createJobRefresher() {
     });
     const source = await hos();
     const hns = [...new Set(rows.map((row) => row.hn))];
-    const names = new Map<string, string>();
+    const patients = new Map<string, HosPatient>();
     for (let index = 0; index < hns.length; index += hnsPerQuery) {
-      for (const [hn, name] of await source.patientNames(hns.slice(index, index + hnsPerQuery))) names.set(hn, name);
+      for (const [hn, patient] of await source.patients(hns.slice(index, index + hnsPerQuery))) patients.set(hn, patient);
     }
+    const amended = new Set((await store.auditEvent.findMany({ where: { action: 'delivery_request.amended_in_transit' }, select: { auditableId: true } }))
+      .map((event) => event.auditableId));
     const villages = await source.villageNames();
     const zones = await store.deliveryZone.findMany({ select: { id: true, subdistrictCode: true, villageCode: true, displayName: true } });
     for (const zone of zones) {
@@ -50,8 +57,12 @@ export function createJobRefresher() {
     }
     const changed = new Map<string, JobDetails>();
     for (const row of rows) {
-      const patientName = names.get(row.hn)?.trim() || row.patientName;
-      const deliveryAddress = withVillageName(row.deliveryAddress, villages.get(villageKey(row.deliveryZone.subdistrictCode, row.deliveryZone.villageCode)));
+      const patient = patients.get(row.hn);
+      const patientName = patient?.name.trim() || row.patientName;
+      // A blank HOSxP address keeps the saved one.
+      const hosAddress = amended.has(row.id) ? '' : patient?.address.trim() ?? '';
+      const deliveryAddress = hosAddress
+        || withVillageName(row.deliveryAddress, villages.get(villageKey(row.deliveryZone.subdistrictCode, row.deliveryZone.villageCode)));
       if (patientName === row.patientName && deliveryAddress === row.deliveryAddress) continue;
       await store.deliveryRequest.update({
         where: { id: row.id },

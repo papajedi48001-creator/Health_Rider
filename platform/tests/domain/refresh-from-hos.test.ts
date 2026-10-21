@@ -8,8 +8,9 @@ const rows = [
   { id: 'r2', hn: '450003368', patientName: 'นายประเสริฐ จันทะฝ่าย', deliveryAddress: '9 หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล', deliveryZone: zone9 },
   { id: 'r3', hn: '490039502', patientName: 'บำเพ็ญ เชิญชม', deliveryAddress: '1 หมู่ 9 ต.ปลาโหล', deliveryZone: zone9 },
 ];
-const hosWith = (names: Map<string, string>, villages = new Map([['470602/02', 'จิ๋ว'], ['470602/09', 'ดงเชียงเครือ']])) => {
-  const hos = { patientNames: vi.fn().mockResolvedValue(names), villageNames: vi.fn().mockResolvedValue(villages) };
+type Patient = { name: string; address: string };
+const hosWith = (names: Map<string, Patient>, villages = new Map([['470602/02', 'จิ๋ว'], ['470602/09', 'ดงเชียงเครือ']])) => {
+  const hos = { patients: vi.fn().mockResolvedValue(names), villageNames: vi.fn().mockResolvedValue(villages) };
   return { hos, open: vi.fn().mockResolvedValue(hos) };
 };
 const zones = [
@@ -19,17 +20,22 @@ const zones = [
 const storeWith = () => ({
   deliveryRequest: { findMany: vi.fn().mockResolvedValue(rows), update: vi.fn().mockResolvedValue({}) },
   deliveryZone: { findMany: vi.fn().mockResolvedValue(zones), update: vi.fn().mockResolvedValue({}) },
+  auditEvent: { findMany: vi.fn().mockResolvedValue([] as Array<{ auditableId: string }>) },
 });
 
 test('every job picks up its name title and village name from HOSxP, once per server start', async () => {
-  const { hos, open } = hosWith(new Map([['450014298', 'นางสมร ศาลารักษ์'], ['450003368', 'นายประเสริฐ จันทะฝ่าย'], ['490039502', '']]));
+  const { hos, open } = hosWith(new Map([
+    ['450014298', { name: 'นางสมร ศาลารักษ์', address: '' }],
+    ['450003368', { name: 'นายประเสริฐ จันทะฝ่าย', address: '' }],
+    ['490039502', { name: '', address: '' }],
+  ]));
   const store = storeWith();
   const refresh = createJobRefresher();
 
   const changed = await refresh(open, store);
 
-  expect(hos.patientNames).toHaveBeenCalledWith(['450014298', '450003368', '490039502']);
-  // Only what changed is written; a blank HOSxP name keeps the saved one.
+  expect(hos.patients).toHaveBeenCalledWith(['450014298', '450003368', '490039502']);
+  // Only what changed is written; a blank HOSxP name or address keeps the saved one.
   expect(store.deliveryRequest.update.mock.calls).toEqual([
     [{ where: { id: 'r1' }, data: { patientName: 'นางสมร ศาลารักษ์', deliveryAddress: '154 หมู่ 2 บ้านจิ๋ว ต.ปลาโหล' } }],
     [{ where: { id: 'r3' }, data: { deliveryAddress: '1 หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล' } }],
@@ -46,7 +52,7 @@ test('two pages opening together share one sweep', async () => {
   const store = storeWith();
   const refresh = createJobRefresher();
   await Promise.all([refresh(open, store), refresh(open, store)]);
-  expect(hos.patientNames).toHaveBeenCalledTimes(1);
+  expect(hos.patients).toHaveBeenCalledTimes(1);
 });
 
 test('when HOSxP cannot be reached pages still load, and it is tried again a few minutes later', async () => {
@@ -81,4 +87,25 @@ test('when village names cannot be read, the sweep runs again a few minutes late
   expect(hos.villageNames).toHaveBeenCalledTimes(1);
   await refresh(open, store, start + 6 * 60_000);
   expect(hos.villageNames).toHaveBeenCalledTimes(2);
+});
+
+// Jobs confirmed before 2026-10-21 carry the contact person's address (informaddr); the sweep puts the patient's
+// registered address in its place, except where staff corrected the address by hand.
+test('jobs take the patient registered address from HOSxP, except an address staff amended', async () => {
+  const { open } = hosWith(new Map([
+    ['450014298', { name: 'สมร ศาลารักษ์', address: '402 หมู่ 18 บ้านดาดโพนไผ่ ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร' }],
+    ['450003368', { name: 'นายประเสริฐ จันทะฝ่าย', address: '12 หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล' }],
+    ['490039502', { name: 'บำเพ็ญ เชิญชม', address: '1 หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล' }],
+  ]));
+  const store = storeWith();
+  store.auditEvent.findMany.mockResolvedValue([{ auditableId: 'r2' }]);
+
+  const changed = await createJobRefresher()(open, store);
+
+  expect(store.auditEvent.findMany).toHaveBeenCalledWith({ where: { action: 'delivery_request.amended_in_transit' }, select: { auditableId: true } });
+  expect(store.deliveryRequest.update.mock.calls).toEqual([
+    [{ where: { id: 'r1' }, data: { deliveryAddress: '402 หมู่ 18 บ้านดาดโพนไผ่ ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร' } }],
+    [{ where: { id: 'r3' }, data: { deliveryAddress: '1 หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล' } }],
+  ]);
+  expect(changed.has('r2')).toBe(false);
 });
