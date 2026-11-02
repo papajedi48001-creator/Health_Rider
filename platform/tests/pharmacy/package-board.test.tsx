@@ -84,3 +84,56 @@ test('the waiting-for-rider and take-back queues can be searched by HN or name t
   fireEvent.change(search, { target: { value: 'ไม่มีคนนี้' } });
   expect(screen.getByText('ไม่พบคนไข้ที่ตรงกับคำค้นหา')).toBeInTheDocument();
 });
+
+test('edits a waiting package only after confirming the old and new values', async () => {
+  const plaLo6 = zone('z-6', 'ปลาโหล ม.6', '470603', 'ต.ปลาโหล');
+  const board = { toPrepare: [], returnRequired: [], awaitingRider: [{
+    ...row('r1', 'นางสมร ศาลารักษ์', plaLo6), deliveryAddress: 'บ้านเดิม', telephone: '0800000000', deliveryVersion: 1, deletable: true,
+    latestAttempt: { id: 'a-r1', status: 'prepared', failureReason: null, failedAt: null },
+  }] };
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(board), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<PharmacyPackageBoard view="awaiting" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'แก้ไข นางสมร ศาลารักษ์' }));
+  fireEvent.change(screen.getByLabelText('ที่อยู่จัดส่ง'), { target: { value: 'บ้านใหม่' } });
+  fireEvent.change(screen.getByLabelText('เหตุผลการแก้ไข'), { target: { value: 'ญาติแจ้งย้ายบ้าน' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ถัดไป' }));
+
+  expect(screen.getByText('ยืนยันการแก้ไข')).toBeInTheDocument();
+  expect(screen.getByText('บ้านเดิม')).toBeInTheDocument();
+  expect(screen.getByText('บ้านใหม่')).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยันแก้ไข' }));
+  expect(await screen.findByText(/แก้ไขข้อมูล นางสมร ศาลารักษ์ แล้ว/)).toBeInTheDocument();
+  const [url, init] = fetchMock.mock.calls[1];
+  expect(String(url)).toContain('/api/pharmacy/requests/r1');
+  expect(init.method).toBe('PATCH');
+  expect(JSON.parse(init.body)).toEqual({ deliveryAddress: 'บ้านใหม่', telephone: '0800000000', reason: 'ญาติแจ้งย้ายบ้าน', expectedVersion: 1 });
+});
+
+test('deleting asks for a reason and confirmation; jobs with delivery history offer no delete', async () => {
+  const plaLo6 = zone('z-6', 'ปลาโหล ม.6', '470603', 'ต.ปลาโหล');
+  const board = { awaitingRider: [], returnRequired: [], toPrepare: [
+    { ...row('r1', 'ผู้ป่วยใหม่', plaLo6), deletable: true },
+    { ...row('r2', 'ผู้ป่วยส่งซ้ำ', plaLo6), deletable: false, latestAttempt: { id: 'a-r2', status: 'returned', failureReason: null, failedAt: null } },
+  ] };
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(board), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<PharmacyPackageBoard view="prepare" />);
+
+  expect(await screen.findByRole('button', { name: 'ลบ ผู้ป่วยใหม่' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'ลบ ผู้ป่วยส่งซ้ำ' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'แก้ไข ผู้ป่วยส่งซ้ำ' })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'ลบ ผู้ป่วยใหม่' }));
+  expect(screen.getByRole('dialog', { name: 'ลบงานของ ผู้ป่วยใหม่' })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('เหตุผลการลบ'), { target: { value: 'ผู้ป่วยมารับยาเอง' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยันลบ' }));
+  expect(await screen.findByText(/ลบงานของ ผู้ป่วยใหม่ แล้ว/)).toBeInTheDocument();
+  const [url, init] = fetchMock.mock.calls[1];
+  expect(String(url)).toContain('/api/pharmacy/requests/r1');
+  expect(init.method).toBe('DELETE');
+  expect(JSON.parse(init.body)).toEqual({ reason: 'ผู้ป่วยมารับยาเอง' });
+});

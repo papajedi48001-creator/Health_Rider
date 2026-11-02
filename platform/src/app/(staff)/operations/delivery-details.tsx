@@ -31,6 +31,7 @@ const historyLabels: Record<string, string> = {
   'delivery_attempt.prepared': 'เตรียมพัสดุ',
   'package_qr.reissued': 'ออก QR ใหม่',
   'delivery_attempt.claimed': 'ไรเดอร์รับงาน',
+  'delivery_request.amended_before_pickup': 'เภสัชแก้ที่อยู่/โทรศัพท์ก่อนไรเดอร์รับงาน',
   'delivery_request.amended_in_transit': 'แก้ที่อยู่/โทรศัพท์ระหว่างส่ง',
   'delivery_attempt.sync_conflict': 'ข้อมูลจากไรเดอร์ขัดกัน ส่งให้ตรวจสอบ',
   'delivery_attempt.event_rejected': 'ไม่รับข้อมูลจากไรเดอร์',
