@@ -102,7 +102,7 @@ test('jobs take the patient registered address from HOSxP, except an address sta
 
   const changed = await createJobRefresher()(open, store);
 
-  expect(store.auditEvent.findMany).toHaveBeenCalledWith({ where: { action: 'delivery_request.amended_in_transit' }, select: { auditableId: true } });
+  expect(store.auditEvent.findMany).toHaveBeenCalledWith({ where: { action: { in: ['delivery_request.amended_in_transit', 'delivery_request.amended_before_pickup'] } }, select: { auditableId: true } });
   expect(store.deliveryRequest.update.mock.calls).toEqual([
     [{ where: { id: 'r1' }, data: { deliveryAddress: '402 หมู่ 18 บ้านดาดโพนไผ่ ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร' } }],
     [{ where: { id: 'r3' }, data: { deliveryAddress: '1 หมู่ 9 บ้านดงเชียงเครือ ต.ปลาโหล' } }],

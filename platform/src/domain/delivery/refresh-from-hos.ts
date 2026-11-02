@@ -5,7 +5,7 @@ import type { HosPatient } from '@/hos/types';
 // before the fix of 2026-10-21 were saved with the contact person's address (informaddr) instead of the patient's.
 // Once per server process every job is looked up and saved with its current HOSxP name and registered address
 // with the village name, and every zone name gains its village name too, since most pages show the zone in place
-// of the address. An address staff corrected by hand (an in-transit amendment) is kept.
+// of the address. An address staff corrected by hand (before pickup or in transit) is kept.
 type Row = {
   id: string; hn: string; patientName: string; deliveryAddress: string;
   deliveryZone: { subdistrictCode: string; villageCode: string };
@@ -23,9 +23,11 @@ type Store = {
     update(args: { where: { id: string }; data: { displayName: string } }): Promise<unknown>;
   };
   auditEvent: {
-    findMany(args: { where: { action: string }; select: { auditableId: true } }): Promise<Array<{ auditableId: string }>>;
+    findMany(args: { where: { action: { in: string[] } }; select: { auditableId: true } }): Promise<Array<{ auditableId: string }>>;
   };
 };
+// An address staff corrected by hand, before or after a rider took the package.
+const amendmentActions = ['delivery_request.amended_in_transit', 'delivery_request.amended_before_pickup'];
 export type JobDetails = { patientName: string; deliveryAddress: string };
 
 // A failed sweep is not retried on every page load, so a HOSxP outage does not slow pages down each time.
@@ -47,7 +49,7 @@ export function createJobRefresher() {
     for (let index = 0; index < hns.length; index += hnsPerQuery) {
       for (const [hn, patient] of await source.patients(hns.slice(index, index + hnsPerQuery))) patients.set(hn, patient);
     }
-    const amended = new Set((await store.auditEvent.findMany({ where: { action: 'delivery_request.amended_in_transit' }, select: { auditableId: true } }))
+    const amended = new Set((await store.auditEvent.findMany({ where: { action: { in: amendmentActions } }, select: { auditableId: true } }))
       .map((event) => event.auditableId));
     const villages = await source.villageNames();
     const zones = await store.deliveryZone.findMany({ select: { id: true, subdistrictCode: true, villageCode: true, displayName: true } });

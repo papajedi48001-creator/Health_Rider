@@ -299,11 +299,14 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .select-bar label { font-weight: 600; }
 .pick-list li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 14px; }
 .pick-list li > p { margin: 0; grid-column: 2; }
-.pick-list li > button { grid-column: 3; grid-row: 1 / span 2; }
+.pick-list li > button, .pick-list li > .row-actions { grid-column: 3; grid-row: 1 / span 2; }
+.row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.change-table td, .change-table th { white-space: normal; }
 .pick-list .pick { grid-row: 1 / span 2; font-size: 0.85rem; color: var(--muted); }
 @media (max-width: 640px) {
   .pick-list li { grid-template-columns: auto 1fr; }
-  .pick-list li > button { grid-column: 1 / -1; grid-row: auto; }
+  .pick-list li > button, .pick-list li > .row-actions { grid-column: 1 / -1; grid-row: auto; }
+  .row-actions { justify-content: flex-start; }
 }
 
 /* Shipping labels: dashed cut lines, recipient on the left, QR and visit number on the right. */
