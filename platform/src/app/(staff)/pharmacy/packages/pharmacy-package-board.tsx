@@ -244,11 +244,11 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
                   {pick(row)}
                   <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
                   <div className="row-actions">
-                    {info(row)}
                     <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
                       ออก QR ใหม่
                     </button>
                     {editButtons(row)}
+                    {info(row)}
                   </div>
                 </li>
               ))}
