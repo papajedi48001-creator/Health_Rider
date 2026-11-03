@@ -300,6 +300,7 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .pick-list li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 14px; }
 .pick-list li > p { margin: 0; grid-column: 2; }
 .pick-list li > button, .pick-list li > .row-actions { grid-column: 3; grid-row: 1 / span 2; }
+.pick-list li > p .info-button { width: 32px; height: 32px; min-height: 32px; vertical-align: middle; margin: 0 2px; }
 .row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
 .change-table td, .change-table th { white-space: normal; }
 .pick-list .pick { grid-row: 1 / span 2; font-size: 0.85rem; color: var(--muted); }
