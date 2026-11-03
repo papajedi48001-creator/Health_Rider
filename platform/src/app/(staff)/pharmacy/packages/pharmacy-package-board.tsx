@@ -242,12 +242,13 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   {pick(row)}
-                  <p><strong>{row.patientName}</strong> {info(row)} · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
+                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
                   <div className="row-actions">
                     <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
                       ออก QR ใหม่
                     </button>
                     {editButtons(row)}
+                    {info(row)}
                   </div>
                 </li>
               ))}
