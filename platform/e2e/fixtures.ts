@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { ulid } from 'ulidx';
 import { randomBytes } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
@@ -58,4 +59,15 @@ function crc32(data: Buffer): number {
 export async function idleSessions(username: string, minutes: number) {
   const user = await prisma.user.findUniqueOrThrow({ where: { username } });
   await prisma.session.updateMany({ where: { userId: user.id, revokedAt: null }, data: { lastSeenAt: new Date(Date.now() - minutes * 60 * 1000) } });
+}
+
+// An account holding the given roles, signed in with E2E_PASSWORD like the seeded ones.
+export async function createAccount(username: string, displayName: string, roles: Array<'pharmacy' | 'coordinator' | 'rider' | 'admin' | 'auditor'>) {
+  const passwordHash = await bcrypt.hash(process.env.E2E_PASSWORD ?? '', 10);
+  return prisma.user.create({
+    data: {
+      id: ulid(), username, displayName, role: roles[0], passwordHash, healthCenter: 'รพ.สต.ปลาโหล',
+      roleGrants: { create: roles.map((role) => ({ role })) },
+    },
+  });
 }

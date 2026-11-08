@@ -10,8 +10,12 @@ export type ClaimResult =
 // Who holds the package now; null while no rider has claimed it.
 export type PackageHolder = { riderId: string; riderName: string; status: string };
 
+type PackageToken = { attemptId: string; expiresAt: Date; invalidatedAt: Date | null };
+
 export type ClaimTransaction = {
-  findToken(tokenHash: string): Promise<{ attemptId: string; expiresAt: Date; invalidatedAt: Date | null } | null>;
+  findToken(tokenHash: string): Promise<PackageToken | null>;
+  // The newest QR issued for the package with this HOSxP visit number.
+  findTokenByVisitNumber(visitNumber: string): Promise<PackageToken | null>;
   claimPreparedAttempt(attemptId: string, riderId: string, claimedAt: Date): Promise<boolean>;
   invalidateToken(attemptId: string): Promise<void>;
   findHolder(attemptId: string): Promise<PackageHolder | null>;
@@ -21,11 +25,18 @@ type ClaimStore = {
   transaction<T>(work: (transaction: ClaimTransaction) => Promise<T>): Promise<T>;
 };
 
+// A rider whose camera cannot read the QR types the VN printed on the label instead of the QR token.
+export function isVisitNumber(code: string): boolean {
+  return /^\d{1,20}$/.test(code);
+}
+
 const unfinishedStatuses = new Set(['claimed', 'in_transit', 'sync_review', 'return_required']);
 
-export async function claimPackageQr(token: string, riderId: string, claimedAt: Date, store: ClaimStore): Promise<ClaimResult> {
+export async function claimPackageQr(code: string, riderId: string, claimedAt: Date, store: ClaimStore): Promise<ClaimResult> {
   return store.transaction(async (transaction) => {
-    const packageToken = await transaction.findToken(hashPackageQrToken(token));
+    const packageToken = isVisitNumber(code)
+      ? await transaction.findTokenByVisitNumber(code)
+      : await transaction.findToken(hashPackageQrToken(code));
     if (!packageToken) return { kind: 'invalid' };
 
     // A QR scanned again after the package was claimed says who has it instead of calling the QR invalid.

@@ -1,4 +1,6 @@
 import { userRoles, type UserRole } from '@/auth/roles';
+import { parsePhone } from '@/domain/account/profile-rules';
+import { parseHealthCenter } from '@/domain/admin/health-centers';
 import { DomainError } from '@/domain/errors';
 
 export const minimumPasswordLength = 12;
@@ -10,10 +12,14 @@ export type NewUserInput = {
   displayName: string;
   role: UserRole;
   password: string;
+  phone: string | null;
+  healthCenter: string;
   rider?: { employmentCategory: EmploymentCategory };
 };
 
-export type UserChanges = { displayName?: string; role?: UserRole; active?: boolean; password?: string };
+export type UserChanges = {
+  displayName?: string; phone?: string | null; healthCenter?: string; active?: boolean; password?: string;
+};
 
 export function parseNewUser(value: unknown): NewUserInput {
   const body = (value ?? {}) as Record<string, unknown>;
@@ -23,14 +29,16 @@ export function parseNewUser(value: unknown): NewUserInput {
   if (!displayName) throw new DomainError('ต้องระบุชื่อที่แสดง');
   const role = parseRole(body.role);
   const password = parsePassword(body.password);
-  if (role !== 'rider') return { username, displayName, role, password };
+  const phone = parsePhone(body.phone);
+  const healthCenter = parseHealthCenter(body.healthCenter);
+  if (role !== 'rider') return { username, displayName, role, password, phone, healthCenter };
 
   // The rider code is always assigned by the server, so any code sent along is ignored.
   if (!(employmentCategories as readonly unknown[]).includes(body.employmentCategory)) throw new DomainError('ต้องเลือกประเภทไรเดอร์');
-  return { username, displayName, role, password, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
+  return { username, displayName, role, password, phone, healthCenter, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
 }
 
-// Admins cannot lock themselves out by deactivating or demoting their own account.
+// Admins cannot lock themselves out by deactivating their own account; roles change through parseRoleSet.
 export function parseUserChanges(value: unknown, actorId: string, targetId: string): UserChanges {
   const body = (value ?? {}) as Record<string, unknown>;
   const changes: UserChanges = {};
@@ -38,13 +46,14 @@ export function parseUserChanges(value: unknown, actorId: string, targetId: stri
     if (typeof body.displayName !== 'string' || !body.displayName.trim()) throw new DomainError('ต้องระบุชื่อที่แสดง');
     changes.displayName = body.displayName.trim();
   }
-  if (body.role !== undefined) changes.role = parseRole(body.role);
+  if (body.phone !== undefined) changes.phone = parsePhone(body.phone);
+  if (body.healthCenter !== undefined) changes.healthCenter = parseHealthCenter(body.healthCenter);
   if (body.active !== undefined) {
     if (typeof body.active !== 'boolean') throw new DomainError('สถานะบัญชีไม่ถูกต้อง');
     changes.active = body.active;
   }
   if (body.password !== undefined) changes.password = parsePassword(body.password);
-  if (actorId === targetId && (changes.active === false || (changes.role && changes.role !== 'admin'))) {
+  if (actorId === targetId && changes.active === false) {
     throw new DomainError('ปิดหรือลดสิทธิ์บัญชีของตัวเองไม่ได้');
   }
   if (Object.keys(changes).length === 0) throw new DomainError('ไม่มีข้อมูลที่เปลี่ยนแปลง');

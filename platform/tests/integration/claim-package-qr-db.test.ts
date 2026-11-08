@@ -26,6 +26,7 @@ test.skipIf(!databaseUrl)('MariaDB permits only one concurrent QR claim', async 
   const claim = (riderId: string) => db.$transaction((tx) => claimPackageQr(token, riderId, new Date(), {
     transaction: (work) => work({
       findToken: (tokenHash) => tx.packageQrToken.findUnique({ where: { tokenHash } }).then((record) => record && ({ attemptId: record.deliveryAttemptId, expiresAt: record.expiresAt, invalidatedAt: record.invalidatedAt })),
+      findTokenByVisitNumber: async () => null,
       claimPreparedAttempt: async (attemptId, riderId, claimedAt) => (await tx.deliveryAttempt.updateMany({ where: { id: attemptId, riderId: null, status: 'prepared' }, data: { riderId, status: 'claimed', claimedAt } })).count === 1,
       invalidateToken: async (attemptId) => { await tx.packageQrToken.updateMany({ where: { deliveryAttemptId: attemptId, invalidatedAt: null }, data: { invalidatedAt: new Date() } }); },
       findHolder: (attemptId) => tx.deliveryAttempt.findUnique({ where: { id: attemptId }, select: { status: true, rider: { select: { id: true, displayName: true } } } })

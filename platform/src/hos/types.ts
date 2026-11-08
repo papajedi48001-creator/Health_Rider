@@ -19,7 +19,7 @@ export type HosCandidateRow = {
   patient_name: string | Buffer | null;
   patient_age: number | string | null;
   telephone: string | Buffer | null;
-  delivery_address: string | Buffer | null;
+  house_number: string | Buffer | null;
   subdistrict_code: string | number | null;
   subdistrict_name: string | Buffer | null;
   village_code: string | number | null;
@@ -44,3 +44,15 @@ export type HosVillageRow = {
 export type HosVisitDay = { date: string; visitNumber: string };
 
 export type HosVisitDayRow = { visit_date: string; visit_number: string | number };
+
+// A patient as HOSxP has them now: name with title, and registered address with the village name.
+export type HosPatient = { name: string; address: string };
+
+export type HosPatientRow = {
+  hn: string | number;
+  patient_name: string | Buffer | null;
+  house_number: string | Buffer | null;
+  village_code: string | number | null;
+  subdistrict_code: string | number | null;
+  subdistrict_name: string | Buffer | null;
+};

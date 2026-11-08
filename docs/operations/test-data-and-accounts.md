@@ -10,6 +10,7 @@
 | coordinator | `coordinator.uat` | exception/amendment/conflict |
 | auditor | `auditor.uat` | read-only audit |
 | admin | `admin.uat` | role/configuration verification |
+| pharmacy + coordinator | `multi.uat` | บัญชีหลายบทบาท: เลือกบทบาทหลัง login และสลับบทบาท |
 
 บัญชีเหล่านี้สร้างด้วย `npm run db:seed` (ดู `platform/README.md`) โดยใช้รหัสผ่านจาก `SEED_UAT_PASSWORD` ซึ่งต้องยาวอย่างน้อย 12 ตัวอักษรและไม่เก็บใน Git การรัน seed ซ้ำจะตั้งรหัสผ่านใหม่และเปิดใช้งานบัญชีอีกครั้ง
 

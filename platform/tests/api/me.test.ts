@@ -23,7 +23,7 @@ beforeEach(() => {
 test('updates only the signed-in user’s name and phone and audits old and new values', async () => {
   const { PATCH } = await import('@/app/api/me/route');
   findUser.mockResolvedValue({ displayName: 'ไรเดอร์', phone: null });
-  updateUser.mockResolvedValue({ username: 'rider.one', displayName: 'ไรเดอร์', phone: '0812345678', role: 'rider', riderProfile: null });
+  updateUser.mockResolvedValue({ username: 'rider.one', displayName: 'ไรเดอร์', phone: '0812345678', role: 'rider', riderProfile: null, roleGrants: [{ role: 'rider' }] });
 
   const response = await PATCH(json('/api/me', 'PATCH', { phone: '081-234-5678', role: 'admin' }));
 
@@ -40,10 +40,11 @@ test('changes the password only with the current one and keeps this device signe
 
   expect((await POST(json('/api/me/password', 'POST', { currentPassword: 'wrong-password-1', newPassword: 'brand-new-password' }))).status).toBe(422);
   expect(updateUser).not.toHaveBeenCalled();
+  expect((await POST(json('/api/me/password', 'POST', { currentPassword: 'current-password-1', newPassword: 'current-password-1' }))).status).toBe(422);
 
   const response = await POST(json('/api/me/password', 'POST', { currentPassword: 'current-password-1', newPassword: 'brand-new-password' }));
   expect(response.status).toBe(200);
-  expect(updateUser).toHaveBeenCalledWith({ where: { id: 'rider-1' }, data: { passwordHash: expect.any(String) } });
+  expect(updateUser).toHaveBeenCalledWith({ where: { id: 'rider-1' }, data: { passwordHash: expect.any(String), mustChangePassword: false } });
   expect(updateSessions).toHaveBeenCalledWith({
     where: { userId: 'rider-1', revokedAt: null, tokenHash: { not: hashSessionToken('current-token', secret) } }, data: { revokedAt: expect.any(Date) },
   });

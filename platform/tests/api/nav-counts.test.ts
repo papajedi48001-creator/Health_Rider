@@ -24,16 +24,31 @@ beforeEach(() => {
   countConfirmed.mockResolvedValue(1);
 });
 
-test('counts pharmacy queues and HOSxP visits still to confirm', async () => {
+test('counts pharmacy queues, HOSxP visits still to confirm and, as district coordinator, every open delivery', async () => {
   const { GET } = await import('@/app/api/nav-counts/route');
   currentSession.mockResolvedValue({ id: 'p1', role: 'pharmacy', displayName: 'เภสัชกร' });
+  countAttempts.mockResolvedValue(4);
+  countConflicts.mockResolvedValue(1);
 
   const body = await (await GET(request())).json();
 
   expect(body.counts).toEqual({
     '/pharmacy/candidates': 2, '/pharmacy/packages': 2, '/pharmacy/awaiting-rider': 1, '/pharmacy/returns': 1,
+    '/operations': 4, '/operations/exceptions': 5,
   });
-  expect(countAttempts).not.toHaveBeenCalled();
+  expect(countAttempts).toHaveBeenCalledWith({ where: { status: { in: ['claimed', 'in_transit'] } } });
+});
+
+test('a coordinator counts only the deliveries of riders from their own รพ.สต.', async () => {
+  const { GET } = await import('@/app/api/nav-counts/route');
+  currentSession.mockResolvedValue({ id: 'c1', role: 'coordinator', displayName: 'ผู้ประสานงาน', healthCenter: 'รพ.สต.ปลาโหล' });
+  countAttempts.mockResolvedValue(2);
+  countConflicts.mockResolvedValue(0);
+
+  await GET(request());
+
+  expect(countAttempts).toHaveBeenCalledWith({ where: { AND: [{ status: { in: ['claimed', 'in_transit'] } }, { rider: { healthCenter: 'รพ.สต.ปลาโหล' } }] } });
+  expect(countConflicts).toHaveBeenCalledWith({ where: { status: 'pending', deliveryAttempt: { AND: [{}, { rider: { healthCenter: 'รพ.สต.ปลาโหล' } }] } } });
 });
 
 test('counts a rider’s own open jobs only', async () => {

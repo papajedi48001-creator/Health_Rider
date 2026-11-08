@@ -1,9 +1,10 @@
+import { parseHealthCenter } from '@/domain/admin/health-centers';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { DomainError } from '@/domain/errors';
 
-export type ProfileChanges = { displayName?: string; phone?: string | null };
+export type ProfileChanges = { displayName?: string; phone?: string | null; healthCenter?: string };
 
-// Users edit only their own name and phone; username, role and rider code stay with the admin.
+// Users edit their own name, phone and รพ.สต.; username, role and rider code stay with the admin.
 export function parseProfileChanges(value: unknown): ProfileChanges {
   const body = (value ?? {}) as Record<string, unknown>;
   const changes: ProfileChanges = {};
@@ -14,6 +15,7 @@ export function parseProfileChanges(value: unknown): ProfileChanges {
     changes.displayName = displayName;
   }
   if (body.phone !== undefined) changes.phone = parsePhone(body.phone);
+  if (body.healthCenter !== undefined) changes.healthCenter = parseHealthCenter(body.healthCenter);
   if (Object.keys(changes).length === 0) throw new DomainError('ไม่มีข้อมูลที่เปลี่ยนแปลง');
   return changes;
 }

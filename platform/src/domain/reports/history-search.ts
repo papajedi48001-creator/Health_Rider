@@ -1,8 +1,9 @@
+import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { DomainError } from '@/domain/errors';
 
 export const historyPageSize = 25;
 
-export type HistoryFilters = { hn: string; rider: string; subdistrictCode: string; zoneId: string; page: number };
+export type HistoryFilters = { hn: string; rider: string; subdistrictCode: string; zoneId: string; status: DeliveryAttemptStatus | ''; page: number };
 
 // Reads the search box values; blanks mean "any".
 export function parseHistoryFilters(params: URLSearchParams): HistoryFilters {
@@ -13,13 +14,19 @@ export function parseHistoryFilters(params: URLSearchParams): HistoryFilters {
   };
   const page = Number(params.get('page') || '1');
   if (!Number.isInteger(page) || page < 1) throw new DomainError('หน้าไม่ถูกต้อง');
-  return { hn: text('hn', 100), rider: text('rider', 100), subdistrictCode: text('subdistrict', 32), zoneId: text('zone', 26), page };
+  const status = text('status', 32);
+  if (status && !(deliveryAttemptStatuses as readonly string[]).includes(status)) throw new DomainError('สถานะไม่ถูกต้อง');
+  return {
+    hn: text('hn', 100), rider: text('rider', 100), subdistrictCode: text('subdistrict', 32), zoneId: text('zone', 26),
+    status: status as DeliveryAttemptStatus | '', page,
+  };
 }
 
 // Prisma conditions for delivery attempts that match every filled-in filter.
 export function historyWhere(filters: HistoryFilters, createdAt: { gte: Date; lt: Date }) {
   return {
     createdAt,
+    ...(filters.status ? { status: filters.status } : {}),
     ...(filters.rider ? {
       rider: { OR: [{ displayName: { contains: filters.rider } }, { riderProfile: { riderCode: { contains: filters.rider } } }] },
     } : {}),

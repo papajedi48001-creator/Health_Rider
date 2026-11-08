@@ -63,14 +63,13 @@ test('a coordinator narrows the operations overview by tapping a status tile', a
   await expect(tiles.first()).toHaveAttribute('aria-pressed', 'false');
 });
 
-test('a coordinator finds a delivery by HN and opens its details from the info button', async ({ page }) => {
+// A job no rider has claimed yet is pharmacy's, so the district coordinator (pharmacy) is the one who finds it.
+test('the district coordinator finds a delivery by HN and opens its details from the info button', async ({ page }) => {
   const patientName = `ผู้ป่วยค้นประวัติ ${Date.now()}`;
   const request = await createDeliveryRequest(patientName);
   await login(page, 'pharmacy.uat');
   await page.request.post('/api/pharmacy/attempts/prepare', { data: { deliveryRequestId: request.id } });
-  await page.context().clearCookies();
 
-  await login(page, 'coordinator.uat');
   await page.getByRole('navigation', { name: 'เมนูหลัก' }).getByRole('link', { name: 'ค้นหาประวัติการส่ง' }).click();
   const filters = page.getByRole('form', { name: 'ค้นหาประวัติการส่ง' });
   // Typing part of the name suggests the patient, and picking it fills in the HN.

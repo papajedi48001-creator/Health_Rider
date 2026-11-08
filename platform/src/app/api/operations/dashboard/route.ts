@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { scoped } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
+import { csvResponse, toCsv } from '@/domain/reports/reports';
 import { db } from '@/lib/db';
+import { failureReasonLabels, formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { handleRoute, invalidInput } from '@/lib/route';
 import { bangkokDateString, startOfBangkokDay } from '@/lib/time';
 
@@ -12,10 +15,11 @@ export const dynamic = 'force-dynamic';
 // Jobs still moving, matching the menu count, so work from an earlier day is not lost from view.
 const openStatuses: DeliveryAttemptStatus[] = ['prepared', 'claimed', 'in_transit', 'sync_review', 'return_required'];
 
-// Attempts prepared on one Thai day, plus any still open from other days when includeOpen=1, optionally narrowed by status or zone.
+// Attempts prepared on one Thai day, plus any still open from other days when includeOpen=1, optionally narrowed by status or zone;
+// format=csv downloads the same list.
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
-    requireRole(await getSessionFromRequest(request), 'coordinator', 'admin');
+    const viewer = requireRole(await getSessionFromRequest(request), 'pharmacy', 'coordinator', 'admin');
     const params = request.nextUrl.searchParams;
     const status = params.get('status');
     const zoneId = params.get('zoneId');
@@ -24,18 +28,18 @@ export async function GET(request: NextRequest) {
     if (!dayStart || (status && !deliveryAttemptStatuses.includes(status as DeliveryAttemptStatus))) return invalidInput('ตัวกรองไม่ถูกต้อง');
 
     const onDay = { createdAt: { gte: dayStart, lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) } };
-    const where: Prisma.DeliveryAttemptWhereInput = {
+    const where: Prisma.DeliveryAttemptWhereInput = scoped(viewer, {
       ...(params.get('includeOpen') === '1' ? { OR: [onDay, { status: { in: openStatuses } }] } : onDay),
       ...(status ? { status: status as DeliveryAttemptStatus } : {}),
       ...(zoneId ? { deliveryRequest: { deliveryZoneId: zoneId } } : {}),
-    };
+    });
     const [attempts, zones] = await Promise.all([
       db.deliveryAttempt.findMany({
         where,
         orderBy: { createdAt: 'asc' },
         select: {
           id: true, status: true, createdAt: true, claimedAt: true, pickedUpAt: true, deliveredAt: true, failedAt: true, failureReason: true,
-          rider: { select: { id: true, displayName: true, avatarUpdatedAt: true } },
+          rider: { select: { id: true, displayName: true, avatarUpdatedAt: true, riderProfile: { select: { riderCode: true } } } },
           deliveryRequest: {
             select: { id: true, hn: true, patientName: true, telephone: true, deliveryAddress: true, deliveryVersion: true, deliveryZone: { select: { displayName: true } } },
           },
@@ -43,6 +47,19 @@ export async function GET(request: NextRequest) {
       }),
       db.deliveryZone.findMany({ where: { active: true }, orderBy: { displayName: 'asc' }, select: { id: true, displayName: true } }),
     ]);
+    if (params.get('format') === 'csv') {
+      return csvResponse('delivery-overview', { from: date, to: date, start: dayStart, end: dayStart }, toCsv(
+        ['พัสดุ', 'HN', 'ผู้ป่วย', 'โทร', 'ที่อยู่', 'โซน', 'รหัสไรเดอร์', 'ไรเดอร์', 'สถานะ', 'เตรียมพัสดุ', 'รับงาน', 'รับของ', 'ส่งเสร็จ/ไม่สำเร็จ', 'สาเหตุที่ส่งไม่สำเร็จ'],
+        attempts.map((attempt) => [
+          shortCode(attempt.id), attempt.deliveryRequest.hn, attempt.deliveryRequest.patientName, attempt.deliveryRequest.telephone,
+          attempt.deliveryRequest.deliveryAddress, attempt.deliveryRequest.deliveryZone.displayName,
+          attempt.rider?.riderProfile?.riderCode ?? null, attempt.rider?.displayName ?? null, statusLabels[attempt.status],
+          formatThaiDateTime(attempt.createdAt), formatThaiDateTime(attempt.claimedAt), formatThaiDateTime(attempt.pickedUpAt),
+          formatThaiDateTime(attempt.deliveredAt ?? attempt.failedAt),
+          attempt.failureReason ? failureReasonLabels[attempt.failureReason as keyof typeof failureReasonLabels] ?? attempt.failureReason : null,
+        ]),
+      ));
+    }
     return NextResponse.json({ date, attempts, zones });
   });
 }

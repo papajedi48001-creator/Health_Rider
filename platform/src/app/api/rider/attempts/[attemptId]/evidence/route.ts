@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
+import { requireAttemptInScope } from '@/auth/coordinator-scope';
 import { requireRole } from '@/auth/require-role';
 import { readEvidencePhoto } from '@/evidence/photo-storage';
 import { db } from '@/lib/db';
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ att
   return handleRoute(async () => {
     const session = requireRole(await getSessionFromRequest(request), 'rider', 'pharmacy', 'coordinator', 'admin');
     const { attemptId } = await context.params;
+    await requireAttemptInScope(db, session, { id: attemptId }, 'ไม่พบรูปหลักฐาน');
     const evidence = await db.deliveryEvidence.findUnique({
       where: { deliveryAttemptId: attemptId },
       select: { photoPath: true, deliveryAttempt: { select: { riderId: true } } },

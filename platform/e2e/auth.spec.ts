@@ -5,7 +5,10 @@ import { login } from './login';
 test('sends a visitor without a session to login and back after signing in', async ({ page }) => {
   await page.goto('/pharmacy/candidates');
   await expect(page).toHaveURL(/\/login\?next=%2Fpharmacy%2Fcandidates/);
-  await login(page, 'pharmacy.uat');
+  // Signs in on the page it was sent to, so the link back is kept.
+  await page.getByLabel('ชื่อผู้ใช้').fill('pharmacy.uat');
+  await page.getByLabel('รหัสผ่าน').fill(process.env.E2E_PASSWORD ?? '');
+  await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
   await expect(page).toHaveURL(/\/pharmacy\/candidates$/);
 });
 

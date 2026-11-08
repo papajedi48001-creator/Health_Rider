@@ -3,11 +3,24 @@ import { HosUnavailableError, loadHosConfig, type HosConnection } from '@/hos/ho
 import { db } from '@/lib/db';
 import { bangkokDateString } from '@/lib/time';
 import type { HosCandidateRepository } from '@/hos/candidate-repository';
-import type { HosCandidate, HosCandidateRow, HosVillage, HosVillageRow, HosVisitDay, HosVisitDayRow } from '@/hos/types';
+import { villageKey, withVillageName } from '@/domain/delivery/village-address';
+import type { HosCandidate, HosCandidateRow, HosPatient, HosPatientRow, HosVillage, HosVillageRow, HosVisitDay, HosVisitDayRow } from '@/hos/types';
 
 type ReadOnlyConnection = {
   execute(sql: string, values?: unknown): Promise<[unknown, ...unknown[]]>;
 };
+
+// The title (pname) joins the first name as Thai labels write it; a missing title drops out.
+const patientNameSql = "CONCAT_WS(' ', CONCAT(COALESCE(p.pname, ''), p.fname), p.lname)";
+
+// The delivery address is the patient's registered address, the one HOSxP prints on its own slips: house number
+// (addrpart), village number (moopart) and subdistrict/district/province from thaiaddress. informaddr is the
+// address of the patient's contact person, not of the patient, so it is never used.
+const registeredAddressSql = `
+    p.addrpart AS house_number,
+    p.moopart AS village_code,
+    CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code,
+    t.full_name AS subdistrict_name`;
 
 function candidateQuery(itemCodeCount: number): string {
   const itemCodePlaceholders = Array.from({ length: itemCodeCount }, () => '?').join(', ');
@@ -15,13 +28,10 @@ function candidateQuery(itemCodeCount: number): string {
   SELECT DISTINCT
     o.vn AS visit_number,
     o.hn AS hn,
-    CONCAT_WS(' ', p.fname, p.lname) AS patient_name,
+    ${patientNameSql} AS patient_name,
     TIMESTAMPDIFF(YEAR, p.birthday, o.vstdate) AS patient_age,
     COALESCE(NULLIF(p.mobile_phone_number, ''), NULLIF(p.hometel, ''), NULLIF(p.informtel, '')) AS telephone,
-    p.informaddr AS delivery_address,
-    CONCAT(p.chwpart, p.amppart, p.tmbpart) AS subdistrict_code,
-    t.full_name AS subdistrict_name,
-    p.moopart AS village_code
+    ${registeredAddressSql}
   FROM opitemrece AS o
   INNER JOIN patient AS p ON p.hn = o.hn
   LEFT JOIN thaiaddress AS t ON t.addressid = CONCAT(p.chwpart, p.amppart, p.tmbpart)
@@ -57,6 +67,14 @@ function visitDayQuery(itemCodeCount: number): string {
 `;
 }
 
+// Village names change rarely; read them at most every ten minutes.
+const villageCacheMs = 10 * 60_000;
+let villageCache: { at: number; names: Map<string, string> } | null = null;
+
+export function clearVillageNameCache() {
+  villageCache = null;
+}
+
 // One row per visit even when several eligible items were dispensed in it.
 export class MysqlHosCandidateRepository implements HosCandidateRepository {
   constructor(
@@ -74,7 +92,28 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
       bangkokDateString(on),
     ]);
 
-    return (rows as HosCandidateRow[]).map(mapCandidate);
+    const villages = await this.villageNames();
+    return (rows as HosCandidateRow[]).map(mapCandidate).map((candidate) => ({
+      ...candidate,
+      deliveryAddress: withVillageName(candidate.deliveryAddress, villages.get(villageKey(candidate.subdistrictCode, candidate.villageCode))),
+    }));
+  }
+
+  // hosp_moo_control is not in every HOSxP install; without it addresses simply go without village names.
+  // Only a successful read is cached, so a failed one is tried again on the next page load.
+  async villageNames(): Promise<Map<string, string>> {
+    if (villageCache && Date.now() - villageCache.at < villageCacheMs) return villageCache.names;
+    try {
+      const [rows] = await this.connection.execute('SELECT CONCAT(chwpart, amppart, tmbpart) AS subdistrict_code, moo AS village_code, banname AS village_name FROM hosp_moo_control', []);
+      const names = new Map((rows as Array<{ subdistrict_code: string | number | null; village_code: string | number | null; village_name: string | Buffer | null }>)
+        .map((row) => [villageKey(String(row.subdistrict_code ?? '').trim(), normaliseVillageCode(row.village_code)), decodeLegacyText(row.village_name)] as const)
+        .filter(([, name]) => name !== ''));
+      villageCache = { at: Date.now(), names };
+      return names;
+    } catch (error) {
+      console.warn('HOSxP village names unavailable:', error instanceof Error ? error.message : error);
+      return new Map();
+    }
   }
 
   // Eligible visits between two Thai dates, inclusive.
@@ -85,6 +124,25 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
 
     const [rows] = await this.connection.execute(visitDayQuery(this.eligibleItemCodes.length), [...this.eligibleItemCodes, from, to]);
     return (rows as HosVisitDayRow[]).map((row) => ({ date: String(row.visit_date), visitNumber: String(row.visit_number) }));
+  }
+
+  async patients(hns: string[]): Promise<Map<string, HosPatient>> {
+    if (hns.length === 0) return new Map();
+    const placeholders = hns.map(() => '?').join(', ');
+    const [rows] = await this.connection.execute(`
+      SELECT p.hn AS hn, ${patientNameSql} AS patient_name, ${registeredAddressSql}
+      FROM patient AS p
+      LEFT JOIN thaiaddress AS t ON t.addressid = CONCAT(p.chwpart, p.amppart, p.tmbpart)
+      WHERE p.hn IN (${placeholders})`, hns);
+    const villages = await this.villageNames();
+    return new Map((rows as HosPatientRow[]).map((row) => {
+      const subdistrictCode = String(row.subdistrict_code ?? '').trim();
+      const address = registeredAddress(row);
+      return [String(row.hn), {
+        name: decodeLegacyText(row.patient_name),
+        address: withVillageName(address, villages.get(villageKey(subdistrictCode, normaliseVillageCode(row.village_code)))),
+      }] as const;
+    }));
   }
 
   // Villages are normalised the same way as candidates, so "6" and "06" fold into one zone.
@@ -183,7 +241,13 @@ export type HosConnectionTest = {
   items: Array<{ code: string; name: string | null }>;
 };
 
-const requiredTables = ['opitemrece', 'patient', 'thaiaddress'];
+// Each table is read with the columns the app uses, so a missing column shows up in the test, not as a silent blank.
+const requiredTables: Record<string, string> = {
+  opitemrece: '1',
+  patient: 'hn, pname, fname, lname, addrpart, moopart, chwpart, amppart, tmbpart',
+  thaiaddress: 'addressid, full_name',
+  hosp_moo_control: 'chwpart, amppart, tmbpart, moo, banname',
+};
 
 // Checks a HOSxP connection the way the app uses it: can log in, read the tables it needs, and find the item codes.
 export async function testHosConnection(connection: HosConnection, eligibleItemCodes: readonly string[]): Promise<HosConnectionTest> {
@@ -199,9 +263,9 @@ export async function testHosConnection(connection: HosConnection, eligibleItemC
     const version = String((versionRows as Array<{ version: unknown }>)[0]?.version ?? '');
 
     const tables: HosConnectionTest['tables'] = [];
-    for (const name of requiredTables) {
+    for (const [name, columns] of Object.entries(requiredTables)) {
       try {
-        await client.query(`SELECT 1 FROM \`${name}\` LIMIT 0`);
+        await client.query(`SELECT ${columns} FROM \`${name}\` LIMIT 0`);
         tables.push({ name, ok: true, message: null });
       } catch (error) {
         tables.push({ name, ok: false, message: describeHosError(error) });
@@ -237,11 +301,18 @@ function mapCandidate(row: HosCandidateRow): HosCandidate {
     patientName: decodeLegacyText(row.patient_name),
     patientAge: row.patient_age === null ? null : Number(row.patient_age),
     telephone: blankToNull(decodeLegacyText(row.telephone)),
-    deliveryAddress: decodeLegacyText(row.delivery_address),
+    deliveryAddress: registeredAddress(row),
     subdistrictCode: String(row.subdistrict_code ?? '').trim(),
     subdistrictName: blankToNull(decodeLegacyText(row.subdistrict_name)),
     villageCode: normaliseVillageCode(row.village_code),
   };
+}
+
+// "402 หมู่ 18 ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร"; a blank part drops out, and village "0" means none.
+export function registeredAddress(row: { house_number: string | Buffer | null; village_code: string | number | null; subdistrict_name: string | Buffer | null }): string {
+  const village = String(row.village_code ?? '').trim().replace(/^0+(?=\d)/, '');
+  return [decodeLegacyText(row.house_number), village && village !== '0' ? `หมู่ ${village}` : '', decodeLegacyText(row.subdistrict_name)]
+    .filter((part) => part !== '').join(' ');
 }
 
 function normaliseVillageCode(value: string | number | null): string {

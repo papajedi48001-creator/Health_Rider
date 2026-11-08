@@ -6,7 +6,7 @@ import { DeveloperCredit } from '@/brand/developer-credit';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ระบบจัดการ Health Rider',
+  title: 'ระบบจัดการ ภูไทไรเดอร์',
   description: 'ระบบบริหารการส่งยาถึงบ้าน โรงพยาบาลวาริชภูมิ',
   manifest: withBasePath('/manifest.webmanifest'),
   icons: { icon: withBasePath('/icon.svg'), apple: withBasePath('/icon-192.png') },

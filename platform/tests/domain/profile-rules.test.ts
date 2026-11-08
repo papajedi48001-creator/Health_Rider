@@ -4,6 +4,8 @@ import { parsePasswordChange, parseProfileChanges } from '@/domain/account/profi
 test('accepts a trimmed name and a Thai phone number, normalising spaces and dashes', () => {
   expect(parseProfileChanges({ displayName: '  สมชาย ใจดี ', phone: '081-234 5678' })).toEqual({ displayName: 'สมชาย ใจดี', phone: '0812345678' });
   expect(parseProfileChanges({ phone: '' })).toEqual({ phone: null });
+  expect(parseProfileChanges({ healthCenter: 'รพ.สต.ภูวงน้อย' })).toEqual({ healthCenter: 'รพ.สต.ภูวงน้อย' });
+  expect(() => parseProfileChanges({ healthCenter: '' })).toThrow('ต้องเลือก รพ.สต.');
 });
 
 test('rejects an empty name, a bad phone and an empty change', () => {

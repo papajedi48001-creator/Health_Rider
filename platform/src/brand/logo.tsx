@@ -24,7 +24,7 @@ export function Brand({ size = 36, hospitalName = 'โรงพยาบาล�
   return (
     <>
       <LogoMark size={size} />
-      <span className="brand-text"><strong>Health Rider</strong><small>{hospitalName}</small></span>
+      <span className="brand-text"><strong>ภูไทไรเดอร์</strong><small>{hospitalName}</small></span>
     </>
   );
 }

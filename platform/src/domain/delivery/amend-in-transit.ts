@@ -16,7 +16,7 @@ export class StaleDeliveryVersionError extends DomainError {
 }
 
 export async function amendInTransit(requestId: string, data: AmendmentData, coordinator: SessionUser | null, store: AmendmentStore) {
-  const actor = requireRole(coordinator, 'coordinator', 'admin');
+  const actor = requireRole(coordinator, 'pharmacy', 'coordinator', 'admin');
   if ('hn' in (data as object) || 'packageId' in (data as object)) throw new DomainError('แก้ไข HN หรือข้อมูลพัสดุไม่ได้');
   if (!data.reason.trim()) throw new DomainError('ต้องระบุเหตุผลการแก้ไข');
   const request = await store.findInTransitRequest(requestId);

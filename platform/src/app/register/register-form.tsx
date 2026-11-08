@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { HealthCenterSelect } from '@/account/health-center-select';
 import { registrableRoles } from '@/domain/admin/registration-rules';
 import { minimumPasswordLength } from '@/domain/admin/user-rules';
 import { callApi } from '@/lib/api-client';
@@ -45,6 +46,7 @@ export function RegisterForm() {
           {registrableRoles.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}
         </select>
       </label>
+      <HealthCenterSelect />
       <label>ชื่อผู้ใช้ (a-z, 0-9, จุด, ขีด) <input name="username" required pattern="[a-zA-Z0-9._\-]{3,100}" autoComplete="username" autoCapitalize="none" /></label>
       <label>รหัสผ่าน <input name="password" type="password" required minLength={minimumPasswordLength} maxLength={200} autoComplete="new-password" /></label>
       <label>ยืนยันรหัสผ่าน <input name="confirmPassword" type="password" required minLength={minimumPasswordLength} autoComplete="new-password" /></label>

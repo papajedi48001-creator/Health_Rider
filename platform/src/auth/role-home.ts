@@ -1,15 +1,20 @@
 import type { UserRole } from '@/auth/roles';
 
 const roleHomes: Record<UserRole, string> = {
-  pharmacy: '/pharmacy/candidates',
-  coordinator: '/operations',
+  pharmacy: '/dashboard',
+  coordinator: '/dashboard',
   rider: '/rider/scan',
-  admin: '/operations',
+  admin: '/dashboard',
   auditor: '/audit',
 };
 
 export function roleHome(role: UserRole): string {
   return roleHomes[role];
+}
+
+// Where an account with several roles picks the one to work in; `next` is where to go once it has.
+export function chooseRolePath(next?: string | null): string {
+  return next ? `/select-role?next=${encodeURIComponent(next)}` : '/select-role';
 }
 
 const placeholderOrigin = 'http://health-rider.invalid';

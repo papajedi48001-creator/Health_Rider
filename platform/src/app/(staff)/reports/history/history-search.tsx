@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { PersonName } from '@/account/person-name';
 import { DeliveryDetails } from '@/app/(staff)/operations/delivery-details';
 import { Icon } from '@/brand/icons';
-import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
+import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { withBasePath } from '@/lib/base-path';
 import { formatThaiDateTime, statusLabels } from '@/lib/labels';
@@ -14,7 +14,7 @@ import { bangkokDateString } from '@/lib/time';
 import { SuggestBox, type Suggestion } from './suggest-box';
 
 type Zone = { id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string };
-type Filters = { hn: string; rider: string; subdistrict: string; zone: string };
+type Filters = { hn: string; rider: string; subdistrict: string; zone: string; status: string };
 type HistoryItem = {
   id: string; packageCode: string; status: DeliveryAttemptStatus; hn: string; patientName: string; subdistrict: string; zone: string;
   rider: { id: string; displayName: string; avatarUpdatedAt: string | null; riderCode: string | null } | null;
@@ -25,7 +25,7 @@ type PatientOption = { hn: string; patientName: string };
 type HistoryPage = { page: number; pages: number; total: number; items: HistoryItem[] };
 
 const maxSuggestions = 8;
-const emptyFilters: Filters = { hn: '', rider: '', subdistrict: '', zone: '' };
+const emptyFilters: Filters = { hn: '', rider: '', subdistrict: '', zone: '', status: '' };
 
 function thisMonth(): Range {
   const today = bangkokDateString(new Date());
@@ -123,6 +123,13 @@ export function DeliveryHistorySearch() {
           <select value={draft.zone} onChange={(event) => setDraft({ ...draft, zone: event.target.value })}>
             <option value="">ทุกโซน</option>
             {zoneChoices.map((zone) => <option key={zone.id} value={zone.id}>{zone.displayName}</option>)}
+          </select>
+        </label>
+        <label>
+          สถานะ
+          <select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}>
+            <option value="">ทุกสถานะ</option>
+            {deliveryAttemptStatuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
           </select>
         </label>
         <div className="history-actions">

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole } from '@/auth/require-role';
+import { refreshJobsFromHos } from '@/domain/delivery/refresh-from-hos';
+import { getHosCandidateRepository } from '@/hos/mysql-candidate-repository';
 import { db } from '@/lib/db';
 import { handleRoute } from '@/lib/route';
 
@@ -16,15 +18,19 @@ export async function GET(request: NextRequest) {
       where: { createdAt: { gte: new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000) } },
       orderBy: { createdAt: 'asc' },
       select: {
-        id: true, hosVisitNumber: true, hn: true, patientName: true, deliveryAddress: true, createdAt: true,
+        id: true, hosVisitNumber: true, hn: true, patientName: true, telephone: true, deliveryAddress: true, deliveryVersion: true, createdAt: true,
         deliveryZone: { select: { id: true, displayName: true, subdistrictCode: true, subdistrictName: true, villageCode: true } },
-        attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { id: true, status: true, failureReason: true, failedAt: true } },
+        attempts: { orderBy: { createdAt: 'desc' }, select: { id: true, status: true, failureReason: true, failedAt: true, riderId: true } },
       },
     });
 
+    // Labels print from these, so jobs saved without name titles or village names get them before the board shows; HOSxP being down never blocks it.
+    const refreshed = await refreshJobsFromHos(getHosCandidateRepository, db);
     const rows = requests.map((item) => ({
-      id: item.id, visitNumber: item.hosVisitNumber, hn: item.hn, patientName: item.patientName, deliveryAddress: item.deliveryAddress,
-      zone: item.deliveryZone, createdAt: item.createdAt, latestAttempt: item.attempts[0] ?? null,
+      id: item.id, visitNumber: item.hosVisitNumber, hn: item.hn, patientName: refreshed.get(item.id)?.patientName ?? item.patientName, deliveryAddress: refreshed.get(item.id)?.deliveryAddress ?? item.deliveryAddress,
+      telephone: item.telephone, deliveryVersion: item.deliveryVersion, zone: item.deliveryZone, createdAt: item.createdAt, latestAttempt: item.attempts[0] ? { id: item.attempts[0].id, status: item.attempts[0].status, failureReason: item.attempts[0].failureReason, failedAt: item.attempts[0].failedAt } : null,
+      // A job no rider has ever had can be deleted; one with delivery history keeps it.
+      deletable: item.attempts.every((attempt) => attempt.status === 'prepared' && attempt.riderId === null),
     }));
     return NextResponse.json({
       toPrepare: rows.filter((row) => !row.latestAttempt || row.latestAttempt.status === 'returned'),

@@ -5,7 +5,11 @@ import type { EmploymentCategory, UserRole } from '@prisma/client';
 import { ulid } from 'ulidx';
 import { createPrismaClient } from '../src/lib/prisma-client.mjs';
 
-type SeedAccount = { username: string; displayName: string; role: UserRole; rider?: { riderCode: string; employmentCategory: EmploymentCategory } };
+// UAT accounts belong to the hospital itself so they never hit the missing-รพ.สต. prompt.
+const uatHealthCenter = 'รพ.วาริชภูมิ';
+
+// `roles` lists every role held when there is more than the first one.
+type SeedAccount = { username: string; displayName: string; role: UserRole; roles?: UserRole[]; rider?: { riderCode: string; employmentCategory: EmploymentCategory } };
 
 const uatAccounts: SeedAccount[] = [
   { username: 'pharmacy.uat', displayName: 'เภสัชกร UAT', role: 'pharmacy' },
@@ -14,6 +18,7 @@ const uatAccounts: SeedAccount[] = [
   { username: 'rider.external.uat', displayName: 'ไรเดอร์ผู้รับจ้าง UAT', role: 'rider', rider: { riderCode: 'UAT-EXT-01', employmentCategory: 'external' } },
   { username: 'admin.uat', displayName: 'ผู้ดูแลระบบ UAT', role: 'admin' },
   { username: 'auditor.uat', displayName: 'ผู้ตรวจสอบ UAT', role: 'auditor' },
+  { username: 'multi.uat', displayName: 'เภสัชกรและผู้ประสานงาน UAT', role: 'pharmacy', roles: ['pharmacy', 'coordinator'] },
 ];
 
 const prisma = createPrismaClient();
@@ -28,9 +33,12 @@ async function main() {
   for (const account of uatAccounts) {
     const user = await prisma.user.upsert({
       where: { username: account.username },
-      update: { displayName: account.displayName, role: account.role, passwordHash, active: true },
-      create: { id: ulid(), username: account.username, displayName: account.displayName, role: account.role, passwordHash },
+      update: { displayName: account.displayName, role: account.role, passwordHash, active: true, healthCenter: uatHealthCenter, mustChangePassword: false },
+      create: { id: ulid(), username: account.username, displayName: account.displayName, role: account.role, passwordHash, healthCenter: uatHealthCenter },
     });
+    const roles = account.roles ?? [account.role];
+    await prisma.userRoleGrant.deleteMany({ where: { userId: user.id, role: { notIn: roles } } });
+    await prisma.userRoleGrant.createMany({ data: roles.map((role) => ({ userId: user.id, role })), skipDuplicates: true });
     if (account.rider) {
       await prisma.riderProfile.upsert({
         where: { userId: user.id },

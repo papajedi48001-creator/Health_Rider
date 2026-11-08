@@ -10,6 +10,7 @@ import { EmptyState } from '@/brand/empty-state';
 import { HeroBanner } from '@/brand/hero-banner';
 import { mascotName } from '@/brand/mascot';
 import { Icon } from '@/brand/icons';
+import { InstallAppButton } from '@/pwa/install-app-button';
 import { statusTone } from '@/lib/status-tone';
 
 type BarcodeDetectorLike = { detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>> };
@@ -44,9 +45,9 @@ export default function RiderScanPage() {
 
   // Prefers the browser's built-in QR detector (Chrome on Android) and falls back to jsQR elsewhere, such as iPhone Safari.
   async function startCamera() {
-    if (!navigator.mediaDevices?.getUserMedia) return setMessage('อุปกรณ์นี้เปิดกล้องในเบราว์เซอร์ไม่ได้ โปรดกรอกรหัสใต้ QR');
+    if (!navigator.mediaDevices?.getUserMedia) return setMessage('อุปกรณ์นี้เปิดกล้องในเบราว์เซอร์ไม่ได้ โปรดกรอกเลข VN บนฉลาก');
     const readCode = await qrReader().catch(() => null);
-    if (!readCode) return setMessage('โหลดตัวอ่าน QR ไม่ได้ โปรดกรอกรหัสใต้ QR');
+    if (!readCode) return setMessage('โหลดตัวอ่าน QR ไม่ได้ โปรดกรอกเลข VN บนฉลาก');
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).catch(() => null);
     if (!stream || !videoRef.current) return setMessage('เปิดกล้องไม่ได้ โปรดอนุญาตการใช้กล้อง');
     videoRef.current.srcObject = stream;
@@ -77,6 +78,13 @@ export default function RiderScanPage() {
         text={<>สแกน QR ที่พัสดุ แล้ว <span className="nowrap">{mascotName}</span> จะพาไปทีละขั้น</>}
         count={attempts && attempts.length > 0 ? `งานค้าง ${attempts.length} งาน` : undefined}
       />
+      {attempts && attempts.length > 0 && (
+        <div className="rider-stats" role="group" aria-label="สรุปงานของฉัน">
+          <div className="rider-stat"><span className="stat-icon"><Icon name="package" size={20} /></span><span><small>รับงานแล้ว</small><strong>{attempts.filter((attempt) => attempt.status === 'claimed').length}</strong> งาน</span></div>
+          <div className="rider-stat tone-blue"><span className="stat-icon"><Icon name="truck" size={20} /></span><span><small>กำลังนำส่ง</small><strong>{attempts.filter((attempt) => attempt.status === 'in_transit').length}</strong> งาน</span></div>
+        </div>
+      )}
+
       <h1>รับงาน</h1>
       <p aria-live="polite" role="status">{message}</p>
 
@@ -93,10 +101,10 @@ export default function RiderScanPage() {
             <Icon name="scan" size={26} /> สแกน QR รับงาน
           </button>
         )}
-        <p className="divider"><span>หรือกรอกรหัสใต้ QR</span></p>
+        <p className="divider"><span>หรือกรอกเลข VN บนฉลาก</span></p>
         <form className="inline-form" onSubmit={(event) => { event.preventDefault(); void claim(token); }}>
           <label>
-            รหัสใต้ QR
+            เลข VN (หรือรหัสใต้ QR)
             <input value={token} onChange={(event) => setToken(event.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
           </label>
           <button type="submit" className="btn btn-secondary btn-block" disabled={!token.trim()}>ยืนยันรหัส</button>
@@ -111,17 +119,20 @@ export default function RiderScanPage() {
           {attempts.map((attempt) => (
             <li key={attempt.id}>
               <Link href={`/rider/attempts/${attempt.id}`} className="job-link">
+                <span className="job-icon"><Icon name="package" size={20} /></span>
                 <span className="job-main">
                   <strong>{attempt.patientName}</strong>
                   <span className="muted">{attempt.address}</span>
-                  <span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span>
                 </span>
+                <span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span>
                 <Icon name="chevron" />
               </Link>
             </li>
           ))}
         </ul>
       )}
+
+      <InstallAppButton />
     </main>
   );
 }

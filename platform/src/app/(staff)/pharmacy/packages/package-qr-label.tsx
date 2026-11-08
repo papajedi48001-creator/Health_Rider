@@ -3,7 +3,7 @@
 import QRCode from 'qrcode';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { defaultLabelSettings, labelFontPt, pageLayout, paperName, type LabelLayout, type LabelSettings } from '@/domain/settings/label-layout';
+import { defaultLabelSettings, labelSizes, pageLayout, paperName, type LabelLayout, type LabelSettings } from '@/domain/settings/label-layout';
 import { callApi } from '@/lib/api-client';
 import { shortCode } from '@/lib/labels';
 
@@ -20,32 +20,35 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
     void QRCode.toDataURL(label.token, { errorCorrectionLevel: 'M', margin: 1, width: 240 }).then(setImage);
   }, [label.token]);
 
+  const sizes = labelSizes(layout);
+  const qr = { width: `${sizes.qrMm}mm`, height: `${sizes.qrMm}mm` };
   return (
     <article className="parcel-label" style={labelStyle(layout)} aria-label={`ฉลากพัสดุ ${shortCode(label.attemptId)}`}>
       <div className="parcel-head">
         <strong>กรุณาส่ง</strong>
-        <code className="parcel-code">CODE: {label.subdistrictCode}-{label.villageCode}</code>
+        <code className="parcel-code">HN: {label.hn}</code>
       </div>
+      {/* The name gets its own full-width line so it never wraps beside the QR. */}
+      <strong className="parcel-name" style={{ fontSize: `${sizes.namePt}pt` }}>{label.patientName}</strong>
       <div className="parcel-body">
         <div className="parcel-to">
-          <strong className="parcel-name">{label.patientName}</strong>
-          <span className="parcel-address">{label.deliveryAddress}</span>
+          <span className="parcel-address" style={{ fontSize: `${sizes.addressPt}pt` }}>{label.deliveryAddress}</span>
         </div>
         <div className="parcel-qr">
-          {image ? <img src={image} alt={`QR พัสดุ ${shortCode(label.attemptId)}`} width={120} height={120} /> : <span>กำลังสร้าง QR</span>}
+          {image ? <img src={image} alt={`QR พัสดุ ${shortCode(label.attemptId)}`} width={120} height={120} style={qr} /> : <span style={qr}>กำลังสร้าง QR</span>}
           <strong>{label.visitNumber ?? label.hn}</strong>
         </div>
       </div>
       <div className="parcel-foot">(หากไม่มีผู้รับกรุณานำส่งคืน รพ.วาริชภูมิ)</div>
-      {/* Printed small so a rider whose camera cannot read the QR can type the same opaque token. */}
-      <div className="qr-token">รหัสใต้ QR: <code>{label.token}</code></div>
+      {/* A rider whose camera cannot read the QR types the VN printed under it; without a VN only the opaque token can claim the job. */}
+      {label.visitNumber ? null : <div className="qr-token">รหัสใต้ QR: <code>{label.token}</code></div>}
     </article>
   );
 }
 
 // A label is the same size in millimetres on screen as on paper.
 export function labelStyle(layout: LabelLayout): CSSProperties {
-  return { width: `${layout.labelWidthMm}mm`, height: `${layout.labelHeightMm}mm`, fontSize: `${labelFontPt(layout)}pt` };
+  return { width: `${layout.labelWidthMm}mm`, height: `${layout.labelHeightMm}mm`, fontSize: `${labelSizes(layout).basePt}pt` };
 }
 
 // Sets the sheet size and margin for printing, and how many labels sit across each sheet.

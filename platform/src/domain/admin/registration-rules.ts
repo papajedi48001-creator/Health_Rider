@@ -1,5 +1,6 @@
 import type { UserRole } from '@/auth/roles';
 import { parsePhone } from '@/domain/account/profile-rules';
+import { parseHealthCenter } from '@/domain/admin/health-centers';
 import { employmentCategories, minimumPasswordLength, type EmploymentCategory } from '@/domain/admin/user-rules';
 import { DomainError } from '@/domain/errors';
 
@@ -7,7 +8,7 @@ import { DomainError } from '@/domain/errors';
 export const registrableRoles = ['pharmacy', 'coordinator', 'rider'] as const satisfies readonly UserRole[];
 export type RegistrableRole = (typeof registrableRoles)[number];
 
-export type Registration = { username: string; displayName: string; phone: string | null; role: RegistrableRole; password: string };
+export type Registration = { username: string; displayName: string; phone: string | null; healthCenter: string; role: RegistrableRole; password: string };
 
 export function parseRegistration(value: unknown): Registration {
   const body = (value ?? {}) as Record<string, unknown>;
@@ -18,16 +19,17 @@ export function parseRegistration(value: unknown): Registration {
   if (displayName.length > 255) throw new DomainError('ชื่อยาวเกินไป');
   const phone = parsePhone(body.phone);
   if (!phone) throw new DomainError('ต้องระบุเบอร์โทรเพื่อให้ผู้ดูแลระบบติดต่อกลับ');
+  const healthCenter = parseHealthCenter(body.healthCenter);
   if (!(registrableRoles as readonly unknown[]).includes(body.role)) throw new DomainError('ต้องเลือกหน้าที่ที่ต้องการใช้งาน');
   if (typeof body.password !== 'string' || body.password.length < minimumPasswordLength) {
     throw new DomainError(`รหัสผ่านต้องยาวอย่างน้อย ${minimumPasswordLength} ตัวอักษร`);
   }
   if (body.password.length > 200) throw new DomainError('รหัสผ่านยาวเกินไป');
-  return { username, displayName, phone, role: body.role as RegistrableRole, password: body.password };
+  return { username, displayName, phone, healthCenter, role: body.role as RegistrableRole, password: body.password };
 }
 
 export type ApprovalDecision =
-  | { decision: 'approve'; role: UserRole; rider?: { employmentCategory: EmploymentCategory } }
+  | { decision: 'approve'; role: UserRole; healthCenter: string; rider?: { employmentCategory: EmploymentCategory } }
   | { decision: 'reject' };
 
 // The admin confirms or changes the role asked for; a rider also needs a rider code and category.
@@ -37,8 +39,10 @@ export function parseApproval(value: unknown, roles: readonly UserRole[]): Appro
   if (body.decision !== 'approve') throw new DomainError('ต้องเลือกอนุมัติหรือไม่อนุมัติ');
   if (!(roles as readonly unknown[]).includes(body.role)) throw new DomainError('บทบาทไม่ถูกต้อง');
   const role = body.role as UserRole;
-  if (role !== 'rider') return { decision: 'approve', role };
+  // Applications sent before the รพ.สต. was asked for get one at approval.
+  const healthCenter = parseHealthCenter(body.healthCenter);
+  if (role !== 'rider') return { decision: 'approve', role, healthCenter };
   // The rider code is always assigned by the server, so any code sent along is ignored.
   if (!(employmentCategories as readonly unknown[]).includes(body.employmentCategory)) throw new DomainError('ต้องเลือกประเภทไรเดอร์');
-  return { decision: 'approve', role, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
+  return { decision: 'approve', role, healthCenter, rider: { employmentCategory: body.employmentCategory as EmploymentCategory } };
 }

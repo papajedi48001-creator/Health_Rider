@@ -36,7 +36,7 @@ export function DeveloperCredit() {
           <div className="dev-balloon-head">
             {/* eslint-disable-next-line @next/next/no-img-element -- a small static photo served from public/ */}
             <img className="dev-photo" src={withBasePath('/developer.jpg')} alt="" width={44} height={44} />
-            <span><strong>{developer.name}</strong><br /><small className="muted">ผู้พัฒนาระบบ Health Rider</small></span>
+            <span><strong>{developer.name}</strong><br /><small className="muted">ผู้พัฒนาระบบ ภูไทไรเดอร์</small></span>
             <button type="button" className="icon-button" aria-label="ปิด" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
           </div>
           <ul className="dev-contacts">

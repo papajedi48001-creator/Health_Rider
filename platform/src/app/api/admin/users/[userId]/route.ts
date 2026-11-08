@@ -5,6 +5,7 @@ import { hashPassword } from '@/auth/session';
 import { parseUserChanges } from '@/domain/admin/user-rules';
 import { audit } from '@/domain/audit/write-audit-event';
 import { DomainError } from '@/domain/errors';
+import { knownHealthCenter } from '@/domain/admin/health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute } from '@/lib/route';
@@ -16,18 +17,19 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ u
     const admin = requireRole(await getSessionFromRequest(request), 'admin');
     const { userId } = await context.params;
     const { password, ...changes } = parseUserChanges(await readJsonBody(request), admin.id, userId);
+    if (changes.healthCenter) await knownHealthCenter(db, changes.healthCenter);
     const passwordHash = password ? await hashPassword(password) : undefined;
 
     const updated = await db.$transaction(async (tx) => {
-      const before = await tx.user.findUnique({ where: { id: userId }, select: { displayName: true, role: true, active: true, pendingApproval: true } });
+      const before = await tx.user.findUnique({ where: { id: userId }, select: { displayName: true, phone: true, healthCenter: true, active: true, pendingApproval: true, role: true } });
       if (!before) throw new DomainError('ไม่พบบัญชีผู้ใช้', 404);
       if (before.pendingApproval && changes.active === true) throw new DomainError('บัญชีนี้รออนุมัติ โปรดใช้ปุ่มอนุมัติ');
-      const becomesActiveRider = (changes.role ?? before.role) === 'rider' && (changes.active ?? before.active) && !(before.role === 'rider' && before.active);
+      const becomesActiveRider = before.role === 'rider' && changes.active === true && !before.active;
       if (becomesActiveRider) await assertRiderSeatAvailable(tx, userId);
       const after = await tx.user.update({
         where: { id: userId },
-        data: { ...changes, ...(passwordHash ? { passwordHash } : {}) },
-        select: { id: true, username: true, displayName: true, role: true, active: true },
+        data: { ...changes, ...(passwordHash ? { passwordHash, mustChangePassword: true } : {}) },
+        select: { id: true, username: true, displayName: true, phone: true, healthCenter: true, role: true, active: true },
       });
       if (changes.active === false || passwordHash) {
         await tx.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });

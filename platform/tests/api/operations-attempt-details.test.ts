@@ -1,13 +1,13 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { findAttempt, findEvents, findUsers, currentSession } = vi.hoisted(() => ({
-  findAttempt: vi.fn(), findEvents: vi.fn(), findUsers: vi.fn(), currentSession: vi.fn(),
+const { findAttempt, countAttempts, findEvents, findUsers, currentSession } = vi.hoisted(() => ({
+  findAttempt: vi.fn(), countAttempts: vi.fn(), findEvents: vi.fn(), findUsers: vi.fn(), currentSession: vi.fn(),
 }));
 
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({
-  db: { deliveryAttempt: { findUnique: findAttempt }, auditEvent: { findMany: findEvents }, user: { findMany: findUsers } },
+  db: { deliveryAttempt: { findUnique: findAttempt, count: countAttempts }, auditEvent: { findMany: findEvents }, user: { findMany: findUsers } },
 }));
 
 const attempt = {
@@ -29,7 +29,8 @@ function get(id: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  currentSession.mockResolvedValue({ id: 'coord-1', role: 'coordinator', displayName: 'ผู้ประสานงาน' });
+  currentSession.mockResolvedValue({ id: 'coord-1', role: 'coordinator', displayName: 'ผู้ประสานงาน', healthCenter: 'รพ.สต.ปลาโหล' });
+  countAttempts.mockResolvedValue(1);
   findAttempt.mockResolvedValue(attempt);
   findEvents.mockResolvedValue([
     { id: 'E1', actorId: 'pharm-1', action: 'delivery_request.created_from_hos_candidate', reason: null, createdAt: '2026-10-15T04:00:00.000Z' },
@@ -49,6 +50,13 @@ test('returns the delivery with its proof, earlier attempts and named history', 
   expect(body.history.map((event: { actorName: string }) => event.actorName)).toEqual(['เภสัช', 'น้องภูไทไรเดอร์']);
   expect(body.history[0]).not.toHaveProperty('actorId');
   expect(findEvents).toHaveBeenCalledWith(expect.objectContaining({ where: { auditableId: { in: ['ATTEMPT2', 'REQUEST1'] } } }));
+});
+
+test('hides a delivery carried by a rider from another รพ.สต. from a coordinator', async () => {
+  countAttempts.mockResolvedValue(0);
+  expect((await get('ATTEMPT2')).status).toBe(404);
+  expect(countAttempts).toHaveBeenCalledWith({ where: { AND: [{ id: 'ATTEMPT2' }, { rider: { healthCenter: 'รพ.สต.ปลาโหล' } }] } });
+  expect(findAttempt).not.toHaveBeenCalled();
 });
 
 test('answers 404 for an unknown delivery', async () => {

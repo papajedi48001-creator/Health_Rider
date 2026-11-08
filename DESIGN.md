@@ -14,15 +14,15 @@ typography:
   utility:
     fontFamily: "ui-monospace, 'Cascadia Code', monospace"
 rounded:
-  control: "8px"
-  surface: "12px"
+  control: "10px"
+  surface: "16px"
 spacing:
   page: "24px"
 components:
   status:
     backgroundColor: "#FFFFFF"
     textColor: "#17313A"
-    rounded: "12px"
+    rounded: "16px"
 ---
 
 ## Overview

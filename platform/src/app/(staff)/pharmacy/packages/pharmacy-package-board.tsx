@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
+import { DeleteJobDialog, EditJobDialog, type EditableJob } from '@/app/(staff)/pharmacy/packages/package-job-dialogs';
 import { PackageQrSheet, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
@@ -10,7 +11,9 @@ import { failureReasonLabels, formatThaiDateTime, shortCode } from '@/lib/labels
 
 type Zone = { id: string; displayName: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string };
 type Row = {
-  id: string; visitNumber: string | null; hn: string; patientName: string; deliveryAddress: string; zone: Zone;
+  id: string; visitNumber: string | null; hn: string; patientName: string; telephone?: string | null; deliveryAddress: string; deliveryVersion?: number; zone: Zone;
+  // No rider has ever had this job, so pharmacy may delete it.
+  deletable?: boolean;
   latestAttempt: { id: string; status: DeliveryAttemptStatus; failureReason: string | null; failedAt: string | null } | null;
 };
 type Board = { toPrepare: Row[]; awaitingRider: Row[]; returnRequired: Row[] };
@@ -43,6 +46,8 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [subdistrictFilter, setSubdistrictFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
+  const [query, setQuery] = useState('');
+  const [editing, setEditing] = useState<{ job: EditableJob; mode: 'edit' | 'delete' } | null>(null);
 
   const load = useCallback(async () => {
     const result = await callApi<Board>('/api/pharmacy/requests');
@@ -106,8 +111,11 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   for (const row of allRows) {
     if (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) zones.set(row.zone.id, row.zone.displayName);
   }
-  const matches = (row: Row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter);
-  const shown = allRows.filter(matches);
+  // Every queue has a search box: pharmacy looks up the patient in hand by HN or name words.
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  const emptyText = (none: string) => (terms.length > 0 ? 'ไม่พบคนไข้ที่ตรงกับคำค้นหา' : none);
+  const inZone = allRows.filter((row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter));
+  const shown = inZone.filter((row) => terms.every((term) => `${row.hn} ${row.patientName}`.includes(term)));
   const ticked = shown.filter((row) => selected.has(row.id));
   const allTicked = shown.length > 0 && ticked.length === shown.length;
 
@@ -120,7 +128,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
           checked={allTicked}
           onChange={() => setSelected(allTicked ? new Set() : new Set(shown.map((row) => row.id)))}
         />
-        เลือกทั้งหมด{zoneFilter ? 'ในโซนนี้' : subdistrictFilter ? 'ในตำบลนี้' : ''} ({shown.length})
+        เลือกทั้งหมด{terms.length > 0 ? 'ที่ค้นพบ' : zoneFilter ? 'ในโซนนี้' : subdistrictFilter ? 'ในตำบลนี้' : ''} ({shown.length})
       </label>
       <button type="button" className="btn btn-primary btn-small" disabled={ticked.length === 0 || busy !== null} onClick={() => void printSelected(ticked)}>
         {busy === 'batch' ? 'กำลังออก QR' : `${action} (${ticked.length})`}
@@ -137,8 +145,36 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   // The latest package of a request, for the details pop-up; a request not yet prepared has none.
   const info = (row: Row) => row.latestAttempt && <DeliveryInfoButton attemptId={row.latestAttempt.id} patientName={row.patientName} />;
 
+  // Edit and delete sit on every row of the two queues before a rider has the package; both open a confirmation pop-up.
+  const jobOf = (row: Row): EditableJob => ({
+    id: row.id, hn: row.hn, patientName: row.patientName, telephone: row.telephone ?? null, deliveryAddress: row.deliveryAddress,
+    deliveryVersion: row.deliveryVersion ?? 1, zoneName: row.zone.displayName,
+    packageCode: row.latestAttempt?.status === 'prepared' ? shortCode(row.latestAttempt.id) : null,
+  });
+  const editButtons = (row: Row) => (
+    <>
+      <button type="button" className="btn btn-secondary btn-small" disabled={busy !== null} onClick={() => setEditing({ job: jobOf(row), mode: 'edit' })} aria-label={`แก้ไข ${row.patientName}`}>
+        แก้ไข
+      </button>
+      {row.deletable !== false && (
+        <button type="button" className="btn btn-danger btn-small" disabled={busy !== null} onClick={() => setEditing({ job: jobOf(row), mode: 'delete' })} aria-label={`ลบ ${row.patientName}`}>
+          ลบ
+        </button>
+      )}
+    </>
+  );
+  async function afterChange(done: string) {
+    setEditing(null);
+    setSelected(new Set());
+    await load();
+    window.dispatchEvent(new Event('health-rider:counts'));
+    setMessage(done);
+  }
+
   return (
     <div>
+      {editing?.mode === 'edit' && <EditJobDialog job={editing.job} onClose={() => setEditing(null)} onSaved={(done) => void afterChange(done)} />}
+      {editing?.mode === 'delete' && <DeleteJobDialog job={editing.job} onClose={() => setEditing(null)} onDeleted={(done) => void afterChange(done)} />}
       {board && (
         <div className="filter-bar">
           <label>
@@ -159,14 +195,22 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
               ))}
             </select>
           </label>
+          <label>
+            ค้นหา HN / ชื่อคนไข้
+            <input type="search" list="package-patients" autoComplete="off" value={query} onChange={(event) => setQuery(event.target.value)} />
+          </label>
         </div>
       )}
+      {/* The browser suggests matching patients while typing; picking one fills "name HN", which narrows to that patient. */}
+      <datalist id="package-patients">
+        {inZone.map((row) => <option key={row.id} value={`${row.patientName} ${row.hn}`} />)}
+      </datalist>
       <p aria-live="polite">{message}</p>
       {labels && <PackageQrSheet labels={labels} onClose={() => setLabels(null)} />}
       {board && view === 'prepare' && (
         <section>
           <h2>ต้องเตรียมพัสดุ ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text="ไม่มีรายการที่ต้องเตรียมพัสดุ" /> : (
+          {shown.length === 0 ? <EmptyState text={emptyText('ไม่มีรายการที่ต้องเตรียมพัสดุ')} /> : (
             <>
             {selectBar('เตรียมพัสดุและพิมพ์ QR ที่เลือก')}
             <ul className="pick-list">
@@ -175,9 +219,12 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
                   {pick(row)}
                   <p><strong>{row.patientName}</strong> · HN {row.hn} · {row.zone.displayName}</p>
                   {row.latestAttempt?.status === 'returned' && <p>ส่งใหม่หลังรับยาคืนแล้ว {info(row)}</p>}
-                  <button type="button" disabled={busy === row.id} onClick={() => void run(row.id, '/api/pharmacy/attempts/prepare', { deliveryRequestId: row.id }, 'เตรียมพัสดุแล้ว พิมพ์ฉลาก QR ติดพัสดุ', row)}>
-                    {busy === row.id ? 'กำลังเตรียม' : 'เตรียมพัสดุและออก QR'}
-                  </button>
+                  <div className="row-actions">
+                    <button type="button" disabled={busy === row.id} onClick={() => void run(row.id, '/api/pharmacy/attempts/prepare', { deliveryRequestId: row.id }, 'เตรียมพัสดุแล้ว พิมพ์ฉลาก QR ติดพัสดุ', row)}>
+                      {busy === row.id ? 'กำลังเตรียม' : 'เตรียมพัสดุและออก QR'}
+                    </button>
+                    {editButtons(row)}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -188,17 +235,21 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
       {board && view === 'awaiting' && (
         <section>
           <h2>รอไรเดอร์รับงาน ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text="ไม่มีพัสดุที่รอไรเดอร์รับงาน" /> : (
+          {shown.length === 0 ? <EmptyState text={emptyText('ไม่มีพัสดุที่รอไรเดอร์รับงาน')} /> : (
             <>
             {selectBar('ออก QR ใหม่และพิมพ์ที่เลือก')}
             <ul className="pick-list">
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   {pick(row)}
-                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName} {info(row)}</p>
-                  <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
-                    ออก QR ใหม่
-                  </button>
+                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
+                  <div className="row-actions">
+                    <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
+                      ออก QR ใหม่
+                    </button>
+                    {editButtons(row)}
+                    {info(row)}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -209,7 +260,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
       {board && view === 'returns' && (
         <section>
           <h2>รอรับยาคืน ({shown.length})</h2>
-          {shown.length === 0 ? <EmptyState text="ไม่มียาที่รอรับคืน" /> : (
+          {shown.length === 0 ? <EmptyState text={emptyText('ไม่มียาที่รอรับคืน')} /> : (
             <ul>
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>

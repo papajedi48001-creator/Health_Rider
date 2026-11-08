@@ -12,6 +12,10 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL, e.g. mysql://health_rider:<password>@192.168.1.254:3306/health_rider}
+      # For one-off maintenance scripts run in this image, such as scripts/purge-test-data.mts.
+      EVIDENCE_STORAGE_PATH: /app/data/evidence
+    volumes:
+      - health-rider-evidence:/app/data/evidence
 
   web:
     build:
@@ -30,12 +34,19 @@ services:
       HOS_ELIGIBLE_ITEM_CODES: ${HOS_ELIGIBLE_ITEM_CODES:-}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET to a random value of at least 32 characters}
       EVIDENCE_STORAGE_PATH: /app/data/evidence
+      # Folder shared with the host updater (deploy/updater) for the "อัปเดตระบบ" admin page.
+      UPDATER_STATE_PATH: /app/updater
     ports:
       # Plain HTTP for the reverse proxy only. If the proxy runs on another server, set WEB_PUBLISH to
       # this machine's LAN address and port (e.g. 192.168.1.50:3000) and firewall it to the proxy.
       - "${WEB_PUBLISH:-127.0.0.1:3000}:3000"
     volumes:
       - health-rider-evidence:/app/data/evidence
+      # Created by deploy/updater/install.sh (root:1001, mode 2770). The app writes request.json here and
+      # reads status.json, which the host updater writes; the app never runs git or docker itself.
+      - ${UPDATER_STATE_DIR:-/var/lib/health-rider-updater}:/app/updater
+      # Part of the installation ID a license key is issued for (src/license/installation.ts).
+      - /etc/machine-id:/etc/host-machine-id:ro
 
 # A fixed private range for this app's Docker network. Docker's automatic 172.x range can overlap the
 # hospital network, which cuts off SSH and other traffic to this server. Change it if 10.250.252.0/24 is in use.

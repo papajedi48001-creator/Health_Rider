@@ -5,6 +5,7 @@ import { deliveryAttemptStatuses, type DeliveryAttemptStatus } from '@/domain/de
 import { Icon, type IconName } from '@/brand/icons';
 import { statusTone } from '@/lib/status-tone';
 import { callApi } from '@/lib/api-client';
+import { withBasePath } from '@/lib/base-path';
 import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
 import { DeliveryDetails } from '@/app/(staff)/operations/delivery-details';
@@ -61,6 +62,8 @@ export function OperationsDashboard() {
   }
 
   const counts = data?.attempts.reduce<Record<string, number>>((total, attempt) => ({ ...total, [attempt.status]: (total[attempt.status] ?? 0) + 1 }), {}) ?? {};
+  // The download follows every filter on screen, status included.
+  const csvQuery = new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), format: 'csv' }).toString();
   const shown = (data?.attempts ?? []).filter((attempt) => !filters.status || attempt.status === filters.status);
 
   return (
@@ -85,6 +88,7 @@ export function OperationsDashboard() {
           <input type="checkbox" checked={filters.includeOpen === '1'} onChange={(event) => setFilters({ ...filters, includeOpen: event.target.checked ? '1' : '' })} />
           รวมงานที่ยังไม่ปิดจากวันอื่น
         </label>
+        <a className="btn btn-primary btn-small" href={withBasePath(`/api/operations/dashboard?${csvQuery}`)} download><Icon name="download" size={18} /> ส่งออก CSV</a>
       </form>
       <p aria-live="polite">{message}</p>
       {data && data.attempts.length > 0 && (

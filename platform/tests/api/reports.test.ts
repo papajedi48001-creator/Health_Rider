@@ -26,7 +26,7 @@ test('each report is limited to the roles it serves', async () => {
   const pharmacy = (await import('@/app/api/reports/pharmacy/route')).GET;
   const delivery = (await import('@/app/api/reports/delivery/route')).GET;
   const fees = (await import('@/app/api/reports/fees/route')).GET;
-  const allowed: Record<string, string[]> = { pharmacy: ['pharmacy', 'admin'], delivery: ['coordinator', 'admin'], fees: ['admin'] };
+  const allowed: Record<string, string[]> = { pharmacy: ['pharmacy', 'admin'], delivery: ['pharmacy', 'coordinator', 'admin'], fees: ['admin'] };
   const routes = { pharmacy, delivery, fees };
   for (const role of ['pharmacy', 'coordinator', 'admin', 'rider', 'auditor']) {
     as(role);
@@ -75,9 +75,9 @@ test('a delivered job with no price yet takes its subdistrict rate', async () =>
 });
 
 test('a coordinator opens one rider’s jobs in the range, latest first, twenty per page', async () => {
-  as('coordinator');
+  currentSession.mockResolvedValue({ id: 'coordinator-1', role: 'coordinator', displayName: 'C', healthCenter: 'รพ.สต.ปลาโหล' });
   const { db } = await import('@/lib/db');
-  (db as unknown as { user: { findUnique: ReturnType<typeof vi.fn> } }).user = { findUnique: vi.fn().mockResolvedValue({ id: 'R1', displayName: 'ไรเดอร์หนึ่ง', riderProfile: { riderCode: 'R-01' } }) };
+  (db as unknown as { user: { findUnique: ReturnType<typeof vi.fn> } }).user = { findUnique: vi.fn().mockResolvedValue({ id: 'R1', displayName: 'ไรเดอร์หนึ่ง', healthCenter: 'รพ.สต.ปลาโหล', riderProfile: { riderCode: 'R-01' } }) };
   const job = (id: string, deliveredAt: string | null, failedAt: string | null) => ({
     id, status: deliveredAt ? 'delivered' : 'return_required', claimedAt: new Date('2026-10-01T01:00:00Z'), pickedUpAt: new Date('2026-10-01T01:10:00Z'),
     deliveredAt: deliveredAt && new Date(deliveredAt), failedAt: failedAt && new Date(failedAt), failureReason: failedAt ? 'recipient_unavailable' : null,
@@ -87,11 +87,14 @@ test('a coordinator opens one rider’s jobs in the range, latest first, twenty 
   const { GET } = await import('@/app/api/reports/delivery/rider/route');
   const body = await (await GET(get('/api/reports/delivery/rider?riderId=R1&from=2026-10-01&to=2026-10-02'))).json();
 
-  expect(attemptFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ riderId: 'R1' }) }));
+  expect(attemptFindMany.mock.calls.at(-1)![0].where.AND).toEqual([expect.objectContaining({ riderId: 'R1' }), { rider: { healthCenter: 'รพ.สต.ปลาโหล' } }]);
   expect(body).toMatchObject({ rider: { id: 'R1', riderCode: 'R-01' }, page: 1, pages: 1, total: 2 });
   expect(body.items.map((item: { packageCode: string }) => item.packageCode)).toEqual(['0000B2', '0000A1']);
   expect(body.items[1]).toMatchObject({ minutes: 30, hasEvidence: true });
 
-  as('pharmacy');
+  // A rider from another รพ.สต. is not found for this coordinator.
+  currentSession.mockResolvedValue({ id: 'coordinator-2', role: 'coordinator', displayName: 'C', healthCenter: 'รพ.สต.คำบิด' });
+  expect((await GET(get('/api/reports/delivery/rider?riderId=R1'))).status).toBe(404);
+  as('rider');
   expect((await GET(get('/api/reports/delivery/rider?riderId=R1'))).status).toBe(403);
 });
