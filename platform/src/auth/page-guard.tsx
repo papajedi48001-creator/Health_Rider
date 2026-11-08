@@ -67,8 +67,8 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
         {session.role === 'admin' && <ViewSwitcher view={isAdminView(view) ? view : 'admin'} />}
         <MainNav groups={groupsFor(shownRole)} />
         <div className="sidebar-mascot" aria-hidden="true">
-          <Mascot width={120} variant="small" />
-          <span>{mascotName} พร้อมส่งยาถึงบ้าน</span>
+          <Mascot width={48} variant="face" />
+          <span><strong>{mascotName}</strong>พร้อมส่งยาถึงบ้าน</span>
         </div>
         <div className="staff-user">
           <Link href={accountHref} className="user-link" aria-label={`ข้อมูลผู้ใช้ ${session.displayName}`}>

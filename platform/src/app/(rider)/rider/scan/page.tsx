@@ -78,6 +78,13 @@ export default function RiderScanPage() {
         text={<>สแกน QR ที่พัสดุ แล้ว <span className="nowrap">{mascotName}</span> จะพาไปทีละขั้น</>}
         count={attempts && attempts.length > 0 ? `งานค้าง ${attempts.length} งาน` : undefined}
       />
+      {attempts && attempts.length > 0 && (
+        <div className="rider-stats" role="group" aria-label="สรุปงานของฉัน">
+          <div className="rider-stat"><span className="stat-icon"><Icon name="package" size={20} /></span><span><small>รับงานแล้ว</small><strong>{attempts.filter((attempt) => attempt.status === 'claimed').length}</strong> งาน</span></div>
+          <div className="rider-stat tone-blue"><span className="stat-icon"><Icon name="truck" size={20} /></span><span><small>กำลังนำส่ง</small><strong>{attempts.filter((attempt) => attempt.status === 'in_transit').length}</strong> งาน</span></div>
+        </div>
+      )}
+
       <h1>รับงาน</h1>
       <p aria-live="polite" role="status">{message}</p>
 
@@ -112,11 +119,12 @@ export default function RiderScanPage() {
           {attempts.map((attempt) => (
             <li key={attempt.id}>
               <Link href={`/rider/attempts/${attempt.id}`} className="job-link">
+                <span className="job-icon"><Icon name="package" size={20} /></span>
                 <span className="job-main">
                   <strong>{attempt.patientName}</strong>
                   <span className="muted">{attempt.address}</span>
-                  <span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span>
                 </span>
+                <span className={`chip ${statusTone(attempt.status)}`}>{statusLabels[attempt.status]}</span>
                 <Icon name="chevron" />
               </Link>
             </li>
