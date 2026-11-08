@@ -12,14 +12,14 @@ test('an account with several roles picks one after login and can switch later',
   await expect(page).toHaveURL(/\/select-role$/);
 
   await page.getByRole('button', { name: /^ผู้ประสานงาน/ }).click();
-  await expect(page).toHaveURL(/\/operations$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   const menu = page.getByRole('navigation', { name: 'เมนูหลัก' });
   await expect(menu.getByRole('link', { name: 'ภาพรวมการจัดส่ง' })).toBeVisible();
   await expect(menu.getByRole('link', { name: 'รอยืนยันจาก HOSxP' })).toHaveCount(0);
 
   await page.getByRole('link', { name: 'เปลี่ยนบทบาท' }).click();
   await page.getByRole('button', { name: /^เภสัชกร/ }).click();
-  await expect(page).toHaveURL(/\/pharmacy\/candidates$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(menu.getByRole('link', { name: 'รอยืนยันจาก HOSxP' })).toBeVisible();
 });
 
@@ -30,7 +30,7 @@ test('a user asks for another role on their profile and an admin approves it', a
   await createAccount(username, name, ['coordinator']);
 
   await login(page, username);
-  await expect(page).toHaveURL(/\/operations$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/account');
   const request = page.getByRole('form', { name: 'ขอเพิ่มบทบาท' });
   await request.getByLabel('บทบาทที่ต้องการ').selectOption('pharmacy');

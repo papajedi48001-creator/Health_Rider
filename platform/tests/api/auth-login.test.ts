@@ -36,7 +36,7 @@ test('signs in an active user with an HttpOnly session cookie and audits it', as
   const response = await POST(login({ username: 'pharmacy.uat', password: 'correct-password' }));
 
   expect(response.status).toBe(200);
-  await expect(response.json()).resolves.toEqual({ redirectTo: '/pharmacy/candidates' });
+  await expect(response.json()).resolves.toEqual({ redirectTo: '/dashboard' });
   expect(response.headers.get('set-cookie')).toMatch(/health_rider_session=.+HttpOnly/i);
   expect(createSession).toHaveBeenCalledTimes(1);
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.logged_in' }) }));

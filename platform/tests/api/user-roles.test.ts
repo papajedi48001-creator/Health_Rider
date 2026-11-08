@@ -45,7 +45,7 @@ test('picks a held role for this sign-in, audits it and refuses a role the accou
 
   const response = await POST(send('/api/me/role', { role: 'coordinator' }, 'POST', 'health_rider_session=tok'));
   expect(response.status).toBe(200);
-  await expect(response.json()).resolves.toEqual({ role: 'coordinator', home: '/operations' });
+  await expect(response.json()).resolves.toEqual({ role: 'coordinator', home: '/dashboard' });
   expect(setActiveRole).toHaveBeenCalledWith(hashSessionToken('tok', secret), 'coordinator');
   expect(createAudit).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: 'user.role_selected', newValues: { role: 'coordinator' } }) }));
 });

@@ -1,10 +1,10 @@
 import type { UserRole } from '@/auth/roles';
 
 const roleHomes: Record<UserRole, string> = {
-  pharmacy: '/pharmacy/candidates',
-  coordinator: '/operations',
+  pharmacy: '/dashboard',
+  coordinator: '/dashboard',
   rider: '/rider/scan',
-  admin: '/operations',
+  admin: '/dashboard',
   auditor: '/audit',
 };
 
