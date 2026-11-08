@@ -14,6 +14,8 @@ import { Icon, type IconName } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
 import { withBasePath } from '@/lib/base-path';
 import { UserAvatar } from '@/account/user-avatar';
+import { deliveryTierNotice } from '@/license/delivery-tier';
+import { currentLicenseState, deliveriesThisMonth } from '@/license/license-store';
 import { ForcedPasswordChange } from '@/account/forced-password-change';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
@@ -57,6 +59,10 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
   if (!session) redirect(await loginRedirectPath());
   if (session.roleChoicePending) redirect(chooseRolePath());
   const accountHref = session.role === 'rider' ? '/rider/profile' : '/account';
+  const license = await currentLicenseState();
+  // Everyone needs to know when the app is about to lock; renewal reminders are for admins.
+  const licenseNotice = license.message && (license.status === 'grace' || session.role === 'admin') ? license.message : null;
+  const tierNotice = session.role === 'admin' && license.license?.maxDeliveriesPerMonth ? deliveryTierNotice(license.license, await deliveriesThisMonth()) : null;
   const view = (await cookies()).get(viewCookieName)?.value;
   const shownRole = menuRole(session.role, view);
 
@@ -64,7 +70,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
     <div className="staff-app">
       <header className="staff-sidebar">
         <Link href={roleHome(shownRole)} className="brand">
-          <Brand />
+          <Brand hospitalName={license.license?.licensee.name} />
         </Link>
         {session.role === 'admin' && <ViewSwitcher view={isAdminView(view) ? view : 'admin'} />}
         <MainNav groups={groupsFor(shownRole)} />
@@ -86,6 +92,8 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
         </div>
       </header>
       <div className="staff-content">
+        {licenseNotice && <p role="status" className={license.status === 'grace' ? 'notice notice-danger' : 'notice'}>{licenseNotice}</p>}
+        {tierNotice && <p role="status" className="notice">{tierNotice}</p>}
         {session.mustChangePassword ? <ForcedPasswordChange /> : roles.includes(session.role) ? children : (
           <main className="no-access">
             <Mascot width={180} variant="small" />

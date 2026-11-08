@@ -6,3 +6,6 @@ platform/.env
 platform/vendor/
 platform/node_modules/
 platform/public/build/
+
+# License signing keys never go in the repo (license-tool keeps them in ~/.health-rider-license)
+*.pem

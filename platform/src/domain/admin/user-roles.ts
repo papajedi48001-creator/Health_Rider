@@ -4,6 +4,7 @@ import { suggestRiderCode } from '@/domain/admin/rider-code';
 import { employmentCategories, type EmploymentCategory } from '@/domain/admin/user-rules';
 import { newPublicId } from '@/domain/delivery/status';
 import { DomainError } from '@/domain/errors';
+import { assertRiderSeatAvailable } from '@/license/license-store';
 
 export type RoleSet = { roles: UserRole[]; rider?: { employmentCategory: EmploymentCategory } };
 
@@ -69,6 +70,7 @@ export async function setUserRoles(tx: RoleClient, userId: string, set: RoleSet)
   }
   const removed = before.filter((role) => !set.roles.includes(role));
   const added = set.roles.filter((role) => !before.includes(role));
+  if (added.includes('rider')) await assertRiderSeatAvailable(tx, userId);
   if (removed.length > 0) await tx.userRoleGrant.deleteMany({ where: { userId, role: { in: removed } } });
   if (added.length > 0) await tx.userRoleGrant.createMany({ data: added.map((role) => ({ userId, role })), skipDuplicates: true });
   const primary = primaryRole(user.role, set.roles);

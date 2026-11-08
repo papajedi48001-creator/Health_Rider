@@ -273,6 +273,19 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .login-switch { margin: 12px 0 0; text-align: center; color: var(--muted); font-size: 0.92rem; }
 .login-switch a { font-weight: 600; }
 .register-done { display: grid; gap: 8px; text-align: center; }
+/* License lock: the login page fades behind a card that asks for a token key. */
+.login-locked { position: relative; }
+.login-locked .login-shell { opacity: 0.3; filter: grayscale(0.6) blur(1px); pointer-events: none; user-select: none; }
+.license-lock { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px 16px; background: rgba(13, 43, 62, 0.28); overflow-y: auto; }
+.license-lock-card { width: min(100%, 460px); display: grid; gap: 12px; padding: 28px 24px; background: var(--surface); border-radius: var(--radius-surface); box-shadow: 0 16px 48px rgba(13, 43, 62, 0.28); }
+.license-lock-card h1 { margin: 0; font-size: 1.3rem; }
+.license-lock-card textarea { width: 100%; font-family: var(--utility-font); font-size: 0.85rem; word-break: break-all; }
+.license-lock-card button[type="submit"] { width: 100%; min-height: 46px; }
+.license-installation { display: grid; gap: 6px; padding: 12px; background: var(--primary-soft); border-radius: var(--radius-control); }
+.license-installation span { color: var(--muted); font-size: 0.9rem; }
+.license-installation div { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.license-installation code { font-family: var(--utility-font); font-size: 1.15rem; font-weight: 700; letter-spacing: 0.04em; color: var(--ink); }
+.license-contact { margin: 0; color: var(--muted); font-size: 0.9rem; text-align: center; }
 @media (min-width: 760px) {
   .login-shell { grid-template-columns: 1.05fr 1fr; }
   .login-hero { padding: 40px 32px; }
