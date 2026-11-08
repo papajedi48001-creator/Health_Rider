@@ -1,8 +1,10 @@
+import { HeroBanner } from '@/brand/hero-banner';
 import { AdminUsers } from '@/app/(staff)/admin/admin-users';
 
 export default function AdminPage() {
   return (
     <main>
+      <HeroBanner title="บัญชีผู้ใช้" text="สร้างบัญชี ปิดหรือเปิดการใช้งาน และจัดการสิทธิ์ของผู้ใช้" />
       <h1>บัญชีผู้ใช้</h1>
       <p>จัดการบัญชีผู้ใช้และไรเดอร์ ทุกการเปลี่ยนแปลงถูกบันทึกในประวัติการตรวจสอบ</p>
       <AdminUsers />
