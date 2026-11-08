@@ -137,3 +137,47 @@ test('deleting asks for a reason and confirmation; jobs with delivery history of
   expect(init.method).toBe('DELETE');
   expect(JSON.parse(init.body)).toEqual({ reason: 'ผู้ป่วยมารับยาเอง' });
 });
+
+test('reprints a waiting label with the QR this browser issued, without issuing a new one', async () => {
+  window.localStorage.clear();
+  const plaLo6 = zone('z-6', 'ปลาโหล ม.6', '470603', 'ต.ปลาโหล');
+  const board = { toPrepare: [], returnRequired: [], awaitingRider: [
+    { ...row('r1', 'นางสมร ศาลารักษ์', plaLo6), latestAttempt: { id: 'a-r1', status: 'prepared', failureReason: null, failedAt: null } },
+    { ...row('r2', 'นายสรรเพชร ศิรินา', plaLo6), latestAttempt: { id: 'a-r2', status: 'prepared', failureReason: null, failedAt: null } },
+  ] };
+  const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+    if (url.endsWith('/qr')) return new Response(JSON.stringify({ attemptId: 'a-r1', token: 'first-token-0123456789abcdef' }), { status: 201 });
+    if (url.endsWith('/qr/reprint')) return new Response(JSON.stringify({ attemptId: 'a-r1' }), { status: 200 });
+    if (url.includes('label-settings')) return new Response('{}', { status: 500 });
+    return new Response(JSON.stringify(board), { status: 200 });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubGlobal('print', vi.fn());
+  render(<PharmacyPackageBoard view="awaiting" />);
+
+  // Issue a QR first so this browser keeps its token, then close the sheet.
+  fireEvent.click((await screen.findAllByRole('button', { name: 'ออก QR ใหม่' }))[0]);
+  fireEvent.click(await screen.findByRole('button', { name: 'ปิด' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'พิมพ์ซ้ำ นางสมร ศาลารักษ์' }));
+  expect(await screen.findByRole('heading', { name: 'พิมพ์ฉลากซ้ำ 1 ชิ้น' })).toBeInTheDocument();
+  const reprintCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/qr/reprint'))!;
+  expect(String(reprintCall[0])).toContain('/api/pharmacy/attempts/a-r1/qr/reprint');
+  expect(JSON.parse(reprintCall[1].body)).toEqual({ token: 'first-token-0123456789abcdef' });
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/qr'))).toHaveLength(1);
+  expect(screen.getByText('รหัสใต้ QR:').parentElement).toHaveTextContent('first-token-0123456789abcdef');
+
+  // The label turns over only for the 180° print and is upright again afterwards.
+  let turnedWhilePrinting = false;
+  vi.mocked(window.print).mockImplementation(() => { turnedWhilePrinting = document.querySelector('.label-dialog')!.classList.contains('label-rotated'); });
+  fireEvent.click(screen.getByRole('button', { name: 'พิมพ์กลับด้าน 180°' }));
+  await vi.waitFor(() => expect(window.print).toHaveBeenCalledTimes(1));
+  expect(turnedWhilePrinting).toBe(true);
+  await vi.waitFor(() => expect(document.querySelector('.label-rotated')).toBeNull());
+  fireEvent.click(screen.getByRole('button', { name: 'ปิด' }));
+
+  // A package whose QR was issued on another computer cannot be reprinted here.
+  fireEvent.click(screen.getByRole('button', { name: 'พิมพ์ซ้ำ นายสรรเพชร ศิรินา' }));
+  expect(await screen.findByText(/พิมพ์ซ้ำไม่ได้ 1 ราย \(นายสรรเพชร ศิรินา\)/)).toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: 'ฉลาก QR พัสดุ' })).not.toBeInTheDocument();
+});

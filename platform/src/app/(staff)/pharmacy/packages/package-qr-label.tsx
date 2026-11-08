@@ -74,29 +74,48 @@ function chunk<T>(items: T[], size: number): T[][] {
   return pages;
 }
 
-// Opens over the page so the labels can be printed straight away. It closes only from its own button,
-// because a QR is never shown again once this is closed. One label prints with the admin's single-label
-// layout, several with the batch layout.
-export function PackageQrSheet({ labels, onClose }: { labels: PackageLabel[]; onClose: () => void }) {
+// Opens over the page so the labels can be printed straight away. It closes only from its own button.
+// The same QR can be printed again later only from the browser that issued it. One label prints with the
+// admin's single-label layout, several with the batch layout. Labels can also print turned 180° for a
+// printer that feeds the roll the other way round.
+export function PackageQrSheet({ labels, reprint = false, onClose }: { labels: PackageLabel[]; reprint?: boolean; onClose: () => void }) {
   const [settings, setSettings] = useState<LabelSettings>(defaultLabelSettings);
+  const [rotated, setRotated] = useState(false);
+  const [printRequest, setPrintRequest] = useState(0);
 
   useEffect(() => {
     void callApi<{ settings: LabelSettings }>('/api/label-settings').then((result) => { if (result.ok) setSettings(result.data.settings); });
   }, []);
+
+  // Prints once the labels have re-rendered the right way up or turned over, then turns them back upright.
+  useEffect(() => {
+    if (printRequest === 0) return;
+    window.print();
+    setRotated(false);
+  }, [printRequest]);
+
+  function print(turned: boolean) {
+    setRotated(turned);
+    setPrintRequest((count) => count + 1);
+  }
 
   const layout = labels.length === 1 ? settings.single : settings.batch;
   // Each sheet of paper is its own grid so a label never splits across two sheets.
   const pages = chunk(labels, pageLayout(layout).perPage);
   // Rendered straight under <body> so printing can drop the rest of the page instead of leaving blank sheets behind it.
   return createPortal(
-    <div className="photo-viewer label-dialog" role="dialog" aria-modal="true" aria-label="ฉลาก QR พัสดุ">
+    <div className={`photo-viewer label-dialog${rotated ? ' label-rotated' : ''}`} role="dialog" aria-modal="true" aria-label="ฉลาก QR พัสดุ">
       <style>{labelLayoutCss(layout)}</style>
       <section className="photo-viewer-body label-sheet">
         <div className="label-toolbar">
-          <h2>ฉลาก QR พัสดุ {labels.length} ชิ้น</h2>
-          <p>พิมพ์ฉลากทันที ระบบจะไม่แสดง QR เดิมซ้ำ หากฉลากหายให้ออก QR ใหม่ · {describeLayout(layout)}</p>
+          <h2>{reprint ? 'พิมพ์ฉลากซ้ำ' : 'ฉลาก QR พัสดุ'} {labels.length} ชิ้น</h2>
+          <p>
+            {reprint ? 'ใช้ QR เดิม ฉลากที่พิมพ์ไปแล้วยังสแกนรับงานได้' : 'พิมพ์ฉลากทันที พิมพ์ซ้ำด้วย QR เดิมได้จากเครื่องนี้เท่านั้น หากฉลากหายให้ออก QR ใหม่'}
+            {' · '}{describeLayout(layout)}
+          </p>
           <div className="label-actions">
-            <button type="button" className="btn btn-primary" autoFocus onClick={() => window.print()}>พิมพ์ฉลาก</button>
+            <button type="button" className="btn btn-primary" autoFocus onClick={() => print(false)}>พิมพ์ฉลาก</button>
+            <button type="button" className="btn btn-secondary" onClick={() => print(true)}>พิมพ์กลับด้าน 180°</button>
             <button type="button" className="btn btn-secondary" onClick={onClose}>ปิด</button>
           </div>
         </div>

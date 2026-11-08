@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
 import { DeleteJobDialog, EditJobDialog, type EditableJob } from '@/app/(staff)/pharmacy/packages/package-job-dialogs';
 import { PackageQrSheet, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
+import { forgetIssuedToken, issuedToken, keepIssuedToken } from '@/lib/issued-qr-tokens';
 import { EmptyState } from '@/brand/empty-state';
 import { failureReasonLabels, formatThaiDateTime, shortCode } from '@/lib/labels';
 
@@ -24,6 +25,7 @@ const viewKey: Record<BoardView, keyof Board> = { prepare: 'toPrepare', awaiting
 type Issued = { attemptId: string; token?: string };
 
 function labelFor(row: Row, issued: Issued & { token: string }): PackageLabel {
+  keepIssuedToken(issued.attemptId, issued.token);
   return {
     attemptId: issued.attemptId, token: issued.token, patientName: row.patientName, deliveryAddress: row.deliveryAddress,
     hn: row.hn, visitNumber: row.visitNumber, subdistrictCode: row.zone.subdistrictCode, villageCode: row.zone.villageCode,
@@ -42,6 +44,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [message, setMessage] = useState('กำลังโหลดรายการ');
   const [labels, setLabels] = useState<PackageLabel[] | null>(null);
+  const [reprinting, setReprinting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [subdistrictFilter, setSubdistrictFilter] = useState('');
@@ -66,10 +69,32 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
     setBusy(null);
     if (!result.ok) return setMessage(result.message);
     const { token } = result.data;
-    if (row && token) setLabels([labelFor(row, { ...result.data, token })]);
+    if (row && token) { setLabels([labelFor(row, { ...result.data, token })]); setReprinting(false); }
     await load();
     window.dispatchEvent(new Event('health-rider:counts'));
     setMessage(done);
+  }
+
+  // Prints the label again with the QR this browser issued, after the server confirms that QR is still the live one.
+  async function reprint(rows: Row[]) {
+    setBusy('reprint');
+    const printed: PackageLabel[] = [];
+    const missing: string[] = [];
+    for (const row of rows) {
+      const attemptId = row.latestAttempt!.id;
+      const token = issuedToken(attemptId);
+      const result = token ? await callApi<Issued>(`/api/pharmacy/attempts/${attemptId}/qr/reprint`, { json: { token } }) : null;
+      if (token && result?.ok) printed.push(labelFor(row, { attemptId, token }));
+      else {
+        if (token) forgetIssuedToken(attemptId);
+        missing.push(row.patientName);
+      }
+    }
+    setBusy(null);
+    if (printed.length > 0) { setLabels(printed); setReprinting(true); }
+    setMessage(missing.length === 0
+      ? `พิมพ์ฉลากซ้ำ ${printed.length} ชิ้น ใช้ QR เดิม`
+      : `พิมพ์ซ้ำไม่ได้ ${missing.length} ราย (${missing.join(', ')}) เพราะเครื่องนี้ไม่มี QR เดิม หรือ QR เดิมใช้ไม่ได้แล้ว กด "ออก QR ใหม่" แทน`);
   }
 
   // Issues the QR for every ticked row one by one, so one failure does not lose the labels already issued.
@@ -86,7 +111,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
     }
     setBusy(null);
     setSelected(new Set());
-    if (issued.length > 0) setLabels(issued);
+    if (issued.length > 0) { setLabels(issued); setReprinting(false); }
     await load();
     window.dispatchEvent(new Event('health-rider:counts'));
     setMessage(failed.length === 0 ? `ออก QR แล้ว ${issued.length} ชิ้น พิมพ์ฉลากติดพัสดุ` : `ออก QR แล้ว ${issued.length} ชิ้น ไม่สำเร็จ ${failed.length} ราย: ${failed.join(', ')}`);
@@ -120,7 +145,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const allTicked = shown.length > 0 && ticked.length === shown.length;
 
   // Shown on the queues that issue QR: tick people one by one, or every package in the filtered zone.
-  const selectBar = (action: string) => (
+  const selectBar = (action: string, extra?: ReactNode) => (
     <div className="select-bar">
       <label>
         <input
@@ -133,6 +158,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
       <button type="button" className="btn btn-primary btn-small" disabled={ticked.length === 0 || busy !== null} onClick={() => void printSelected(ticked)}>
         {busy === 'batch' ? 'กำลังออก QR' : `${action} (${ticked.length})`}
       </button>
+      {extra}
     </div>
   );
   const pick = (row: Row) => (
@@ -206,7 +232,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
         {inZone.map((row) => <option key={row.id} value={`${row.patientName} ${row.hn}`} />)}
       </datalist>
       <p aria-live="polite">{message}</p>
-      {labels && <PackageQrSheet labels={labels} onClose={() => setLabels(null)} />}
+      {labels && <PackageQrSheet labels={labels} reprint={reprinting} onClose={() => setLabels(null)} />}
       {board && view === 'prepare' && (
         <section>
           <h2>ต้องเตรียมพัสดุ ({shown.length})</h2>
@@ -237,13 +263,20 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
           <h2>รอไรเดอร์รับงาน ({shown.length})</h2>
           {shown.length === 0 ? <EmptyState text={emptyText('ไม่มีพัสดุที่รอไรเดอร์รับงาน')} /> : (
             <>
-            {selectBar('ออก QR ใหม่และพิมพ์ที่เลือก')}
+            {selectBar('ออก QR ใหม่และพิมพ์ที่เลือก', (
+              <button type="button" className="btn btn-secondary btn-small" disabled={ticked.length === 0 || busy !== null} onClick={() => void reprint(ticked)}>
+                {busy === 'reprint' ? 'กำลังพิมพ์ซ้ำ' : `พิมพ์ซ้ำ QR เดิมที่เลือก (${ticked.length})`}
+              </button>
+            ))}
             <ul className="pick-list">
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   {pick(row)}
                   <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
                   <div className="row-actions">
+                    <button type="button" className="btn btn-secondary btn-small" disabled={busy !== null} onClick={() => void reprint([row])} aria-label={`พิมพ์ซ้ำ ${row.patientName}`}>
+                      พิมพ์ซ้ำ
+                    </button>
                     <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
                       ออก QR ใหม่
                     </button>

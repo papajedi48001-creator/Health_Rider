@@ -318,7 +318,9 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .label-toolbar { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
 .label-toolbar h2 { margin: 0; }
 .label-toolbar p { margin: 0; flex: 1 1 260px; color: var(--muted); }
-.label-actions { display: flex; gap: 8px; }
+.label-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Printing turned over: each label turns within its own space, so it still lands on the same sticker. */
+.label-rotated .parcel-label { transform: rotate(180deg); }
 /* Label sizes are set in millimetres from the admin's label settings; text is in em so it scales with the label. */
 .label-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; justify-content: start; }
 .parcel-label { box-sizing: border-box; display: grid; grid-template-rows: auto auto 1fr auto; gap: 0.45em; padding: 0.7em 0.85em; overflow: hidden; border: 1.5px dashed #9aa4b2; border-radius: 6px; background: #fff; color: #111; break-inside: avoid; }

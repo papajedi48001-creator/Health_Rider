@@ -57,7 +57,7 @@ export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onC
     setBusy(false);
     if (!result.ok) { setConfirming(false); return setProblem(result.message); }
     onSaved(job.packageCode
-      ? `แก้ไขข้อมูล ${job.patientName} แล้ว ฉลากที่พิมพ์ไปแล้วยังเป็นข้อมูลเดิม กด "ออก QR ใหม่" เพื่อพิมพ์ฉลากใหม่`
+      ? `แก้ไขข้อมูล ${job.patientName} แล้ว ฉลากที่พิมพ์ไปแล้วยังเป็นข้อมูลเดิม กด "พิมพ์ซ้ำ" หรือ "ออก QR ใหม่" เพื่อพิมพ์ฉลากใหม่`
       : `แก้ไขข้อมูล ${job.patientName} แล้ว`);
   }
 
