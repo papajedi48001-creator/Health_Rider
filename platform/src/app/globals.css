@@ -110,10 +110,13 @@ td button { background: var(--surface); color: var(--primary); min-height: 36px;
 td button:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-dark); }
 
 /* Tables: a card with a tinted header row and calm row separators. */
-table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; box-shadow: var(--shadow); }
+/* overflow: clip keeps the rounded corners without making the table a scroll box, so its header row can stick. */
+table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: clip; box-shadow: var(--shadow); }
 @media (max-width: 719px) { table { display: block; overflow-x: auto; } }
 th, td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
-th { background: var(--surface); color: var(--muted); font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+th { background: var(--surface); color: var(--muted); font-size: 0.78rem; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+/* A slim header row leaves more of the screen for the rows themselves. */
+thead th { padding-top: 7px; padding-bottom: 7px; }
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover td { background: #f6fafb; }
 
@@ -921,10 +924,57 @@ section.dash-table { padding: 20px 0 8px; margin: 0; }
 .dash-tabs a > span { color: var(--primary); font-weight: 700; }
 .dash-tabs a[aria-current='page'] { background: var(--primary); color: #fff; }
 .dash-tabs a[aria-current='page'] > span { color: #fff; }
-.dash-table-scroll { overflow-x: auto; }
+@media (max-width: 959px) { .dash-table-scroll { overflow-x: auto; } }
 .dash-table table { min-width: 900px; border: 0; border-radius: 0; box-shadow: none; display: table; }
 .dash-table th { border-top: 1px solid var(--line); }
 .dash-table td { vertical-align: middle; }
 .dash-table th:first-child, .dash-table td:first-child { padding-left: 20px; }
 .dash-empty, .dash-more { padding: 12px 20px; margin: 0; color: var(--muted); }
 .dash-table td strong { white-space: nowrap; }
+
+/* Long lists: a table's header row stays at the top of the screen while its rows scroll under it. On a phone or
+   tablet the table scrolls sideways in its own box instead, and inside a pop-up it sticks to the pop-up's top. */
+@media (min-width: 960px) {
+  thead th { position: sticky; top: 0; z-index: 3; box-shadow: inset 0 -1px 0 var(--line); }
+}
+.photo-viewer thead th { position: sticky; top: 0; z-index: 3; }
+
+/* Staff pages keep the banner, headings, filters and stat tiles above their tables, but in a compact size so more
+   of the screen goes to the rows. Rider pages are left as they are. */
+.staff-content h1 { font-size: 1.3rem; margin: 0 0 2px; }
+.staff-content h1 + p:not([role='status']) { font-size: 0.9rem; margin: 0 0 12px; }
+.staff-content .hero-banner { min-height: 0; padding: 12px 22px; margin: 0 0 14px; border-radius: 16px; }
+.staff-content .hero-banner::before { width: 34px; height: 34px; right: 170px; top: 12px; }
+.staff-content .hero-banner::after { width: 52px; height: 52px; right: 18px; top: 10px; }
+.staff-content .hero-banner .mascot { margin: -8px 4px -13px 0; }
+.staff-content .hero-banner .mascot img { width: 110px; }
+.staff-content .hero-text { gap: 2px; }
+.staff-content .hero-text strong { font-size: 1.2rem; }
+.staff-content .hero-text > span { font-size: 0.88rem; }
+.staff-content .hero-banner.hero-large { min-height: 0; padding: 14px 26px; }
+.staff-content .hero-large .hero-text strong { font-size: 1.3rem; }
+.staff-content .hero-large .hero-accent { font-size: 1.55rem; }
+.staff-content .hero-large .hero-text > span { font-size: 0.9rem; }
+.staff-content .hero-banner.hero-large .mascot { margin: -10px 8px -15px 0; }
+.staff-content .hero-banner.hero-large .mascot img { width: 150px; }
+.staff-content .hero-banner.hero-large::before { right: 220px; top: 14px; }
+.staff-content .page-greeting { margin: 0 0 10px; }
+.staff-content .page-greeting h1 { font-size: 1.25rem; }
+.staff-content .page-greeting p { font-size: 0.88rem; margin: 0; }
+.staff-content .filter-bar { padding: 10px 14px; gap: 8px 12px; margin: 0 0 12px; }
+.staff-content .filter-bar label { font-size: 0.85rem; gap: 2px; }
+.staff-content .filter-bar input, .staff-content .filter-bar select, .staff-content .filter-bar .btn { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
+.staff-content .stat-row { gap: 10px; margin: 0 0 12px; }
+.staff-content .stat { padding: 10px 14px 13px; gap: 10px; }
+.staff-content .stat::after { bottom: 6px; left: 14px; }
+.staff-content .stat strong { font-size: 1.35rem; }
+.staff-content .stat-icon { width: 38px; height: 38px; border-radius: 10px; }
+.staff-content .dash-cards { gap: 12px; margin: 0 0 14px; }
+.staff-content .dash-card { padding: 12px 14px; gap: 12px; }
+.staff-content .dash-card-icon { width: 42px; height: 42px; border-radius: 12px; }
+.staff-content .dash-card-value strong { font-size: 1.5rem; }
+.staff-content .dash-card-note { font-size: 0.78rem; }
+.staff-content .dash-card-bar { margin-top: 4px; }
+.staff-content section.dash-table { padding-top: 14px; }
+.staff-content .dash-tabs { padding: 10px 20px 10px; }
+@media (min-width: 960px) { .staff-content main { padding-top: 20px; } }
