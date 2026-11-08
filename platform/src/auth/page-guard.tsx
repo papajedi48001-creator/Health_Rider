@@ -34,6 +34,7 @@ const navigation: Array<{ group: string; href: string; label: string; icon: Icon
   { group: 'ผู้ดูแลระบบ', href: '/admin/rates', label: 'ค่าบริการ', icon: 'coins', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin/labels', label: 'ตั้งค่าฉลาก QR', icon: 'package', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: 'settings', roles: ['admin'] },
+  { group: 'ผู้ดูแลระบบ', href: '/admin/updates', label: 'อัปเดตระบบ', icon: 'download', roles: ['admin'] },
   // Lets a rider who opens a staff page get back to the rider app.
   { group: 'ไรเดอร์', href: '/rider/scan', label: 'กลับไปหน้าไรเดอร์', icon: 'scan', roles: ['rider'] },
   { group: 'ช่วยเหลือ', href: '/help', label: 'คู่มือการใช้งาน', icon: 'info', roles: ['pharmacy', 'coordinator', 'rider', 'admin', 'auditor'] },

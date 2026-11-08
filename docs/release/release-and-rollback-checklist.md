@@ -18,7 +18,7 @@
 
 1. หยุดรับงานใหม่และแจ้ง pharmacy/rider ใช้ขั้นตอนสำรองที่โรงพยาบาลอนุมัติ
 2. เก็บ log, container/image version, เวลา และข้อมูล incident; ห้ามลบ evidence หรือ audit
-3. เปลี่ยนกลับ image/configuration เวอร์ชันก่อนหน้าเมื่อได้รับอนุมัติจาก incident owner
+3. เมื่อได้รับอนุมัติจาก incident owner ให้ admin ย้อนกลับจากเมนู "ผู้ดูแลระบบ > อัปเดตระบบ" (ย้อนได้ถึงเวอร์ชัน 1.0.0, ดู [system-updates.md](../operations/system-updates.md)) หรือ checkout tag เวอร์ชันก่อนหน้าแล้ว build ใหม่ด้วยมือ
 4. Restore DB/evidence เฉพาะจาก backup ที่ผ่านการยืนยัน และทำบนคำสั่งของผู้รับผิดชอบเท่านั้น
 5. ตรวจความสอดคล้องของ Delivery Attempt, QR, evidence และ audit ก่อนเปิดรับงานใหม่
 6. ทำ post-incident review และกำหนดเกณฑ์ re-release
