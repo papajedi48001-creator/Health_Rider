@@ -110,7 +110,8 @@ td button { background: var(--surface); color: var(--primary); min-height: 36px;
 td button:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-dark); }
 
 /* Tables: a card with a tinted header row and calm row separators. */
-table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; box-shadow: var(--shadow); }
+/* overflow: clip keeps the rounded corners without making the table a scroll box, so its header row can stick. */
+table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: clip; box-shadow: var(--shadow); }
 @media (max-width: 719px) { table { display: block; overflow-x: auto; } }
 th, td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
 th { background: var(--surface); color: var(--muted); font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
@@ -921,10 +922,17 @@ section.dash-table { padding: 20px 0 8px; margin: 0; }
 .dash-tabs a > span { color: var(--primary); font-weight: 700; }
 .dash-tabs a[aria-current='page'] { background: var(--primary); color: #fff; }
 .dash-tabs a[aria-current='page'] > span { color: #fff; }
-.dash-table-scroll { overflow-x: auto; }
+@media (max-width: 959px) { .dash-table-scroll { overflow-x: auto; } }
 .dash-table table { min-width: 900px; border: 0; border-radius: 0; box-shadow: none; display: table; }
 .dash-table th { border-top: 1px solid var(--line); }
 .dash-table td { vertical-align: middle; }
 .dash-table th:first-child, .dash-table td:first-child { padding-left: 20px; }
 .dash-empty, .dash-more { padding: 12px 20px; margin: 0; color: var(--muted); }
 .dash-table td strong { white-space: nowrap; }
+
+/* Long lists: a table's header row stays at the top of the screen while its rows scroll under it. On a phone or
+   tablet the table scrolls sideways in its own box instead, and inside a pop-up it sticks to the pop-up's top. */
+@media (min-width: 960px) {
+  thead th { position: sticky; top: 0; z-index: 3; box-shadow: inset 0 -1px 0 var(--line); }
+}
+.photo-viewer thead th { position: sticky; top: 0; z-index: 3; }
