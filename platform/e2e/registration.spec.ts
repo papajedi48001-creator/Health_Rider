@@ -43,5 +43,5 @@ test('a new pharmacist applies on the login page and signs in once an admin appr
   await adminContext.close();
 
   await page.getByRole('button', { name: 'เข้าสู่ระบบ' }).click();
-  await expect(page).toHaveURL(/\/pharmacy\/candidates$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
 });

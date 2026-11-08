@@ -1,9 +1,9 @@
 import { withBasePath } from '@/lib/base-path';
 
-// "น้องภูไทไรเดอร์", the Health Rider mascot: a smiling rider on a teal-and-white scooter with the medicine box.
+// "น้องภูไทไรเดอร์", the Health Rider mascot: a smiling rider in a teal helmet giving a thumbs-up and holding the medicine bag.
 const sources = {
-  full: { webp: withBasePath('/brand/mascot.webp'), png: withBasePath('/brand/mascot.png'), ratio: 1224 / 938 },
-  small: { webp: withBasePath('/brand/mascot-small.webp'), png: withBasePath('/brand/mascot-small.png'), ratio: 1224 / 938 },
+  full: { webp: withBasePath('/brand/mascot.webp'), png: withBasePath('/brand/mascot.png'), ratio: 2525 / 2781 },
+  small: { webp: withBasePath('/brand/mascot-small.webp'), png: withBasePath('/brand/mascot-small.png'), ratio: 2525 / 2781 },
   face: { webp: withBasePath('/brand/mascot-face.webp'), png: withBasePath('/brand/mascot-face.png'), ratio: 1 },
 } as const;
 

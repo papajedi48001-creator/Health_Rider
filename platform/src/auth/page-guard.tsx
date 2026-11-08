@@ -17,6 +17,7 @@ import { UserAvatar } from '@/account/user-avatar';
 import { ForcedPasswordChange } from '@/account/forced-password-change';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
+  { group: 'ภาพรวม', href: '/dashboard', label: 'หน้าหลัก', icon: 'home', roles: ['pharmacy', 'coordinator', 'admin'] },
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
   { group: 'เภสัชกรรม', href: '/pharmacy/packages', label: 'เตรียมพัสดุ', icon: 'package', roles: ['pharmacy', 'admin'] },
   { group: 'เภสัชกรรม', href: '/pharmacy/awaiting-rider', label: 'รอไรเดอร์รับงาน', icon: 'scooter', roles: ['pharmacy', 'admin'] },
@@ -67,8 +68,8 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
         {session.role === 'admin' && <ViewSwitcher view={isAdminView(view) ? view : 'admin'} />}
         <MainNav groups={groupsFor(shownRole)} />
         <div className="sidebar-mascot" aria-hidden="true">
-          <Mascot width={120} variant="small" />
-          <span>{mascotName} พร้อมส่งยาถึงบ้าน</span>
+          <Mascot width={48} variant="face" />
+          <span><strong>{mascotName}</strong>พร้อมส่งยาถึงบ้าน</span>
         </div>
         <div className="staff-user">
           <Link href={accountHref} className="user-link" aria-label={`ข้อมูลผู้ใช้ ${session.displayName}`}>
