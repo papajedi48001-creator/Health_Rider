@@ -938,3 +938,43 @@ section.dash-table { padding: 20px 0 8px; margin: 0; }
   thead th { position: sticky; top: 0; z-index: 3; box-shadow: inset 0 -1px 0 var(--line); }
 }
 .photo-viewer thead th { position: sticky; top: 0; z-index: 3; }
+
+/* Staff pages keep the banner, headings, filters and stat tiles above their tables, but in a compact size so more
+   of the screen goes to the rows. Rider pages are left as they are. */
+.staff-content h1 { font-size: 1.3rem; margin: 0 0 2px; }
+.staff-content h1 + p:not([role='status']) { font-size: 0.9rem; margin: 0 0 12px; }
+.staff-content .hero-banner { min-height: 0; padding: 12px 22px; margin: 0 0 14px; border-radius: 16px; }
+.staff-content .hero-banner::before { width: 34px; height: 34px; right: 170px; top: 12px; }
+.staff-content .hero-banner::after { width: 52px; height: 52px; right: 18px; top: 10px; }
+.staff-content .hero-banner .mascot { margin: -8px 4px -13px 0; }
+.staff-content .hero-banner .mascot img { width: 110px; }
+.staff-content .hero-text { gap: 2px; }
+.staff-content .hero-text strong { font-size: 1.2rem; }
+.staff-content .hero-text > span { font-size: 0.88rem; }
+.staff-content .hero-banner.hero-large { min-height: 0; padding: 14px 26px; }
+.staff-content .hero-large .hero-text strong { font-size: 1.3rem; }
+.staff-content .hero-large .hero-accent { font-size: 1.55rem; }
+.staff-content .hero-large .hero-text > span { font-size: 0.9rem; }
+.staff-content .hero-banner.hero-large .mascot { margin: -10px 8px -15px 0; }
+.staff-content .hero-banner.hero-large .mascot img { width: 150px; }
+.staff-content .hero-banner.hero-large::before { right: 220px; top: 14px; }
+.staff-content .page-greeting { margin: 0 0 10px; }
+.staff-content .page-greeting h1 { font-size: 1.25rem; }
+.staff-content .page-greeting p { font-size: 0.88rem; margin: 0; }
+.staff-content .filter-bar { padding: 10px 14px; gap: 8px 12px; margin: 0 0 12px; }
+.staff-content .filter-bar label { font-size: 0.85rem; gap: 2px; }
+.staff-content .filter-bar input, .staff-content .filter-bar select, .staff-content .filter-bar .btn { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
+.staff-content .stat-row { gap: 10px; margin: 0 0 12px; }
+.staff-content .stat { padding: 10px 14px 13px; gap: 10px; }
+.staff-content .stat::after { bottom: 6px; left: 14px; }
+.staff-content .stat strong { font-size: 1.35rem; }
+.staff-content .stat-icon { width: 38px; height: 38px; border-radius: 10px; }
+.staff-content .dash-cards { gap: 12px; margin: 0 0 14px; }
+.staff-content .dash-card { padding: 12px 14px; gap: 12px; }
+.staff-content .dash-card-icon { width: 42px; height: 42px; border-radius: 12px; }
+.staff-content .dash-card-value strong { font-size: 1.5rem; }
+.staff-content .dash-card-note { font-size: 0.78rem; }
+.staff-content .dash-card-bar { margin-top: 4px; }
+.staff-content section.dash-table { padding-top: 14px; }
+.staff-content .dash-tabs { padding: 10px 20px 10px; }
+@media (min-width: 960px) { .staff-content main { padding-top: 20px; } }
