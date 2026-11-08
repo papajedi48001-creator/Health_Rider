@@ -17,6 +17,7 @@ import { UserAvatar } from '@/account/user-avatar';
 import { ForcedPasswordChange } from '@/account/forced-password-change';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
+  { group: 'ภาพรวม', href: '/dashboard', label: 'หน้าหลัก', icon: 'home', roles: ['pharmacy', 'coordinator', 'admin'] },
   { group: 'เภสัชกรรม', href: '/pharmacy/candidates', label: 'รอยืนยันจาก HOSxP', icon: 'clipboard', roles: ['pharmacy', 'admin'] },
   { group: 'เภสัชกรรม', href: '/pharmacy/packages', label: 'เตรียมพัสดุ', icon: 'package', roles: ['pharmacy', 'admin'] },
   { group: 'เภสัชกรรม', href: '/pharmacy/awaiting-rider', label: 'รอไรเดอร์รับงาน', icon: 'scooter', roles: ['pharmacy', 'admin'] },

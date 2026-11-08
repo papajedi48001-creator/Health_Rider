@@ -861,3 +861,70 @@ label.switch-toggle { display: inline-flex; align-items: center; gap: 10px; marg
 .user-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 8px 0; }
 .user-filters label { flex: 1 1 180px; }
 .user-filters .btn { flex: 0 0 auto; }
+
+/* Home dashboard: a greeting line, a large banner, four stat cards and today's deliveries in one card. */
+.page-greeting { margin: 0 0 18px; }
+.page-greeting h1 { margin: 0; font-size: 1.55rem; }
+.page-greeting p { margin: 2px 0 0; color: var(--muted); }
+.hero-accent { display: block; }
+.hero-banner.hero-large { min-height: 240px; padding: 32px 40px; }
+.hero-large .hero-text { gap: 10px; }
+.hero-large .hero-text strong { font-size: 2.1rem; line-height: 1.3; color: var(--ink); }
+.hero-large .hero-accent { font-size: 2.6rem; color: var(--primary); }
+.hero-large .hero-text > span { font-size: 1.05rem; color: var(--ink); opacity: 0.8; }
+.hero-banner.hero-large .mascot { margin: -20px 24px -33px 0; }
+.hero-banner.hero-large .mascot img { width: 300px; }
+.hero-banner.hero-large::before { right: 380px; top: 40px; }
+@media (max-width: 720px) {
+  .hero-banner.hero-large { min-height: 0; padding: 18px 0 18px 18px; }
+  .hero-large .hero-text strong { font-size: 1.1rem; }
+  .hero-large .hero-accent { font-size: 1.35rem; }
+  .hero-large .hero-text > span { font-size: 0.85rem; }
+  .hero-banner.hero-large .mascot { margin: -6px 0 -19px; }
+  .hero-banner.hero-large .mascot img { width: 150px; }
+}
+
+.dash-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0 0 20px; }
+@media (max-width: 1180px) { .dash-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .dash-cards { gap: 10px; } }
+.dash-card {
+  --tone: var(--primary); --tone-soft: var(--primary-soft);
+  display: flex; align-items: flex-start; gap: 14px; padding: 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-surface); box-shadow: var(--shadow);
+}
+.dash-card.tone-blue { --tone: var(--blue); --tone-soft: #e8efff; }
+.dash-card.tone-green { --tone: var(--success); --tone-soft: #e6f6ea; }
+.dash-card.tone-orange { --tone: #ea7a0c; --tone-soft: #fff1e0; }
+.dash-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 56px; height: 56px; border-radius: 16px; background: var(--tone-soft); color: var(--tone); }
+.dash-card-body { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.dash-card-label { color: var(--muted); font-size: 0.9rem; }
+.dash-card-value { color: var(--ink); font-size: 1rem; }
+.dash-card-value strong { font-size: 2rem; line-height: 1.15; }
+.dash-card-note { color: var(--muted); font-size: 0.82rem; }
+.dash-card-bar { display: block; height: 4px; margin-top: 8px; border-radius: 4px; background: #edf2f6; overflow: hidden; }
+.dash-card-bar > span { display: block; height: 100%; min-width: 6px; border-radius: 4px; background: var(--tone); }
+@media (max-width: 520px) {
+  .dash-card { flex-direction: column; gap: 8px; padding: 14px; }
+  .dash-card-icon { width: 42px; height: 42px; border-radius: 12px; }
+  .dash-card-value strong { font-size: 1.5rem; }
+}
+
+section.dash-table { padding: 20px 0 8px; margin: 0; }
+.dash-table-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 0 20px; }
+.dash-table-head h2 { margin: 0; font-size: 1.15rem; }
+.dash-table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dash-tabs { display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 20px 12px; }
+.dash-tabs a {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px;
+  background: #f1f5f8; color: var(--ink); font-size: 0.9rem; font-weight: 600; text-decoration: none;
+}
+.dash-tabs a > span { color: var(--primary); font-weight: 700; }
+.dash-tabs a[aria-current='page'] { background: var(--primary); color: #fff; }
+.dash-tabs a[aria-current='page'] > span { color: #fff; }
+.dash-table-scroll { overflow-x: auto; }
+.dash-table table { min-width: 900px; border: 0; border-radius: 0; box-shadow: none; display: table; }
+.dash-table th { border-top: 1px solid var(--line); }
+.dash-table td { vertical-align: middle; }
+.dash-table th:first-child, .dash-table td:first-child { padding-left: 20px; }
+.dash-empty, .dash-more { padding: 12px 20px; margin: 0; color: var(--muted); }
+.dash-table td strong { white-space: nowrap; }
