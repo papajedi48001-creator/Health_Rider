@@ -995,3 +995,76 @@ section.dash-table { padding: 20px 0 8px; margin: 0; }
 .table-scroll { overflow-x: auto; }
 .bullet-list { margin: 4px 0; padding-left: 20px; }
 .bullet-list li { display: list-item; list-style: disc; border: 0; background: none; border-radius: 0; padding: 0; margin: 2px 0; }
+
+/* Motion: staff pages and login only. Rider pages stay still. Everything is screen-only and
+   skipped for people who ask their device for reduced motion. Entrance animations fill
+   backwards only, so no transform is left on an element once it has finished. */
+@keyframes hr-rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes hr-fade { from { opacity: 0; } }
+@keyframes hr-pop { from { opacity: 0; transform: translateY(8px) scale(0.97); } }
+@keyframes hr-slide { from { opacity: 0; transform: translateX(-10px); } }
+@keyframes hr-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes hr-wave { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-6deg); } 80% { transform: rotate(5deg); } 90% { transform: rotate(-3deg); } }
+@keyframes hr-grow { from { transform: scaleX(0); } }
+@keyframes hr-shine { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+@keyframes hr-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 138, 61, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(255, 138, 61, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 138, 61, 0); } }
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  /* Page content rises in, one block after another. */
+  .staff-content main > * { animation: hr-rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+  .staff-content main > :nth-child(2) { animation-delay: 0.06s; }
+  .staff-content main > :nth-child(3) { animation-delay: 0.12s; }
+  .staff-content main > :nth-child(4) { animation-delay: 0.18s; }
+  .staff-content main > :nth-child(n+5) { animation-delay: 0.24s; }
+
+  /* Banner: mascot floats and waits a moment, a soft light sweeps across once. */
+  .staff-content .hero-banner .mascot { animation: hr-float 4s ease-in-out 0.6s infinite; }
+  .staff-content .hero-banner .mascot img { transform-origin: 50% 90%; animation: hr-wave 6s ease-in-out 1.2s infinite; }
+  .staff-content .hero-banner .hero-text { position: relative; z-index: 1; animation: hr-slide 0.5s ease-out 0.1s backwards; }
+  .staff-content .hero-banner::after { animation: hr-float 5s ease-in-out infinite; }
+  .staff-content .hero-banner::before { animation: hr-float 6s ease-in-out 1s infinite; }
+
+  /* Cards come in one by one and lift on hover. */
+  .staff-content .dash-card, .staff-content .stat { animation: hr-pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; transition: transform 0.18s, box-shadow 0.18s; }
+  .staff-content :is(.dash-cards, .stat-row) > :nth-child(2) { animation-delay: 0.08s; }
+  .staff-content :is(.dash-cards, .stat-row) > :nth-child(3) { animation-delay: 0.16s; }
+  .staff-content :is(.dash-cards, .stat-row) > :nth-child(4) { animation-delay: 0.24s; }
+  .staff-content :is(.dash-cards, .stat-row) > :nth-child(n+5) { animation-delay: 0.32s; }
+  .staff-content .dash-card:hover, .staff-content .stat:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(13, 43, 62, 0.12); }
+  .staff-content .dash-card-bar > span { transform-origin: left; animation: hr-grow 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.35s backwards; }
+
+  /* Table rows fade in from the top, the first rows a little apart. */
+  .staff-content tbody tr { animation: hr-fade 0.35s ease-out 0.2s backwards; }
+  .staff-content tbody tr:nth-child(2) { animation-delay: 0.24s; }
+  .staff-content tbody tr:nth-child(3) { animation-delay: 0.28s; }
+  .staff-content tbody tr:nth-child(4) { animation-delay: 0.32s; }
+  .staff-content tbody tr:nth-child(5) { animation-delay: 0.36s; }
+  .staff-content tbody tr:nth-child(n+6) { animation-delay: 0.4s; }
+  .staff-content tbody td { transition: background-color 0.15s; }
+
+  /* Buttons lift a little on hover and press down on click. */
+  .staff-content .btn:not(:disabled):not([aria-disabled='true']) { transition: transform 0.12s, box-shadow 0.15s, background-color 0.15s, border-color 0.15s; }
+  .staff-content .btn:not(:disabled):not([aria-disabled='true']):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13, 43, 62, 0.14); }
+  .staff-content .btn:not(:disabled):not([aria-disabled='true']):active { transform: translateY(0) scale(0.97); box-shadow: none; }
+  .staff-content .btn-primary { position: relative; overflow: hidden; }
+  .staff-content .btn-primary::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: translateX(-120%) skewX(-18deg); pointer-events: none; }
+  .staff-content .btn-primary:not(:disabled):hover::after { animation: hr-shine 0.7s ease-out; }
+
+  /* Sidebar: links slide in on load, nudge on hover, badges pulse while work is waiting. */
+  .staff-sidebar nav.tabs a { transition: background-color 0.15s, color 0.15s, padding-left 0.18s; animation: hr-slide 0.4s ease-out backwards; }
+  .staff-sidebar nav.tabs a:hover:not([aria-current='page']) { padding-left: 16px; }
+  .staff-sidebar nav.tabs a > svg { transition: transform 0.18s; }
+  .staff-sidebar nav.tabs a:hover > svg { transform: scale(1.12); }
+  .staff-sidebar .badge:not(.badge-zero) { animation: hr-pulse 2.2s ease-out 1s infinite; }
+  .staff-sidebar .sidebar-mascot img { animation: hr-float 4s ease-in-out infinite; }
+
+  /* Messages and dialogs. */
+  .staff-content .notice, .staff-content [role='status']:not(:empty) { animation: hr-slide 0.35s ease-out backwards; }
+  .staff-app .photo-viewer { animation: hr-fade 0.2s ease-out; }
+  .staff-app .photo-viewer-body, .staff-app .label-sheet { animation: hr-pop 0.25s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .staff-content .empty-state .mascot, .staff-content .celebrate .mascot { animation: hr-float 3.5s ease-in-out infinite; }
+
+  /* Login page. */
+  .login-hero .mascot { animation: hr-float 4s ease-in-out infinite; }
+  .login-card { animation: hr-pop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s backwards; }
+}
