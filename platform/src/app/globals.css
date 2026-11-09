@@ -478,6 +478,9 @@ nav.tabs a[aria-current='page'] > svg { color: #fff; }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-success { background: var(--success); border-color: var(--success); color: #fff; }
 .btn-secondary { background: var(--surface); color: var(--primary); }
+/* Reprinting keeps the old QR: a solid button like "ออก QR ใหม่", in navy so the two are not confused. */
+button.btn-reprint { background: var(--navy); border-color: var(--navy); color: #fff; }
+button.btn-reprint:hover:not(:disabled) { background: var(--navy-soft); border-color: var(--navy-soft); }
 .btn-danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
 .btn-block { width: 100%; }
 .btn-large { min-height: 56px; font-size: 1.08rem; }
