@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
@@ -93,6 +93,8 @@ test.skipIf(!hasPython)('reports the versions it can install and the one that ru
   expect(status.releases.map((item: { version: string }) => item.version)).toEqual(['1.1.0', '1.0.0']);
   expect(status.releases[0].whatsNew).toEqual(['มีอะไรใหม่ใน 1.1.0']);
   expect(status.fetchError).toBeNull();
+  // The web container's user (uid 1001) owns the shared folder; it has no matching group inside the container.
+  if (process.getuid?.() === 0) expect(statSync(state).uid).toBe(1001);
 });
 
 test.skipIf(!hasPython)('updates to a newer version and rolls back, but never below the floor', () => {

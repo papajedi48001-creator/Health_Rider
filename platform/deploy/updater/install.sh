@@ -19,8 +19,21 @@ install -m 0755 "$here/health-rider-updater.py" /usr/local/lib/health-rider-upda
 install -m 0644 "$here/health-rider-updater.service" /etc/systemd/system/health-rider-updater.service
 install -m 0644 "$here/health-rider-updater.timer" /etc/systemd/system/health-rider-updater.timer
 
-# root owns the folder; the web container (gid 1001) may write request.json into it.
-install -d -o root -g 1001 -m 2770 "$state_dir"
+# The web container runs as uid 1001 with no matching group, so that uid owns the folder and may
+# write request.json into it. root (the updater) needs no permission bits.
+install -d -o 1001 -g 0 -m 0770 "$state_dir"
+
+# With SELinux enforcing (Rocky, AlmaLinux, RHEL) a container may only use files labelled container_file_t.
+if command -v selinuxenabled >/dev/null && selinuxenabled; then
+  if command -v semanage >/dev/null; then
+    semanage fcontext -a -t container_file_t "$state_dir(/.*)?" 2>/dev/null \
+      || semanage fcontext -m -t container_file_t "$state_dir(/.*)?"
+    restorecon -R "$state_dir"
+  else
+    echo "Note: semanage not found (dnf install policycoreutils-python-utils); labelling with chcon, which a full relabel would undo." >&2
+    chcon -R -t container_file_t "$state_dir"
+  fi
+fi
 install -d -o root -g root -m 0700 /var/backups/health-rider
 
 if [[ ! -f $env_file ]]; then

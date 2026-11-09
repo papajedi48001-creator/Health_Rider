@@ -34,7 +34,8 @@
 2. ติดตั้งตัวอัปเดต (สร้างโฟลเดอร์ร่วม, `/etc/health-rider-updater.env`, systemd timer และเพิ่ม `UPDATER_STATE_DIR` ใน `.env.production`):
 
    ```bash
-   sudo apt install -y mariadb-client python3     # ถ้ายังไม่มี ใช้สำรองฐานข้อมูล
+   sudo apt install -y mariadb-client python3     # Ubuntu/Debian
+   sudo dnf install -y mariadb python3 policycoreutils-python-utils   # Rocky/AlmaLinux/RHEL
    sudo bash /opt/health-rider/platform/deploy/updater/install.sh
    ```
 
@@ -105,7 +106,7 @@ repo เป็น private: บัญชี root ต้อง `git fetch` ได�
 | อาการ | สาเหตุ / วิธีแก้ |
 |---|---|
 | "ยังไม่ได้ติดตั้งตัวอัปเดตบนเซิร์ฟเวอร์" | ยังไม่ได้ทำขั้นตอนติดตั้ง หรือ build image ก่อนติดตั้ง |
-| "แอปเขียนโฟลเดอร์ของตัวอัปเดตไม่ได้" | โฟลเดอร์ไม่ใช่ `root:1001` mode `2770` รัน `install.sh` ใหม่ |
+| "แอปเขียนโฟลเดอร์ของตัวอัปเดตไม่ได้" | โฟลเดอร์ต้องเป็นของ uid `1001` mode `0770` และถ้า SELinux เปิด (`getenforce` = Enforcing) ต้องมี label `container_file_t` รัน `install.sh` ใหม่ (เครื่อง Rocky/RHEL ติดตั้ง `policycoreutils-python-utils` ก่อน) |
 | "ไม่ได้รายงานสถานะเกิน 3 นาที" | timer หยุด: `systemctl enable --now health-rider-updater.timer` แล้วดู `journalctl -u health-rider-updater` |
 | งานขึ้น "ไม่สำเร็จ ... กลับไปใช้เวอร์ชันเดิมแล้ว" | เวอร์ชันใหม่ build หรือเปิดไม่ขึ้น ระบบกลับเวอร์ชันเดิมให้แล้ว ดูข้อความใน log |
 | "กลับไปเวอร์ชันเดิมไม่สำเร็จ" | ต้องแก้บนเครื่อง: `git checkout v<เวอร์ชันเดิม>` แล้ว `docker compose ... up -d --build` และถ้าจำเป็น restore จากไฟล์ใน `/var/backups/health-rider` |
