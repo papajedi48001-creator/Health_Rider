@@ -6,7 +6,7 @@ export default function PharmacyAwaitingRiderPage() {
     <main>
       <HeroBanner title="รอไรเดอร์รับงาน" text="พัสดุที่พร้อมแล้ว รอไรเดอร์สแกน QR เพื่อรับงาน" />
       <h1>รอไรเดอร์รับงาน</h1>
-      <p>พัสดุที่ออก QR แล้วและรอไรเดอร์สแกนรับงาน หากฉลาก QR หายหรือชำรุดให้ออก QR ใหม่</p>
+      <p>พัสดุที่ออก QR แล้วและรอไรเดอร์สแกนรับงาน กด "พิมพ์ซ้ำ" เพื่อพิมพ์ฉลากด้วย QR เดิม หากฉลากหายให้ออก QR ใหม่</p>
       <PharmacyPackageBoard view="awaiting" />
     </main>
   );

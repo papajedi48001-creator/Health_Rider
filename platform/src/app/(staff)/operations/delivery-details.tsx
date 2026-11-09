@@ -30,6 +30,7 @@ const historyLabels: Record<string, string> = {
   'delivery_request.created_from_hos_candidate': 'เภสัชยืนยันจาก HOSxP',
   'delivery_attempt.prepared': 'เตรียมพัสดุ',
   'package_qr.reissued': 'ออก QR ใหม่',
+  'package_qr.reprinted': 'พิมพ์ฉลากซ้ำ (QR เดิม)',
   'delivery_attempt.claimed': 'ไรเดอร์รับงาน',
   'delivery_request.amended_before_pickup': 'เภสัชแก้ที่อยู่/โทรศัพท์ก่อนไรเดอร์รับงาน',
   'delivery_request.amended_in_transit': 'แก้ที่อยู่/โทรศัพท์ระหว่างส่ง',

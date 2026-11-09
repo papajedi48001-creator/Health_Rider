@@ -54,3 +54,21 @@ test('reissues a QR only for a package no rider has claimed', async () => {
   expect(invalidated).toEqual(['attempt-1']);
   await expect(reissuePackageQr('attempt-2', new Date(), pharmacist, store('claimed'))).rejects.toThrow('ออก QR ใหม่ได้เฉพาะ');
 });
+
+test('reprints a label only with the live QR of a package no rider has claimed', async () => {
+  const { checkReprintToken } = await import('@/domain/delivery/reprint-package-qr');
+  const { hashPackageQrToken } = await import('@/domain/delivery/issue-package-qr');
+  const now = new Date('2026-11-08T10:00:00.000Z');
+  const live = { deliveryAttemptId: 'attempt-1', expiresAt: new Date('2026-11-09T00:00:00.000Z'), invalidatedAt: null as Date | null, attemptStatus: 'prepared' as DeliveryAttemptStatus };
+  const store = (record: typeof live | null) => ({
+    findToken: async (tokenHash: string) => (tokenHash === hashPackageQrToken('kept-token') ? record : null),
+  });
+
+  await expect(checkReprintToken('attempt-1', 'kept-token', now, pharmacist, store(live))).resolves.toBeUndefined();
+  await expect(checkReprintToken('attempt-1', 'other-token', now, pharmacist, store(live))).rejects.toThrow('ไม่พบ QR เดิม');
+  await expect(checkReprintToken('attempt-2', 'kept-token', now, pharmacist, store(live))).rejects.toThrow('ไม่พบ QR เดิม');
+  await expect(checkReprintToken('attempt-1', 'kept-token', now, pharmacist, store({ ...live, invalidatedAt: now }))).rejects.toThrow('QR เดิมใช้ไม่ได้แล้ว');
+  await expect(checkReprintToken('attempt-1', 'kept-token', now, pharmacist, store({ ...live, expiresAt: now }))).rejects.toThrow('QR เดิมใช้ไม่ได้แล้ว');
+  await expect(checkReprintToken('attempt-1', 'kept-token', now, pharmacist, store({ ...live, attemptStatus: 'claimed' }))).rejects.toThrow('ยังไม่มีไรเดอร์รับงาน');
+  await expect(checkReprintToken('attempt-1', 'kept-token', now, { id: 'r', role: 'rider', displayName: 'ไรเดอร์' }, store(live))).rejects.toThrow();
+});
