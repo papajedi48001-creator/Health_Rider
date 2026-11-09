@@ -58,7 +58,10 @@ class Config:
         self.backup = env("HR_BACKUP", "required")  # required | off
         self.backup_dir = env("HR_BACKUP_DIR", "/var/backups/health-rider")
         self.backup_keep = int(env("HR_BACKUP_KEEP", "14"))
-        self.web_gid = int(env("HR_WEB_GID", "1001"))
+        # The web container runs as uid 1001 (user nextjs) with no useful group, so the folder is
+        # owned by that uid. HR_WEB_GID only sets the folder's group; root needs no permission bits.
+        self.web_uid = int(env("HR_WEB_UID", "1001"))
+        self.web_gid = int(env("HR_WEB_GID", "0"))
         self.docker = env("HR_DOCKER", "docker")
 
 
@@ -406,11 +409,12 @@ def backup_database(cfg: Config, job: dict) -> str:
 # ---------------------------------------------------------------- main
 
 def prepare_state_dir(cfg: Config) -> None:
-    # root owns it; the web container's group (gid 1001) may add request.json. Set by install.sh too.
+    # The web container's user (uid 1001) owns it so it can add request.json; root reads and writes
+    # anything regardless. status.json stays root-owned and world-readable. Set by install.sh too.
     os.makedirs(cfg.state, exist_ok=True)
     if os.geteuid() == 0:
-        os.chown(cfg.state, 0, cfg.web_gid)
-        os.chmod(cfg.state, 0o2770)
+        os.chown(cfg.state, cfg.web_uid, cfg.web_gid)
+        os.chmod(cfg.state, 0o770)
 
 
 def main() -> int:

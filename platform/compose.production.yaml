@@ -42,7 +42,7 @@ services:
       - "${WEB_PUBLISH:-127.0.0.1:3000}:3000"
     volumes:
       - health-rider-evidence:/app/data/evidence
-      # Created by deploy/updater/install.sh (root:1001, mode 2770). The app writes request.json here and
+      # Created by deploy/updater/install.sh (owner uid 1001, mode 0770, SELinux container_file_t). The app writes request.json here and
       # reads status.json, which the host updater writes; the app never runs git or docker itself.
       - ${UPDATER_STATE_DIR:-/var/lib/health-rider-updater}:/app/updater
 
