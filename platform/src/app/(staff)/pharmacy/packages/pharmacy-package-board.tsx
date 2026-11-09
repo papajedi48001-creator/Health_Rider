@@ -264,7 +264,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
           {shown.length === 0 ? <EmptyState text={emptyText('ไม่มีพัสดุที่รอไรเดอร์รับงาน')} /> : (
             <>
             {selectBar('ออก QR ใหม่และพิมพ์ที่เลือก', (
-              <button type="button" className="btn btn-secondary btn-small" disabled={ticked.length === 0 || busy !== null} onClick={() => void reprint(ticked)}>
+              <button type="button" className="btn btn-small btn-reprint" disabled={ticked.length === 0 || busy !== null} onClick={() => void reprint(ticked)}>
                 {busy === 'reprint' ? 'กำลังพิมพ์ซ้ำ' : `พิมพ์ซ้ำ QR เดิมที่เลือก (${ticked.length})`}
               </button>
             ))}
@@ -274,7 +274,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
                   {pick(row)}
                   <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
                   <div className="row-actions">
-                    <button type="button" className="btn btn-secondary btn-small" disabled={busy !== null} onClick={() => void reprint([row])} aria-label={`พิมพ์ซ้ำ ${row.patientName}`}>
+                    <button type="button" className="btn-reprint" disabled={busy !== null} onClick={() => void reprint([row])} aria-label={`พิมพ์ซ้ำ ${row.patientName}`}>
                       พิมพ์ซ้ำ
                     </button>
                     <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
