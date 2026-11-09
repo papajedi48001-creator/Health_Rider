@@ -102,38 +102,30 @@ export function AdminUpdates() {
     <>
       <p aria-live="polite">{message}</p>
 
-      <section aria-labelledby="updates-current">
+      {/* Only problems and work in progress show above the list; the version list marks the running one. */}
+      <UpdaterProblems view={data} />
+      {unreachable && <p className="notice" role="status">ระบบกำลังเริ่มใหม่หรือเชื่อมต่อไม่ได้ หน้านี้จะลองใหม่ทุก 5 วินาที</p>}
+      {data.pending && (
+        <div className="notice" role="status">
+          รอเซิร์ฟเวอร์รับคำสั่ง: {data.pending.action === 'check' ? 'ตรวจหาเวอร์ชันใหม่' : `${actionLabels[data.pending.action]}เป็นเวอร์ชัน ${data.pending.version}`}
+          {' '}โดย {data.pending.requestedBy.name} เมื่อ {formatThaiDateTime(data.pending.requestedAt)}{' '}
+          <button type="button" className="btn btn-secondary btn-small" onClick={() => void cancel()}>ยกเลิกคำสั่ง</button>
+        </div>
+      )}
+      {running && running.action !== 'check' && (
+        <p className="notice" role="status">
+          กำลัง{actionLabels[running.action]}จาก {running.from ?? '-'} เป็นเวอร์ชัน {running.version}: {running.step ?? 'กำลังเริ่ม'}
+        </p>
+      )}
+
+      <section aria-labelledby="updates-list">
         <div className="panel-head">
-          <h2 id="updates-current">เวอร์ชันที่ใช้อยู่: {data.current.version}</h2>
+          <h2 id="updates-list">เวอร์ชันทั้งหมด</h2>
           <button type="button" className="btn btn-secondary btn-small" disabled={busy || !canChange} onClick={() => void checkNow()}>
             <Icon name="history" size={18} /> ตรวจหาเวอร์ชันใหม่ตอนนี้
           </button>
         </div>
-        <p>{data.current.title} · ออกเมื่อ {formatThaiDateTime(data.current.releasedAt)}</p>
-        <p className="muted">
-          ตรวจหาเวอร์ชันใหม่ล่าสุด: {updater.fetchedAt ? formatThaiDateTime(updater.fetchedAt) : 'ยังไม่เคยตรวจ'}
-          {updater.deployedRef && <> · บนเซิร์ฟเวอร์: <code>{updater.deployedRef}</code></>}
-          {' '}· ย้อนกลับได้ถึงเวอร์ชัน {data.rollbackFloor} เท่านั้น (เวอร์ชันแรกที่มีระบบอัปเดต)
-        </p>
-        <UpdaterProblems view={data} />
-        {unreachable && <p className="notice" role="status">ระบบกำลังเริ่มใหม่หรือเชื่อมต่อไม่ได้ หน้านี้จะลองใหม่ทุก 5 วินาที</p>}
-        {data.pending && (
-          <div className="notice" role="status">
-            รอเซิร์ฟเวอร์รับคำสั่ง: {data.pending.action === 'check' ? 'ตรวจหาเวอร์ชันใหม่' : `${actionLabels[data.pending.action]}เป็นเวอร์ชัน ${data.pending.version}`}
-            {' '}โดย {data.pending.requestedBy.name} เมื่อ {formatThaiDateTime(data.pending.requestedAt)}{' '}
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => void cancel()}>ยกเลิกคำสั่ง</button>
-          </div>
-        )}
-        {running && running.action !== 'check' && (
-          <p className="notice" role="status">
-            กำลัง{actionLabels[running.action]}จาก {running.from ?? '-'} เป็นเวอร์ชัน {running.version}: {running.step ?? 'กำลังเริ่ม'}
-          </p>
-        )}
-      </section>
-
-      <section aria-labelledby="updates-list">
-        <h2 id="updates-list">เวอร์ชันทั้งหมด</h2>
-        <p className="muted">เรียงจากใหม่ไปเก่า ก่อนเปลี่ยนเวอร์ชันทุกครั้งระบบจะสำรองฐานข้อมูลไว้บนเซิร์ฟเวอร์ และถ้าเวอร์ชันใหม่เปิดไม่ขึ้นจะกลับไปเวอร์ชันเดิมให้อัตโนมัติ</p>
+        <p className="muted">เรียงจากใหม่ไปเก่า ก่อนเปลี่ยนเวอร์ชันทุกครั้งระบบจะสำรองฐานข้อมูลไว้บนเซิร์ฟเวอร์ และถ้าเวอร์ชันใหม่เปิดไม่ขึ้นจะกลับไปเวอร์ชันเดิมให้อัตโนมัติ ย้อนกลับได้ถึงเวอร์ชัน {data.rollbackFloor} เท่านั้น</p>
         <ol className="release-list">
           {data.releases.map((release) => (
             <li key={release.version} className={release.relation === 'current' ? 'release-current' : undefined} aria-label={`เวอร์ชัน ${release.version}`}>
