@@ -155,12 +155,16 @@ LimitRequestBody 5242880
 
 ## 7. อัปเดตเวอร์ชัน
 
+ตั้งแต่เวอร์ชัน 1.0.0 admin อัปเดตและย้อนกลับเวอร์ชันได้จากเมนู "ผู้ดูแลระบบ > อัปเดตระบบ" ซึ่งสำรองฐานข้อมูลให้ก่อนทุกครั้ง
+ติดตั้งตัวอัปเดตบนเครื่องครั้งเดียวตาม [system-updates.md](system-updates.md)
+
+ถ้ายังไม่ได้ติดตั้งตัวอัปเดต ให้อัปเดตด้วยมือ และสำรองฐานก่อนทุกครั้ง (ข้อ 8) เพราะ migration อาจแก้ตาราง:
+
 ```bash
-git pull
+git fetch --tags origin
+git checkout v<เวอร์ชัน>
 docker compose -f compose.production.yaml --env-file .env.production up -d --build
 ```
-
-สำรองฐานก่อนอัปเดตทุกครั้ง (ข้อ 8) เพราะ migration อาจแก้ตาราง
 
 ## 8. สำรองข้อมูล
 
