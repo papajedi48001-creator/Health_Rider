@@ -33,6 +33,10 @@ import uuid
 
 # Never install anything older than this, whatever a manifest says: older versions have no updater.
 HARD_FLOOR = "1.0.0"
+# Raised whenever this script or its systemd units change. After an update, a checked-out updater with a
+# higher revision replaces the installed one, so no one has to run install.sh again. A rollback never
+# installs an older updater. Version 1.0.0 shipped revision 1 (it has no such line).
+UPDATER_REVISION = 2
 VERSION = re.compile(r"^(0|[1-9]\d{0,3})\.(0|[1-9]\d{0,3})\.(0|[1-9]\d{0,3})$")
 TAG = re.compile(r"^v((0|[1-9]\d{0,3})\.(0|[1-9]\d{0,3})\.(0|[1-9]\d{0,3}))$")
 MANIFEST_PATH = "platform/releases.json"
@@ -63,6 +67,8 @@ class Config:
         self.web_uid = int(env("HR_WEB_UID", "1001"))
         self.web_gid = int(env("HR_WEB_GID", "0"))
         self.docker = env("HR_DOCKER", "docker")
+        self.install_dir = env("HR_INSTALL_DIR", "/usr/local/lib/health-rider-updater")
+        self.systemd_dir = env("HR_SYSTEMD_DIR", "/etc/systemd/system")
 
 
 def now() -> str:
@@ -311,7 +317,13 @@ class Updater:
             return
         self.status["current"], self.status["deployedRef"] = deployed(cfg)
         verb = "อัปเดต" if job["action"] == "update" else "ย้อนกลับ"
-        self.finish(job, "succeeded", f"{verb}เป็นเวอร์ชัน {job['version']} เรียบร้อย")
+        message = f"{verb}เป็นเวอร์ชัน {job['version']} เรียบร้อย"
+        try:
+            if install_newer_updater(cfg):
+                message += " · ติดตั้งตัวอัปเดตรุ่นใหม่แล้ว"
+        except Exception as error:  # noqa: BLE001 - the app update itself succeeded
+            message += f" · ติดตั้งตัวอัปเดตรุ่นใหม่ไม่สำเร็จ ({str(error)[:200]}) ให้รัน install.sh"
+        self.finish(job, "succeeded", message)
 
     def finish(self, job: dict, state: str, message: str) -> None:
         job.update(state=state, message=message, finishedAt=now(), step=None)
@@ -406,6 +418,41 @@ def backup_database(cfg: Config, job: dict) -> str:
     return target
 
 
+# ---------------------------------------------------------------- self-install
+
+def revision_of(path: str) -> int:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            match = re.search(r"^UPDATER_REVISION = (\d+)$", handle.read(), re.MULTILINE)
+    except OSError:
+        return 0
+    return int(match.group(1)) if match else 1
+
+
+def install_newer_updater(cfg: Config) -> bool:
+    """Copies the checked-out updater over the installed one when it is newer. This run keeps going on
+    the code already loaded; the next timer run uses the new copy."""
+    source = os.path.join(cfg.repo, "platform", "deploy", "updater")
+    target = os.path.join(cfg.install_dir, "health-rider-updater.py")
+    if not os.path.isdir(cfg.install_dir) or revision_of(os.path.join(source, "health-rider-updater.py")) <= revision_of(target):
+        return False
+    units_changed = False
+    for unit in ("health-rider-updater.service", "health-rider-updater.timer"):
+        new, old = os.path.join(source, unit), os.path.join(cfg.systemd_dir, unit)
+        if os.path.isfile(new) and (not os.path.isfile(old) or open(new, "rb").read() != open(old, "rb").read()):
+            shutil.copyfile(new, f"{old}.tmp")
+            os.chmod(f"{old}.tmp", 0o644)
+            os.replace(f"{old}.tmp", old)
+            units_changed = True
+    shutil.copyfile(os.path.join(source, "health-rider-updater.py"), f"{target}.tmp")
+    os.chmod(f"{target}.tmp", 0o755)
+    os.replace(f"{target}.tmp", target)
+    if units_changed and shutil.which("systemctl"):
+        subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=60)
+    log(f"installed updater revision {revision_of(target)}")
+    return True
+
+
 # ---------------------------------------------------------------- main
 
 def prepare_state_dir(cfg: Config) -> None:
@@ -415,6 +462,16 @@ def prepare_state_dir(cfg: Config) -> None:
     if os.geteuid() == 0:
         os.chown(cfg.state, cfg.web_uid, cfg.web_gid)
         os.chmod(cfg.state, 0o770)
+        label_for_containers(cfg.state)
+
+
+def label_for_containers(path: str) -> None:
+    """With SELinux enforcing, a container may only use files labelled container_file_t."""
+    if not shutil.which("selinuxenabled") or subprocess.run(["selinuxenabled"]).returncode != 0:
+        return
+    current = subprocess.run(["stat", "-c", "%C", path], capture_output=True, text=True).stdout
+    if ":container_file_t:" not in current and shutil.which("chcon"):
+        subprocess.run(["chcon", "-R", "-t", "container_file_t", path], capture_output=True)
 
 
 def main() -> int:
