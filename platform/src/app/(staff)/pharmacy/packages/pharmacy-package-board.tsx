@@ -176,13 +176,15 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
     id: row.id, hn: row.hn, patientName: row.patientName, telephone: row.telephone ?? null, deliveryAddress: row.deliveryAddress,
     deliveryVersion: row.deliveryVersion ?? 1, zoneName: row.zone.displayName,
     packageCode: row.latestAttempt?.status === 'prepared' ? shortCode(row.latestAttempt.id) : null,
+    // On "รอไรเดอร์รับงาน", delete removes only the waiting package and the job returns to "เตรียมพัสดุ".
+    packageId: view === 'awaiting' && row.latestAttempt?.status === 'prepared' ? row.latestAttempt.id : null,
   });
   const editButtons = (row: Row) => (
     <>
       <button type="button" className="btn btn-secondary btn-small" disabled={busy !== null} onClick={() => setEditing({ job: jobOf(row), mode: 'edit' })} aria-label={`แก้ไข ${row.patientName}`}>
         แก้ไข
       </button>
-      {row.deletable !== false && (
+      {(view === 'awaiting' || row.deletable !== false) && (
         <button type="button" className="btn btn-danger btn-small" disabled={busy !== null} onClick={() => setEditing({ job: jobOf(row), mode: 'delete' })} aria-label={`ลบ ${row.patientName}`}>
           ลบ
         </button>

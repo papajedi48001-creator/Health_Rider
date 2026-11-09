@@ -181,3 +181,25 @@ test('reprints a waiting label with the QR this browser issued, without issuing 
   expect(await screen.findByText(/พิมพ์ซ้ำไม่ได้ 1 ราย \(นายสรรเพชร ศิรินา\)/)).toBeInTheDocument();
   expect(screen.queryByRole('dialog', { name: 'ฉลาก QR พัสดุ' })).not.toBeInTheDocument();
 });
+
+test('deleting on the waiting-for-rider queue removes only the package and sends the job back to prepare', async () => {
+  const plaLo6 = zone('z-6', 'ปลาโหล ม.6', '470603', 'ต.ปลาโหล');
+  const board = { toPrepare: [], returnRequired: [], awaitingRider: [{
+    ...row('r1', 'นางสมร ศาลารักษ์', plaLo6), deletable: false,
+    latestAttempt: { id: 'a-r1', status: 'prepared', failureReason: null, failedAt: null },
+  }] };
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(board), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<PharmacyPackageBoard view="awaiting" />);
+
+  // Offered even for a job with delivery history, since only the waiting package goes.
+  fireEvent.click(await screen.findByRole('button', { name: 'ลบ นางสมร ศาลารักษ์' }));
+  expect(screen.getByText(/งานจะกลับไปอยู่ที่เมนูเตรียมพัสดุ/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('เหตุผลการลบ'), { target: { value: 'พิมพ์ฉลากผิดคน' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยันลบ' }));
+
+  expect(await screen.findByText('ลบพัสดุของ นางสมร ศาลารักษ์ แล้ว งานกลับไปอยู่ที่เมนูเตรียมพัสดุ')).toBeInTheDocument();
+  const deleteCall = fetchMock.mock.calls.find(([, init]) => init?.method === 'DELETE')!;
+  expect(String(deleteCall[0])).toContain('/api/pharmacy/attempts/a-r1');
+  expect(JSON.parse(deleteCall[1].body)).toEqual({ reason: 'พิมพ์ฉลากผิดคน' });
+});

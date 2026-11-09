@@ -7,6 +7,8 @@ import { callApi } from '@/lib/api-client';
 export type EditableJob = {
   id: string; hn: string; patientName: string; telephone: string | null; deliveryAddress: string; deliveryVersion: number;
   zoneName: string; packageCode: string | null;
+  // The package waiting for a rider, if any; deleting it sends the job back to "เตรียมพัสดุ" instead of deleting the job.
+  packageId?: string | null;
 };
 
 function useCloseOnEscape(onClose: () => void) {
@@ -119,10 +121,13 @@ export function DeleteJobDialog({ job, onClose, onDeleted }: { job: EditableJob;
   async function remove(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    const result = await callApi(`/api/pharmacy/requests/${job.id}`, { method: 'DELETE', json: { reason } });
+    const url = job.packageId ? `/api/pharmacy/attempts/${job.packageId}` : `/api/pharmacy/requests/${job.id}`;
+    const result = await callApi(url, { method: 'DELETE', json: { reason } });
     setBusy(false);
     if (!result.ok) return setProblem(result.message);
-    onDeleted(`ลบงานของ ${job.patientName} แล้ว หากลบผิด ยืนยันรายการนี้ใหม่ได้จากเมนูรอยืนยันจาก HOSxP`);
+    onDeleted(job.packageId
+      ? `ลบพัสดุของ ${job.patientName} แล้ว งานกลับไปอยู่ที่เมนูเตรียมพัสดุ`
+      : `ลบงานของ ${job.patientName} แล้ว หากลบผิด ยืนยันรายการนี้ใหม่ได้จากเมนูรอยืนยันจาก HOSxP`);
   }
 
   return (
@@ -135,7 +140,9 @@ export function DeleteJobDialog({ job, onClose, onDeleted }: { job: EditableJob;
         {problem && <p className="notice notice-danger" role="alert">{problem}</p>}
         <JobSummary job={job} />
         <p className="notice notice-danger">
-          ต้องการลบงานจัดส่งนี้ใช่หรือไม่{job.packageCode ? ' QR บนฉลากที่พิมพ์แล้วจะสแกนรับงานไม่ได้อีก' : ''} ระบบจะเก็บข้อมูลที่ลบ ผู้ลบ และเหตุผลไว้ในบันทึกการใช้งาน
+          {job.packageId
+            ? 'ต้องการลบพัสดุนี้ออกจากรอไรเดอร์รับงานใช่หรือไม่ งานจะกลับไปอยู่ที่เมนูเตรียมพัสดุ และ QR บนฉลากที่พิมพ์แล้วจะสแกนรับงานไม่ได้อีก'
+            : `ต้องการลบงานจัดส่งนี้ใช่หรือไม่${job.packageCode ? ' QR บนฉลากที่พิมพ์แล้วจะสแกนรับงานไม่ได้อีก' : ''}`} ระบบจะเก็บข้อมูลที่ลบ ผู้ลบ และเหตุผลไว้ในบันทึกการใช้งาน
         </p>
         <form onSubmit={(event) => void remove(event)} aria-label="ฟอร์มยืนยันการลบ">
           <label>เหตุผลการลบ
