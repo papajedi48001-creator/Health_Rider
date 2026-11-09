@@ -195,3 +195,35 @@ test.skipIf(!hasPython)('a failed backup stops the change before anything is che
   expect(status.job.message).toMatch(/สำรองฐานข้อมูลไม่สำเร็จ: Access denied/);
   expect(git('describe', '--tags', '--exact-match', 'HEAD')).toBe('v1.0.0');
 });
+
+test.skipIf(!hasPython)('installs a newer updater after an update, and never an older one after a rollback', () => {
+  const source = path.resolve(__dirname, '../../deploy/updater');
+  const installed = path.join(root, 'installed');
+  const units = path.join(root, 'units');
+  mkdirSync(installed);
+  mkdirSync(units);
+  mkdirSync(path.join(repo, 'platform/deploy/updater'), { recursive: true });
+  // 1.0.0 ships the first updater, which has no revision line.
+  writeFileSync(path.join(repo, 'platform/deploy/updater/health-rider-updater.py'), '# first updater\n');
+  release('1.0.0', []);
+  for (const file of ['health-rider-updater.py', 'health-rider-updater.service', 'health-rider-updater.timer']) {
+    copyFileSync(path.join(source, file), path.join(repo, 'platform/deploy/updater', file));
+  }
+  release('1.0.1', ['1.0.0']);
+  git('checkout', '-q', 'v1.0.0');
+  writeFileSync(path.join(installed, 'health-rider-updater.py'), '# first updater\n');
+  const settings = { HR_INSTALL_DIR: installed, HR_SYSTEMD_DIR: units };
+
+  ask('1.0.1');
+  let status = run(settings);
+  expect(status.job.state).toBe('succeeded');
+  expect(status.job.message).toContain('ติดตั้งตัวอัปเดตรุ่นใหม่แล้ว');
+  expect(readFileSync(path.join(installed, 'health-rider-updater.py'), 'utf8')).toBe(readFileSync(path.join(source, 'health-rider-updater.py'), 'utf8'));
+  expect(existsSync(path.join(units, 'health-rider-updater.timer'))).toBe(true);
+
+  ask('1.0.0');
+  status = run(settings);
+  expect(status.job).toMatchObject({ action: 'rollback', state: 'succeeded' });
+  expect(status.job.message).not.toContain('ตัวอัปเดต');
+  expect(readFileSync(path.join(installed, 'health-rider-updater.py'), 'utf8')).toContain('UPDATER_REVISION = 2');
+});
