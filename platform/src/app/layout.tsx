@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { withBasePath } from '@/lib/base-path';
 import { AppShell } from '@/pwa/app-shell';
 import { DeveloperCredit } from '@/brand/developer-credit';
+import { ScrollJump } from '@/brand/scroll-jump';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body>
         <AppShell />
         {children}
+        <ScrollJump />
         <DeveloperCredit />
       </body>
     </html>
