@@ -8,6 +8,11 @@ import { handleRoute } from '@/lib/route';
 
 export const dynamic = 'force-dynamic';
 
+// The label prints the รพ.สต. by name, so the zone carries the name rather than the related record.
+function zoneWithHealthCenter<T extends { healthCenter: { name: string } | null }>({ healthCenter, ...zone }: T) {
+  return { ...zone, healthCenterName: healthCenter?.name ?? null };
+}
+
 const recentDays = 14;
 
 // Requests pharmacy still acts on: no package yet, a package waiting for a rider, or medication to take back.
@@ -19,7 +24,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'asc' },
       select: {
         id: true, hosVisitNumber: true, hn: true, patientName: true, telephone: true, deliveryAddress: true, deliveryVersion: true, createdAt: true,
-        deliveryZone: { select: { id: true, displayName: true, subdistrictCode: true, subdistrictName: true, villageCode: true } },
+        deliveryZone: { select: { id: true, displayName: true, subdistrictCode: true, subdistrictName: true, villageCode: true, healthCenter: { select: { name: true } } } },
         attempts: { orderBy: { createdAt: 'desc' }, select: { id: true, status: true, failureReason: true, failedAt: true, riderId: true } },
       },
     });
@@ -28,7 +33,7 @@ export async function GET(request: NextRequest) {
     const refreshed = await refreshJobsFromHos(getHosCandidateRepository, db);
     const rows = requests.map((item) => ({
       id: item.id, visitNumber: item.hosVisitNumber, hn: item.hn, patientName: refreshed.get(item.id)?.patientName ?? item.patientName, deliveryAddress: refreshed.get(item.id)?.deliveryAddress ?? item.deliveryAddress,
-      telephone: item.telephone, deliveryVersion: item.deliveryVersion, zone: item.deliveryZone, createdAt: item.createdAt, latestAttempt: item.attempts[0] ? { id: item.attempts[0].id, status: item.attempts[0].status, failureReason: item.attempts[0].failureReason, failedAt: item.attempts[0].failedAt } : null,
+      telephone: item.telephone, deliveryVersion: item.deliveryVersion, zone: zoneWithHealthCenter(item.deliveryZone), createdAt: item.createdAt, latestAttempt: item.attempts[0] ? { id: item.attempts[0].id, status: item.attempts[0].status, failureReason: item.attempts[0].failureReason, failedAt: item.attempts[0].failedAt } : null,
       // A job no rider has ever had can be deleted; one with delivery history keeps it.
       deletable: item.attempts.every((attempt) => attempt.status === 'prepared' && attempt.riderId === null),
     }));

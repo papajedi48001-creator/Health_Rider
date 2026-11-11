@@ -38,3 +38,11 @@ test('name, address and QR sizes typed by the admin show on the sample label', a
   expect(label.querySelector('.parcel-address')).toHaveStyle({ fontSize: '9pt' });
   expect(await within(label).findByRole('img')).toHaveStyle({ width: '35mm', height: '35mm' });
 });
+
+test('the sample label prints the รพ.สต. of the delivery zone', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ settings: defaultLabelSettings, saved: false }), { status: 200 })));
+  render(<AdminLabels />);
+
+  const single = await screen.findByRole('group', { name: 'พิมพ์ฉลากเดียว' });
+  expect(within(single).getByRole('article')).toHaveTextContent('รพ.สต.ดอนยาวใหญ่');
+});

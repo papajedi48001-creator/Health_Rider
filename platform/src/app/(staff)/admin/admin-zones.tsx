@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { callApi } from '@/lib/api-client';
 
-type Zone = { id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string; active: boolean };
+type Zone = {
+  id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string; active: boolean;
+  healthCenter: { id: string; name: string } | null;
+};
+type HealthCenter = { id: string; name: string };
 type HosVillage = { subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string; visits: number; exists: boolean };
 
 const villageKey = (village: { subdistrictCode: string; villageCode: string }) => `${village.subdistrictCode}/${village.villageCode}`;
@@ -16,12 +20,29 @@ export function AdminZones() {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [subdistrictFilter, setSubdistrictFilter] = useState('');
+  const [healthCenters, setHealthCenters] = useState<HealthCenter[]>([]);
+  const [bulkHealthCenter, setBulkHealthCenter] = useState('');
 
   const load = useCallback(async () => {
     const result = await callApi<{ zones: Zone[] }>('/api/admin/zones');
     if (result.ok) setZones(result.data.zones);
     else setMessage(result.message);
   }, []);
+
+  useEffect(() => {
+    void callApi<{ healthCenters: HealthCenter[] }>('/api/admin/health-centers').then((result) => { if (result.ok) setHealthCenters(result.data.healthCenters); });
+  }, []);
+
+  // Every zone shown under the subdistrict filter gets the same รพ.สต.; an empty choice clears it.
+  async function setHealthCenterForShown() {
+    const result = await callApi<{ updated: number }>('/api/admin/zones/health-center', {
+      method: 'PUT', json: { zoneIds: shownZones.map((zone) => zone.id), healthCenterId: bulkHealthCenter },
+    });
+    if (!result.ok) return setMessage(result.message);
+    await load();
+    const name = healthCenters.find((center) => center.id === bulkHealthCenter)?.name;
+    setMessage(name ? `ตั้ง ${name} ให้ ${result.data.updated} โซนแล้ว` : `ล้าง รพ.สต. ของ ${result.data.updated} โซนแล้ว`);
+  }
 
   useEffect(() => {
     void load();
@@ -142,16 +163,35 @@ export function AdminZones() {
           ))}
         </select>
       </label>
+      {subdistrictFilter && (
+        <div aria-label="ตั้ง รพ.สต. ทั้งตำบล" role="group">
+          <label>
+            รพ.สต. ของทุกหมู่ในตำบลนี้ ({shownZones.length} โซน)
+            <select value={bulkHealthCenter} onChange={(event) => setBulkHealthCenter(event.target.value)}>
+              <option value="">ไม่ระบุ รพ.สต.</option>
+              {healthCenters.map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => void setHealthCenterForShown()}>ใช้กับทุกโซนในตำบลนี้</button>
+        </div>
+      )}
       <table>
-        <thead><tr><th>ตำบล</th><th>หมู่บ้าน</th><th>ชื่อโซน</th><th>สถานะ</th><th /></tr></thead>
+        <thead><tr><th>ตำบล</th><th>หมู่บ้าน</th><th>ชื่อโซน</th><th>รพ.สต. (พิมพ์บนฉลาก)</th><th>สถานะ</th><th /></tr></thead>
         <tbody>
           {shownZones.map((zone) => editing === zone.id ? (
             <tr key={zone.id}>
-              <td colSpan={5}>
+              <td colSpan={6}>
                 <form onSubmit={(event) => void save(event, zone)} aria-label={`แก้ไขโซน ${zone.displayName}`}>
                   <p>ตำบล <code>{zone.subdistrictCode}</code> หมู่ <code>{zone.villageCode}</code> (รหัสต้องตรงกับ HOSxP จึงแก้ไม่ได้)</p>
                   <label>ชื่อโซน <input name="displayName" defaultValue={zone.displayName} required /></label>
                   <label>ชื่อตำบล <input name="subdistrictName" defaultValue={zone.subdistrictName ?? ''} /></label>
+                  <label>
+                    รพ.สต. (พิมพ์บนฉลาก)
+                    <select name="healthCenterId" defaultValue={zone.healthCenter?.id ?? ''}>
+                      <option value="">ไม่ระบุ</option>
+                      {healthCenters.map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}
+                    </select>
+                  </label>
                   <button type="submit">บันทึก</button>
                   <button type="button" onClick={() => setEditing(null)}>ยกเลิก</button>
                 </form>
@@ -162,6 +202,7 @@ export function AdminZones() {
               <td><code>{zone.subdistrictCode}</code>{zone.subdistrictName && <> {zone.subdistrictName}</>}</td>
               <td><code>{zone.villageCode}</code></td>
               <td>{zone.displayName}</td>
+              <td>{zone.healthCenter?.name ?? '-'}</td>
               <td>{zone.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
               <td>
                 <button type="button" onClick={() => setEditing(zone.id)}>แก้ไข</button>

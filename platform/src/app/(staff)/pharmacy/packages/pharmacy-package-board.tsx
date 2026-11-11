@@ -10,7 +10,7 @@ import { forgetIssuedToken, issuedToken, keepIssuedToken } from '@/lib/issued-qr
 import { EmptyState } from '@/brand/empty-state';
 import { failureReasonLabels, formatThaiDateTime, shortCode } from '@/lib/labels';
 
-type Zone = { id: string; displayName: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string };
+type Zone = { id: string; displayName: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; healthCenterName?: string | null };
 type Row = {
   id: string; visitNumber: string | null; hn: string; patientName: string; telephone?: string | null; deliveryAddress: string; deliveryVersion?: number; zone: Zone;
   // No rider has ever had this job, so pharmacy may delete it.
@@ -29,6 +29,7 @@ function labelFor(row: Row, issued: Issued & { token: string }): PackageLabel {
   return {
     attemptId: issued.attemptId, token: issued.token, patientName: row.patientName, deliveryAddress: row.deliveryAddress,
     hn: row.hn, visitNumber: row.visitNumber, subdistrictCode: row.zone.subdistrictCode, villageCode: row.zone.villageCode,
+    healthCenterName: row.zone.healthCenterName ?? null,
   };
 }
 
