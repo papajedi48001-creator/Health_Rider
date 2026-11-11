@@ -6,6 +6,8 @@ import { callApi } from '@/lib/api-client';
 type Zone = {
   id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string; active: boolean;
   healthCenter: { id: string; name: string } | null;
+  // The รพ.สต. HOSxP's hosp_moo_control maps this village to; printed when none is chosen here.
+  hosHealthCenter?: string | null;
 };
 type HealthCenter = { id: string; name: string };
 type HosVillage = { subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string; visits: number; exists: boolean };
@@ -33,7 +35,7 @@ export function AdminZones() {
     void callApi<{ healthCenters: HealthCenter[] }>('/api/admin/health-centers').then((result) => { if (result.ok) setHealthCenters(result.data.healthCenters); });
   }, []);
 
-  // Every zone shown under the subdistrict filter gets the same รพ.สต.; an empty choice clears it.
+  // Every zone shown under the subdistrict filter gets the same รพ.สต.; an empty choice goes back to HOSxP's.
   async function setHealthCenterForShown() {
     const result = await callApi<{ updated: number }>('/api/admin/zones/health-center', {
       method: 'PUT', json: { zoneIds: shownZones.map((zone) => zone.id), healthCenterId: bulkHealthCenter },
@@ -41,7 +43,7 @@ export function AdminZones() {
     if (!result.ok) return setMessage(result.message);
     await load();
     const name = healthCenters.find((center) => center.id === bulkHealthCenter)?.name;
-    setMessage(name ? `ตั้ง ${name} ให้ ${result.data.updated} โซนแล้ว` : `ล้าง รพ.สต. ของ ${result.data.updated} โซนแล้ว`);
+    setMessage(name ? `ตั้ง ${name} ให้ ${result.data.updated} โซนแล้ว` : `ให้ ${result.data.updated} โซนใช้ รพ.สต. ตาม HOSxP แล้ว`);
   }
 
   useEffect(() => {
@@ -166,9 +168,9 @@ export function AdminZones() {
       {subdistrictFilter && (
         <div aria-label="ตั้ง รพ.สต. ทั้งตำบล" role="group">
           <label>
-            รพ.สต. ของทุกหมู่ในตำบลนี้ ({shownZones.length} โซน)
+            เปลี่ยน รพ.สต. ของทุกหมู่ในตำบลนี้ ({shownZones.length} โซน)
             <select value={bulkHealthCenter} onChange={(event) => setBulkHealthCenter(event.target.value)}>
-              <option value="">ไม่ระบุ รพ.สต.</option>
+              <option value="">ตาม HOSxP</option>
               {healthCenters.map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}
             </select>
           </label>
@@ -188,7 +190,7 @@ export function AdminZones() {
                   <label>
                     รพ.สต. (พิมพ์บนฉลาก)
                     <select name="healthCenterId" defaultValue={zone.healthCenter?.id ?? ''}>
-                      <option value="">ไม่ระบุ</option>
+                      <option value="">ตาม HOSxP{zone.hosHealthCenter ? ` (${zone.hosHealthCenter})` : ''}</option>
                       {healthCenters.map((center) => <option key={center.id} value={center.id}>{center.name}</option>)}
                     </select>
                   </label>
@@ -202,7 +204,7 @@ export function AdminZones() {
               <td><code>{zone.subdistrictCode}</code>{zone.subdistrictName && <> {zone.subdistrictName}</>}</td>
               <td><code>{zone.villageCode}</code></td>
               <td>{zone.displayName}</td>
-              <td>{zone.healthCenter?.name ?? '-'}</td>
+              <td>{zone.healthCenter?.name ?? (zone.hosHealthCenter ? <>{zone.hosHealthCenter} <small>(HOSxP)</small></> : '-')}</td>
               <td>{zone.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</td>
               <td>
                 <button type="button" onClick={() => setEditing(zone.id)}>แก้ไข</button>

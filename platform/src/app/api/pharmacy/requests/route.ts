@@ -3,14 +3,16 @@ import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole } from '@/auth/require-role';
 import { refreshJobsFromHos } from '@/domain/delivery/refresh-from-hos';
 import { getHosCandidateRepository } from '@/hos/mysql-candidate-repository';
+import { hosVillageHealthCenters, zoneHealthCenterName } from '@/hos/village-health-centers';
 import { db } from '@/lib/db';
 import { handleRoute } from '@/lib/route';
 
 export const dynamic = 'force-dynamic';
 
 // The label prints the รพ.สต. by name, so the zone carries the name rather than the related record.
-function zoneWithHealthCenter<T extends { healthCenter: { name: string } | null }>({ healthCenter, ...zone }: T) {
-  return { ...zone, healthCenterName: healthCenter?.name ?? null };
+function zoneWithHealthCenter<T extends { subdistrictCode: string; villageCode: string; healthCenter: { name: string } | null }>(zone: T, fromHos: Map<string, string>) {
+  const { healthCenter: _chosen, ...rest } = zone;
+  return { ...rest, healthCenterName: zoneHealthCenterName(zone, fromHos) };
 }
 
 const recentDays = 14;
@@ -30,10 +32,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Labels print from these, so jobs saved without name titles or village names get them before the board shows; HOSxP being down never blocks it.
-    const refreshed = await refreshJobsFromHos(getHosCandidateRepository, db);
+    const [refreshed, healthCenters] = await Promise.all([refreshJobsFromHos(getHosCandidateRepository, db), hosVillageHealthCenters()]);
     const rows = requests.map((item) => ({
       id: item.id, visitNumber: item.hosVisitNumber, hn: item.hn, patientName: refreshed.get(item.id)?.patientName ?? item.patientName, deliveryAddress: refreshed.get(item.id)?.deliveryAddress ?? item.deliveryAddress,
-      telephone: item.telephone, deliveryVersion: item.deliveryVersion, zone: zoneWithHealthCenter(item.deliveryZone), createdAt: item.createdAt, latestAttempt: item.attempts[0] ? { id: item.attempts[0].id, status: item.attempts[0].status, failureReason: item.attempts[0].failureReason, failedAt: item.attempts[0].failedAt } : null,
+      telephone: item.telephone, deliveryVersion: item.deliveryVersion, zone: zoneWithHealthCenter(item.deliveryZone, healthCenters), createdAt: item.createdAt, latestAttempt: item.attempts[0] ? { id: item.attempts[0].id, status: item.attempts[0].status, failureReason: item.attempts[0].failureReason, failedAt: item.attempts[0].failedAt } : null,
       // A job no rider has ever had can be deleted; one with delivery history keeps it.
       deletable: item.attempts.every((attempt) => attempt.status === 'prepared' && attempt.riderId === null),
     }));
