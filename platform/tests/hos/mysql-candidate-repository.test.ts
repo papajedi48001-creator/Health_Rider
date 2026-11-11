@@ -175,3 +175,26 @@ test('a failed read of hosp_moo_control is tried again on the next page load', a
   fail = false;
   await expect(repository.villageNames()).resolves.toEqual(new Map([['470602/02', 'จิ๋ว']]));
 });
+
+test('reads the รพ.สต. of each village from hosp_moo_control, and waits a minute before trying again after a failure', async () => {
+  clearVillageNameCache();
+  let fail = true;
+  const execute = vi.fn(async (sql: string): Promise<[unknown]> => {
+    if (fail) throw new Error("Unknown column 'hosp_sname'");
+    expect(sql).toMatch(/hosp_sname FROM hosp_moo_control/);
+    return [[
+      { subdistrict_code: '470601', village_code: '5', hosp_sname: Buffer.from('รพ.สต.ตาดโพนไผ่', 'utf8') },
+      { subdistrict_code: '470602', village_code: '03', hosp_sname: 'รพ.สต.ปลาโหล' },
+      { subdistrict_code: '470602', village_code: '04', hosp_sname: '' },
+    ]];
+  });
+  const repository = new MysqlHosCandidateRepository({ execute }, ['100001']);
+
+  await expect(repository.villageHealthCenters()).resolves.toEqual(new Map());
+  fail = false;
+  await expect(repository.villageHealthCenters()).resolves.toEqual(new Map());
+  expect(execute).toHaveBeenCalledTimes(1);
+
+  clearVillageNameCache();
+  await expect(repository.villageHealthCenters()).resolves.toEqual(new Map([['470601/05', 'รพ.สต.ตาดโพนไผ่'], ['470602/03', 'รพ.สต.ปลาโหล']]));
+});

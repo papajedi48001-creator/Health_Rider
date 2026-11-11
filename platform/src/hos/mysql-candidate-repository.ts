@@ -71,8 +71,13 @@ function visitDayQuery(itemCodeCount: number): string {
 const villageCacheMs = 10 * 60_000;
 let villageCache: { at: number; names: Map<string, string> } | null = null;
 
+let healthCenterCache: { at: number; names: Map<string, string>; ttl: number } | null = null;
+// A failed read is not retried on every page load, so a HOSxP outage does not slow the package board each time.
+const healthCenterRetryMs = 60_000;
+
 export function clearVillageNameCache() {
   villageCache = null;
+  healthCenterCache = null;
 }
 
 // One row per visit even when several eligible items were dispensed in it.
@@ -113,6 +118,24 @@ export class MysqlHosCandidateRepository implements HosCandidateRepository {
     } catch (error) {
       console.warn('HOSxP village names unavailable:', error instanceof Error ? error.message : error);
       return new Map();
+    }
+  }
+
+  // hosp_moo_control.hosp_sname names the รพ.สต. that looks after each village; it prints on the parcel label.
+  // Read separately from the village names so an install without the column still gets those.
+  async villageHealthCenters(): Promise<Map<string, string>> {
+    if (healthCenterCache && Date.now() - healthCenterCache.at < healthCenterCache.ttl) return healthCenterCache.names;
+    try {
+      const [rows] = await this.connection.execute('SELECT CONCAT(chwpart, amppart, tmbpart) AS subdistrict_code, moo AS village_code, hosp_sname FROM hosp_moo_control', []);
+      const names = new Map((rows as Array<{ subdistrict_code: string | number | null; village_code: string | number | null; hosp_sname: string | Buffer | null }>)
+        .map((row) => [villageKey(String(row.subdistrict_code ?? '').trim(), normaliseVillageCode(row.village_code)), decodeLegacyText(row.hosp_sname).trim()] as const)
+        .filter(([, name]) => name !== ''));
+      healthCenterCache = { at: Date.now(), names, ttl: villageCacheMs };
+      return names;
+    } catch (error) {
+      console.warn('HOSxP village health centers unavailable:', error instanceof Error ? error.message : error);
+      healthCenterCache = { at: Date.now(), names: new Map(), ttl: healthCenterRetryMs };
+      return healthCenterCache.names;
     }
   }
 
