@@ -10,6 +10,8 @@ import { shortCode } from '@/lib/labels';
 export type PackageLabel = {
   attemptId: string; token: string; patientName: string; deliveryAddress: string; hn: string; visitNumber: string | null;
   subdistrictCode: string; villageCode: string;
+  // The รพ.สต. set on the delivery zone; the label leaves it out when the zone has none.
+  healthCenterName?: string | null;
 };
 
 // A shipping label: who and where to deliver, and the QR holding only the opaque token the rider scans to claim the job.
@@ -33,6 +35,7 @@ export function ParcelLabel({ label, layout }: { label: PackageLabel; layout: La
       <div className="parcel-body">
         <div className="parcel-to">
           <span className="parcel-address" style={{ fontSize: `${sizes.addressPt}pt` }}>{label.deliveryAddress}</span>
+          {label.healthCenterName ? <strong className="parcel-health-center">{label.healthCenterName}</strong> : null}
         </div>
         <div className="parcel-qr">
           {image ? <img src={image} alt={`QR พัสดุ ${shortCode(label.attemptId)}`} width={120} height={120} style={qr} /> : <span style={qr}>กำลังสร้าง QR</span>}

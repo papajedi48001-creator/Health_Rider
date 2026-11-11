@@ -24,6 +24,7 @@ const paperOptions: Array<{ value: Paper; label: string }> = [
 const sample: PackageLabel = {
   attemptId: 'sample', token: 'ตัวอย่างรหัสใต้-QR-0000000000', patientName: 'นายตัวอย่าง ใจดี', deliveryAddress: '99 หมู่ 3 ต.วาริชภูมิ อ.วาริชภูมิ จ.สกลนคร',
   hn: '000000000', visitNumber: '690101000001', subdistrictCode: '471101', villageCode: '03',
+  healthCenterName: 'รพ.สต.ดอนยาวใหญ่',
 };
 
 // An empty field means the size is worked out automatically.

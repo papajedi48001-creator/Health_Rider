@@ -128,11 +128,12 @@ model RiderProfile {
 
 // A care unit (hosp_sname in HOSxP) that accounts belong to; several units may share one hospcode.
 model HealthCenter {
-  id        String   @id @db.Char(26)
-  name      String   @unique @db.VarChar(255)
-  hospcode  String?  @db.VarChar(20)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String         @id @db.Char(26)
+  name      String         @unique @db.VarChar(255)
+  hospcode  String?        @db.VarChar(20)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  zones     DeliveryZone[]
 
   @@map("health_centers")
 }
@@ -143,9 +144,12 @@ model DeliveryZone {
   subdistrictName String?           @db.VarChar(255)
   villageCode     String            @db.VarChar(32)
   displayName     String            @db.VarChar(255)
+  // The รพ.สต. that looks after this village; its name prints on the parcel label.
+  healthCenterId  String?           @db.Char(26)
   active          Boolean           @default(true)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  healthCenter    HealthCenter?     @relation(fields: [healthCenterId], references: [id], onDelete: SetNull)
   requests        DeliveryRequest[]
   serviceRates    ServiceRate[]
 

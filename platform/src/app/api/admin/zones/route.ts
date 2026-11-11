@@ -13,7 +13,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     requireRole(await getSessionFromRequest(request), 'admin');
-    const zones = await db.deliveryZone.findMany({ orderBy: [{ subdistrictCode: 'asc' }, { villageCode: 'asc' }] });
+    const zones = await db.deliveryZone.findMany({
+      orderBy: [{ subdistrictCode: 'asc' }, { villageCode: 'asc' }],
+      include: { healthCenter: { select: { id: true, name: true } } },
+    });
     return NextResponse.json({ zones });
   });
 }
