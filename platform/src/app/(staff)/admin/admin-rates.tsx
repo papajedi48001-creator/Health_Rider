@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { resolveRate, type ServiceRateRecord } from '@/domain/delivery/service-rate';
 import { callApi } from '@/lib/api-client';
 import { bangkokDateString } from '@/lib/time';
+import { ThaiDatePicker } from '@/brand/thai-date-picker';
 
 type Zone = { id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string; active: boolean };
 type Rate = { id: string; subdistrictCode: string; deliveryZoneId: string | null; rateSatang: number; effectiveFrom: string; createdAt: string };
@@ -90,7 +91,7 @@ export function AdminRates() {
           </select>
         </label>
         <label>ค่าบริการ (บาท) <input ref={amountInput} name="baht" required inputMode="decimal" pattern="\d{1,6}(\.\d{1,2})?" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
-        <label>วันเริ่มใช้ <input name="effectiveFrom" type="date" required value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} /></label>
+        <ThaiDatePicker label="วันเริ่มใช้" name="effectiveFrom" value={effectiveFrom} onChange={setEffectiveFrom} />
         <button type="submit">บันทึกค่าบริการ</button>
       </form>
       {subdistrictCode && (

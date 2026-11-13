@@ -7,6 +7,7 @@ import { bangkokDateString } from '@/lib/time';
 import { Icon, type IconName } from '@/brand/icons';
 import { EmptyState } from '@/brand/empty-state';
 import { withBasePath } from '@/lib/base-path';
+import { ThaiDatePicker } from '@/brand/thai-date-picker';
 
 export type Range = { from: string; to: string };
 
@@ -49,8 +50,8 @@ export function useReport<T>(endpoint: string) {
 export function ReportFilters({ range, onChange, csvHref }: { range: Range; onChange: (range: Range) => void; csvHref: string }) {
   return (
     <form aria-label="ช่วงวันที่ของรายงาน" className="filter-bar report-filters" onSubmit={(event) => event.preventDefault()}>
-      <label>ตั้งแต่วันที่ <input type="date" value={range.from} max={range.to} onChange={(event) => event.target.value && onChange({ ...range, from: event.target.value })} /></label>
-      <label>ถึงวันที่ <input type="date" value={range.to} min={range.from} onChange={(event) => event.target.value && onChange({ ...range, to: event.target.value })} /></label>
+      <ThaiDatePicker label="ตั้งแต่วันที่" value={range.from} max={range.to} onChange={(from) => onChange({ ...range, from })} />
+      <ThaiDatePicker label="ถึงวันที่" value={range.to} min={range.from} onChange={(to) => onChange({ ...range, to })} />
       <div className="preset-row" role="group" aria-label="ช่วงเวลาที่ใช้บ่อย">
         {presets().map((preset) => (
           <button key={preset.label} type="button" className={`btn btn-secondary btn-small${preset.range.from === range.from && preset.range.to === range.to ? ' is-active' : ''}`} onClick={() => onChange(preset.range)}>

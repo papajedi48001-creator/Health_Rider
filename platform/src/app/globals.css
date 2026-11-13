@@ -133,7 +133,7 @@ img { max-width: 100%; height: auto; }
 
 /* Longer staff forms lay their fields out in columns on wide screens. */
 .staff-content form:has(> label:nth-of-type(3)) { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: end; }
-.staff-content form:has(> label:nth-of-type(3)) > :not(label) { grid-column: 1 / -1; }
+.staff-content form:has(> label:nth-of-type(3)) > :not(label, .date-picker) { grid-column: 1 / -1; }
 .staff-content form:has(> label:nth-of-type(3)) > button { justify-self: start; }
 
 /* Filters sit in one row on wide screens and stack on a phone. */
@@ -543,7 +543,9 @@ button.btn-reprint:hover:not(:disabled) { background: var(--navy-soft); border-c
 .patient-card h2 { font-size: 1.25rem; }
 
 .filters .date-range { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-.filters input[type='date'] { padding: 8px 6px; font-size: 0.95rem; }
+.filters .date-range .date-picker-trigger { padding: 8px 10px; font-size: 0.95rem; }
+/* The second picker of a pair opens towards the left so its calendar stays on a phone screen. */
+.date-range .date-picker:last-child .date-picker-popover { left: auto; right: 0; }
 .summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 .summary-tile { display: grid; justify-items: center; padding: 8px; border-radius: var(--radius-control); background: var(--canvas); font-size: 0.9rem; }
 .summary-tile strong { font-size: 1.5rem; line-height: 1.2; }
@@ -990,6 +992,9 @@ section.dash-table { padding: 20px 0 8px; margin: 0; }
 .staff-content .page-greeting p { font-size: 0.88rem; margin: 0; }
 .staff-content .filter-bar { padding: 10px 14px; gap: 8px 12px; margin: 0 0 12px; }
 .staff-content .filter-bar label { font-size: 0.85rem; gap: 2px; }
+.staff-content .filter-bar .date-picker { gap: 2px; }
+.staff-content .filter-bar .date-picker-label { font-size: 0.85rem; }
+.staff-content .filter-bar .date-picker-trigger { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
 .staff-content .filter-bar input, .staff-content .filter-bar select, .staff-content .filter-bar .btn { min-height: 36px; padding-top: 4px; padding-bottom: 4px; }
 .staff-content .stat-row { gap: 10px; margin: 0 0 12px; }
 .staff-content .stat { padding: 10px 14px 13px; gap: 10px; }

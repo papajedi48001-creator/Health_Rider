@@ -10,6 +10,7 @@ import { EmptyState } from '@/brand/empty-state';
 import { Icon } from '@/brand/icons';
 import { bangkokDateString } from '@/lib/time';
 import { withBasePath } from '@/lib/base-path';
+import { ThaiDatePicker } from '@/brand/thai-date-picker';
 
 type HistoryItem = {
   id: string;
@@ -71,14 +72,8 @@ export function RiderHistory() {
       <h1>ประวัติการส่งของฉัน</h1>
       <section className="rider-card filters" aria-label="ตัวกรอง">
         <div className="date-range">
-          <label>
-            ตั้งแต่วันที่
-            <input type="date" value={from} max={to} onChange={(event) => event.target.value && change(() => setFrom(event.target.value))} />
-          </label>
-          <label>
-            ถึงวันที่
-            <input type="date" value={to} min={from} onChange={(event) => event.target.value && change(() => setTo(event.target.value))} />
-          </label>
+          <ThaiDatePicker label="ตั้งแต่วันที่" value={from} max={to} onChange={(date) => change(() => setFrom(date))} />
+          <ThaiDatePicker label="ถึงวันที่" value={to} min={from} onChange={(date) => change(() => setTo(date))} />
         </div>
         <label>
           สถานะการส่ง
