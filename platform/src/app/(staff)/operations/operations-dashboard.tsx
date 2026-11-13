@@ -10,6 +10,7 @@ import { formatThaiDateTime, shortCode, statusLabels } from '@/lib/labels';
 import { bangkokDateString } from '@/lib/time';
 import { DeliveryDetails } from '@/app/(staff)/operations/delivery-details';
 import { PersonName } from '@/account/person-name';
+import { ThaiDatePicker } from '@/brand/thai-date-picker';
 
 const statusIcons: Record<DeliveryAttemptStatus, IconName> = {
   prepared: 'package', claimed: 'scooter', in_transit: 'truck', delivered: 'checkCircle',
@@ -69,7 +70,7 @@ export function OperationsDashboard() {
   return (
     <div>
       <form aria-label="ตัวกรอง" className="filter-bar" onSubmit={(event) => event.preventDefault()}>
-        <label>วันที่ <input type="date" value={filters.date} onChange={(event) => event.target.value && setFilters({ ...filters, date: event.target.value })} /></label>
+        <ThaiDatePicker label="วันที่" value={filters.date} onChange={(date) => setFilters({ ...filters, date })} />
         <label>
           สถานะ
           <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
