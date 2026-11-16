@@ -19,11 +19,12 @@ test('long pages get to-top and to-bottom buttons that hide at each end', async 
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
-test('on a rider phone the buttons sit above the developer credit and the tab bar', async ({ page }) => {
+test('on a rider phone the buttons sit above the tab bar and no developer credit is shown', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page, 'rider.internal.uat');
   await page.goto('/rider/profile');
   const jump = await page.locator('.scroll-jump').boundingBox();
-  const credit = await page.getByRole('button', { name: /พัฒนาโดย Jacky Hokk/ }).boundingBox();
-  expect(jump!.y + jump!.height).toBeLessThanOrEqual(credit!.y);
+  const tabbar = await page.locator('.rider-tabbar').boundingBox();
+  expect(jump!.y + jump!.height).toBeLessThanOrEqual(tabbar!.y);
+  await expect(page.getByText(/พัฒนาโดย/)).toHaveCount(0);
 });
