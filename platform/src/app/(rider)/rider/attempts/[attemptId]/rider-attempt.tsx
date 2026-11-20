@@ -14,6 +14,7 @@ import { Icon } from '@/brand/icons';
 import { Mascot, mascotName } from '@/brand/mascot';
 import { statusTone } from '@/lib/status-tone';
 import { withBasePath } from '@/lib/base-path';
+import { DeliveryRating } from '@/feedback/delivery-rating';
 
 type AttemptView = {
   id: string;
@@ -167,6 +168,7 @@ export function RiderAttempt({ attemptId }: { attemptId: string }) {
           <Link href="/rider/scan" className="btn btn-primary"><Icon name="scan" /> รับงานถัดไป</Link>
         </section>
       )}
+      {view?.status === 'delivered' && !outcomePending && <DeliveryRating attemptId={attemptId} />}
       {active && (
         <>
           {view.status === 'claimed' && !pickupPending && (
