@@ -58,6 +58,8 @@ model User {
   roleGrants          UserRoleGrant[]
   roleRequests        RoleRequest[]     @relation("RequestedRoles")
   decidedRoleRequests RoleRequest[]     @relation("DecidedRoleRequests")
+  feedback            Feedback[]        @relation("SentFeedback")
+  repliedFeedback     Feedback[]        @relation("RepliedFeedback")
 
   @@map("users")
 }
@@ -322,4 +324,52 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+enum FeedbackKind {
+  problem
+  suggestion
+  praise
+  // A rider's emoji rating of a delivery they just finished.
+  rating
+}
+
+enum FeedbackStatus {
+  new
+  in_progress
+  resolved
+}
+
+// What a user tells the team about the app: from the button on staff pages, or a rider's rating after a delivery.
+model Feedback {
+  id                String         @id @db.Char(26)
+  userId            String         @db.Char(26)
+  // The role the user was working in when they wrote it.
+  role              UserRole
+  kind              FeedbackKind
+  // 1 (very bad) to 5 (very good), for ratings only.
+  rating            Int?           @db.TinyInt
+  // Quick-pick codes the rider ticked, comma separated.
+  tags              String?        @db.VarChar(300)
+  message           String?        @db.VarChar(2000)
+  // The page and device it was sent from, when the user left that option on.
+  pagePath          String?        @db.VarChar(255)
+  userAgent         String?        @db.VarChar(300)
+  appVersion        String?        @db.VarChar(40)
+  // The delivery a rating is about; a delivery is rated once.
+  deliveryAttemptId String?        @unique @db.Char(26)
+  hasPhoto          Boolean        @default(false)
+  status            FeedbackStatus @default(new)
+  reply             String?        @db.VarChar(2000)
+  repliedById       String?        @db.Char(26)
+  repliedAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              User           @relation("SentFeedback", fields: [userId], references: [id])
+  repliedBy         User?          @relation("RepliedFeedback", fields: [repliedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@index([kind, createdAt])
+  @@map("feedback")
 }

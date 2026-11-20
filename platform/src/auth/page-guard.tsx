@@ -15,6 +15,7 @@ import { Mascot, mascotName } from '@/brand/mascot';
 import { withBasePath } from '@/lib/base-path';
 import { UserAvatar } from '@/account/user-avatar';
 import { ForcedPasswordChange } from '@/account/forced-password-change';
+import { FeedbackButton } from '@/feedback/feedback-button';
 
 const navigation: Array<{ group: string; href: string; label: string; icon: IconName; roles: UserRole[] }> = [
   { group: 'ภาพรวม', href: '/dashboard', label: 'หน้าหลัก', icon: 'home', roles: ['pharmacy', 'coordinator', 'admin'] },
@@ -34,6 +35,7 @@ const navigation: Array<{ group: string; href: string; label: string; icon: Icon
   { group: 'ผู้ดูแลระบบ', href: '/admin/rates', label: 'ค่าบริการ', icon: 'coins', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin/labels', label: 'ตั้งค่าฉลาก QR', icon: 'package', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: 'settings', roles: ['admin'] },
+  { group: 'ผู้ดูแลระบบ', href: '/admin/feedback', label: 'กล่องความคิดเห็น', icon: 'message', roles: ['admin'] },
   { group: 'ผู้ดูแลระบบ', href: '/admin/updates', label: 'อัปเดตระบบ', icon: 'download', roles: ['admin'] },
   // Lets a rider who opens a staff page get back to the rider app.
   { group: 'ไรเดอร์', href: '/rider/scan', label: 'กลับไปหน้าไรเดอร์', icon: 'scan', roles: ['rider'] },
@@ -94,6 +96,7 @@ export async function RoleGate({ roles, children }: { roles: readonly UserRole[]
           </main>
         )}
       </div>
+      {!session.mustChangePassword && <FeedbackButton />}
     </div>
   );
 }
