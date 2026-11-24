@@ -30,7 +30,7 @@ type Item = {
   repliedAt: string | null;
   createdAt: string;
 };
-type Stats = { new: number; inProgress: number; resolvedRecently: number; averageRating: number | null; ratingCount: number };
+type Stats = { new: number; inProgress: number; resolvedRecently: number; receivedRecently: number };
 type Inbox = { items: Item[]; nextBefore: string | null; kindCounts: Partial<Record<FeedbackKind, number>>; stats: Stats };
 
 const kindIcons: Record<FeedbackKind, string> = { problem: '🐞', suggestion: '💡', praise: '❤️', rating: '⭐' };
@@ -105,7 +105,7 @@ export function AdminFeedback() {
           <StatTile icon="message" tone={stats.new ? 'chip-warning' : ''} label="เรื่องใหม่" value={stats.new} />
           <StatTile icon="clock" tone="" label="กำลังดำเนินการ" value={stats.inProgress} />
           <StatTile icon="checkCircle" tone="chip-success" label="แก้ไขแล้ว 30 วันล่าสุด" value={stats.resolvedRecently} />
-          <StatTile icon="star" tone="chip-warning" label={`ความพึงพอใจไรเดอร์ (${stats.ratingCount} งาน)`} value={stats.averageRating === null ? '-' : `${stats.averageRating} / 5`} />
+          <StatTile icon="mail" tone="" label="ส่งมา 30 วันล่าสุด" value={stats.receivedRecently} />
         </div>
       )}
       {error && <p className="notice notice-danger">{error}</p>}
@@ -114,7 +114,7 @@ export function AdminFeedback() {
           <div className="fb-filters">
             <div className="chip-row" role="group" aria-label="กรองตามประเภท">
               <button type="button" className="fb-filter" aria-pressed={kind === ''} onClick={() => setKind('')}>ทั้งหมด {total}</button>
-              {feedbackKinds.map((value) => (
+              {feedbackKinds.filter((value) => value !== 'rating' || (inbox?.kindCounts.rating ?? 0) > 0).map((value) => (
                 <button key={value} type="button" className="fb-filter" aria-pressed={kind === value} onClick={() => setKind(value)}>
                   {kindIcons[value]} {value === 'rating' ? 'คะแนน' : feedbackKindLabels[value]} {inbox?.kindCounts[value] ?? 0}
                 </button>

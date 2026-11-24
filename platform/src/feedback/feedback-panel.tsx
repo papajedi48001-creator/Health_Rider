@@ -59,7 +59,7 @@ export function useMyFeedback() {
 }
 
 // Picks a kind, takes a few words and, if the user wants, a screenshot and the page they are on.
-export function FeedbackForm({ onSent }: { onSent: () => void }) {
+export function FeedbackForm({ onSent, quickTopics = [] }: { onSent: () => void; quickTopics?: readonly string[] }) {
   const [kind, setKind] = useState<(typeof writtenFeedbackKinds)[number]>('problem');
   const [message, setMessage] = useState('');
   const [includeContext, setIncludeContext] = useState(true);
@@ -117,6 +117,22 @@ export function FeedbackForm({ onSent }: { onSent: () => void }) {
           </button>
         ))}
       </div>
+      {quickTopics.length > 0 && (
+        <div className="fb-topics">
+          <span className="fb-topics-label">เรื่องที่เจอบ่อย <span className="muted">(แตะเพื่อเติมข้อความ)</span></span>
+          <div className="fb-kinds">
+            {quickTopics.map((topic) => (
+              <button
+                key={topic}
+                type="button"
+                className="fb-tag"
+                aria-pressed={message.includes(topic)}
+                onClick={() => setMessage((current) => (current.includes(topic) ? current : current.trim() ? `${current.trim()} ${topic}` : topic))}
+              >{topic}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <label className="sr-only" htmlFor="fb-message">รายละเอียด</label>
       <textarea
         id="fb-message"
@@ -168,7 +184,7 @@ export function MyFeedbackList({ items }: { items: MyFeedback[] | null }) {
 }
 
 // The form and the user's earlier feedback, as two tabs.
-export function FeedbackPanel({ items, reload }: { items: MyFeedback[] | null; reload: () => Promise<void> }) {
+export function FeedbackPanel({ items, reload, quickTopics }: { items: MyFeedback[] | null; reload: () => Promise<void>; quickTopics?: readonly string[] }) {
   const [tab, setTab] = useState<'send' | 'mine'>('send');
   const unseen = items ? hasUnseenReply(items) : false;
 
@@ -185,7 +201,7 @@ export function FeedbackPanel({ items, reload }: { items: MyFeedback[] | null; r
           ที่เคยส่ง{items && items.length > 0 ? ` (${items.length})` : ''}{unseen && <span className="fb-dot" aria-label="มีคำตอบใหม่" />}
         </button>
       </div>
-      {tab === 'send' ? <FeedbackForm onSent={() => void reload()} /> : <MyFeedbackList items={items} />}
+      {tab === 'send' ? <FeedbackForm onSent={() => void reload()} quickTopics={quickTopics} /> : <MyFeedbackList items={items} />}
     </div>
   );
 }

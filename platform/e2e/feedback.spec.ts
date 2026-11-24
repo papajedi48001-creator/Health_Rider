@@ -39,3 +39,22 @@ test('pharmacy sends a problem from the corner button and reads the admin’s an
   await expect(mine).toContainText('รับทราบครับ กำลังแก้');
   await expect(mine).toContainText('กำลังดำเนินการ');
 });
+
+test('a rider sends a note from the round button above the tab bar, starting from a common trouble', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, 'rider.internal.uat');
+  await page.goto('/rider/scan');
+  const button = await page.getByRole('button', { name: 'ความคิดเห็น' }).boundingBox();
+  const tabbar = await page.locator('.rider-tabbar').boundingBox();
+  expect(button!.y + button!.height).toBeLessThanOrEqual(tabbar!.y);
+  expect(button!.x).toBeGreaterThan(390 / 2);
+
+  await openFeedback(page);
+  const sheet = page.getByRole('dialog', { name: 'ความคิดเห็น' });
+  await sheet.getByRole('button', { name: 'สแกน QR ไม่ติด' }).click();
+  await expect(sheet.getByLabel('รายละเอียด')).toHaveValue('สแกน QR ไม่ติด');
+  await sheet.getByRole('button', { name: 'ส่งความคิดเห็น' }).click();
+  await expect(sheet).toContainText('ได้รับแล้ว ขอบคุณครับ');
+  await sheet.getByRole('button', { name: 'ปิด' }).click();
+  await expect(sheet).toBeHidden();
+});

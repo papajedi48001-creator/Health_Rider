@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/auth/current-session';
 import { requireRole } from '@/auth/require-role';
 import { userRoles } from '@/auth/roles';
-import { DomainError } from '@/domain/errors';
 import { decodeFeedbackPhoto, saveFeedbackPhoto } from '@/domain/feedback/feedback-photo';
 import { initialStatus, parseFeedbackInput } from '@/domain/feedback/feedback-rules';
 import { newPublicId } from '@/domain/delivery/status';
@@ -13,20 +12,11 @@ import { handleRoute } from '@/lib/route';
 
 export const dynamic = 'force-dynamic';
 
-// Any signed-in user may send feedback. A rating is the rider's own word on a delivery they finished, given once.
+// Any signed-in user may send feedback, from the button on staff pages or the rider app.
 export async function POST(request: NextRequest) {
   return handleRoute(async () => {
     const session = requireRole(await getSessionFromRequest(request), ...userRoles);
     const input = parseFeedbackInput(await readJsonBody(request));
-    if (input.kind === 'rating') {
-      if (session.role !== 'rider') throw new DomainError('ให้คะแนนได้เฉพาะไรเดอร์ที่ส่งงานนี้');
-      const attempt = await db.deliveryAttempt.findUnique({ where: { id: input.attemptId! }, select: { riderId: true, status: true } });
-      if (!attempt || attempt.riderId !== session.id) throw new DomainError('ไม่พบงานจัดส่ง', 404);
-      if (attempt.status !== 'delivered') throw new DomainError('ให้คะแนนได้หลังส่งยาสำเร็จแล้ว');
-      if (await db.feedback.findUnique({ where: { deliveryAttemptId: input.attemptId! }, select: { id: true } })) {
-        throw new DomainError('ให้คะแนนงานนี้ไปแล้ว', 409);
-      }
-    }
     const photo = input.photo ? decodeFeedbackPhoto(input.photo) : null;
     const id = newPublicId();
     if (photo) await saveFeedbackPhoto(id, photo);

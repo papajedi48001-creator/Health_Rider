@@ -12,6 +12,7 @@ import { RiderLogout } from '@/rider/rider-logout';
 import { RiderTabBar } from '@/rider/rider-tab-bar';
 import { LogoMark } from '@/brand/logo';
 import { Mascot } from '@/brand/mascot';
+import { FeedbackButton } from '@/feedback/feedback-button';
 
 // The rider app frame: a slim top bar, a single mobile column and bottom tabs. An admin may open it to see the
 // rider's screens, with the view switcher to get back; the rider-only actions still answer them with no permission.
@@ -36,6 +37,7 @@ export async function RiderShell({ children }: { children: ReactNode }) {
         <>
           {children}
           <RiderTabBar />
+          <FeedbackButton rider />
         </>
       ) : (
         <main className="no-access">
