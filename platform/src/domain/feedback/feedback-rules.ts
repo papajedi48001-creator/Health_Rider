@@ -2,7 +2,7 @@ import { DomainError } from '@/domain/errors';
 
 export const feedbackKinds = ['problem', 'suggestion', 'praise', 'rating'] as const;
 export type FeedbackKind = (typeof feedbackKinds)[number];
-// The kinds a user picks on the feedback button; ratings come only from a finished delivery.
+// The kinds a user can send. Ratings after each delivery (1.6.0) are no longer asked for; old ones stay readable.
 export const writtenFeedbackKinds = ['problem', 'suggestion', 'praise'] as const satisfies readonly FeedbackKind[];
 
 export const feedbackStatuses = ['new', 'in_progress', 'resolved'] as const;
@@ -29,7 +29,7 @@ export const ratingFaces = [
   { value: 5, face: '😍', label: 'ดีมาก' },
 ] as const;
 
-// What may have got in the rider's way on a delivery, picked with one tap each.
+// The quick ticks old delivery ratings carried, kept to show those ratings.
 export const ratingTags = {
   hard_to_find: '📍 หาบ้านยาก',
   no_answer: '📞 โทรไม่ติด',
@@ -59,11 +59,14 @@ const text = (value: unknown, limit: number): string | null => {
   return trimmed ? trimmed.slice(0, limit) : null;
 };
 
-// Checks what the browser sent. A written note needs a message; a delivery rating needs a face and the delivery.
+// Riders' common troubles, offered as one-tap starters in the rider's feedback sheet.
+export const riderQuickTopics = ['สแกน QR ไม่ติด', 'ถ่ายรูปช้า', 'ที่อยู่ไม่ชัด', 'โทรหาผู้ป่วยไม่ติด', 'ไม่มีสัญญาณ', 'แอปช้า'] as const;
+
+// Checks what the browser sent: one of the written kinds and some words.
 export function parseFeedbackInput(body: unknown): FeedbackInput {
   const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
   const kind = input.kind as FeedbackKind;
-  if (!feedbackKinds.includes(kind)) throw new DomainError('เลือกประเภทความคิดเห็นก่อนส่ง');
+  if (!(writtenFeedbackKinds as readonly string[]).includes(kind)) throw new DomainError('เลือกประเภทความคิดเห็นก่อนส่ง');
   if (typeof input.message === 'string' && input.message.trim().length > maximumFeedbackMessage) {
     throw new DomainError(`ข้อความยาวได้ไม่เกิน ${maximumFeedbackMessage} ตัวอักษร`);
   }
@@ -71,15 +74,6 @@ export function parseFeedbackInput(body: unknown): FeedbackInput {
   const pagePath = text(input.pagePath, 255);
   const userAgent = text(input.userAgent, 300);
   const photo = typeof input.photo === 'string' && input.photo ? input.photo : null;
-
-  if (kind === 'rating') {
-    const rating = Number(input.rating);
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new DomainError('เลือกหน้ายิ้มก่อนส่ง');
-    const attemptId = typeof input.attemptId === 'string' && /^[0-9A-Za-z]{26}$/.test(input.attemptId) ? input.attemptId : null;
-    if (!attemptId) throw new DomainError('ไม่พบงานจัดส่งที่ให้คะแนน');
-    const tags = Array.isArray(input.tags) ? [...new Set(input.tags.filter((tag): tag is RatingTag => typeof tag === 'string' && tag in ratingTags))] : [];
-    return { kind, message, rating, tags, pagePath, userAgent, attemptId, photo: null };
-  }
 
   if (!message) throw new DomainError('พิมพ์ความคิดเห็นก่อนส่ง');
   return { kind, message, rating: null, tags: [], pagePath, userAgent, attemptId: null, photo };

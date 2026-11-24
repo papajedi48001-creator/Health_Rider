@@ -83,13 +83,6 @@ test('delivers a package from pharmacy preparation to proof of delivery', async 
   expect(await attemptStatus(prepared.attemptId)).toBe('delivered');
   await expect(rider.page.locator('body')).not.toContainText('17.25');
 
-  // Once the delivery is confirmed the rider is asked once how it went.
-  const rating = rider.page.getByLabel('ให้คะแนนงานนี้');
-  await rating.getByRole('radio', { name: /พอใช้/ }).click();
-  await rating.getByRole('button', { name: '📞 โทรไม่ติด' }).click();
-  await rating.getByRole('button', { name: 'ส่ง', exact: true }).click();
-  await expect(rider.page.getByLabel('ขอบคุณสำหรับคะแนน')).toBeVisible();
-
   await rider.page.getByRole('link', { name: 'ประวัติการส่ง' }).click();
   const delivered = rider.page.getByRole('listitem').filter({ hasText: patientName });
   await expect(delivered.getByText('ส่งสำเร็จ', { exact: true })).toHaveCSS('color', 'rgb(21, 128, 61)');

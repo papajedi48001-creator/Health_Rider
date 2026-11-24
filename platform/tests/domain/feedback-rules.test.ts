@@ -11,12 +11,8 @@ test('a written note needs a kind and some words; extra fields are trimmed', () 
   expect(input).toMatchObject({ kind: 'suggestion', message: 'ค้นหาด้วย HN ได้ไหม', pagePath: '/dashboard', rating: null, attemptId: null, tags: [] });
 });
 
-test('a rating needs a face from 1 to 5 and the delivery; unknown ticks are dropped', () => {
-  expect(() => parseFeedbackInput({ kind: 'rating', attemptId })).toThrow('เลือกหน้ายิ้ม');
-  expect(() => parseFeedbackInput({ kind: 'rating', rating: 6, attemptId })).toThrow('เลือกหน้ายิ้ม');
-  expect(() => parseFeedbackInput({ kind: 'rating', rating: 3 })).toThrow('ไม่พบงาน');
-  const input = parseFeedbackInput({ kind: 'rating', rating: 3, attemptId, tags: ['hard_to_find', 'nonsense', 'hard_to_find'], photo: 'abc' });
-  expect(input).toMatchObject({ rating: 3, attemptId, tags: ['hard_to_find'], message: null, photo: null });
+test('delivery ratings are no longer taken', () => {
+  expect(() => parseFeedbackInput({ kind: 'rating', rating: 3, attemptId, message: 'ดี' })).toThrow('เลือกประเภท');
 });
 
 test('only ratings with nothing to act on start as already handled', () => {

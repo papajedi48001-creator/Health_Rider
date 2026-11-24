@@ -4,8 +4,8 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { currentSession, createFeedback, findFeedback, findAttempt, updateFeedback, createAudit } = vi.hoisted(() => ({
-  currentSession: vi.fn(), createFeedback: vi.fn(), findFeedback: vi.fn(), findAttempt: vi.fn(), updateFeedback: vi.fn(), createAudit: vi.fn(),
+const { currentSession, createFeedback, findFeedback, updateFeedback, createAudit } = vi.hoisted(() => ({
+  currentSession: vi.fn(), createFeedback: vi.fn(), findFeedback: vi.fn(), updateFeedback: vi.fn(), createAudit: vi.fn(),
 }));
 const tx = { feedback: { findUnique: findFeedback, update: updateFeedback }, auditEvent: { create: createAudit } };
 
@@ -13,7 +13,6 @@ vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession
 vi.mock('@/lib/db', () => ({
   db: {
     feedback: { create: createFeedback, findUnique: findFeedback },
-    deliveryAttempt: { findUnique: findAttempt },
     $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx),
   },
 }));
@@ -57,28 +56,15 @@ test('a screenshot that is not a JPEG is refused before anything is saved', asyn
   expect(createFeedback).not.toHaveBeenCalled();
 });
 
-test('a rider rates their own finished delivery once', async () => {
+test('a rider sends a note from the app at any time; delivery ratings are no longer taken', async () => {
   const { POST } = await import('@/app/api/feedback/route');
   currentSession.mockResolvedValue({ id: riderId, role: 'rider', displayName: 'ไรเดอร์' });
-  findAttempt.mockResolvedValue({ riderId, status: 'delivered' });
 
-  expect((await POST(post({ kind: 'rating', attemptId, rating: 5 }))).status).toBe(201);
-  expect(createFeedback.mock.calls[0]?.[0].data).toMatchObject({ kind: 'rating', rating: 5, deliveryAttemptId: attemptId, status: 'resolved', tags: null });
+  expect((await POST(post({ kind: 'problem', message: 'สแกน QR ไม่ติด', pagePath: '/rider/scan' }))).status).toBe(201);
+  expect(createFeedback.mock.calls[0]?.[0].data).toMatchObject({ userId: riderId, role: 'rider', kind: 'problem', status: 'new', deliveryAttemptId: null });
 
-  findFeedback.mockResolvedValue({ id: feedbackId });
-  expect((await POST(post({ kind: 'rating', attemptId, rating: 2, tags: ['no_answer'] }))).status).toBe(409);
-});
-
-test('a rating is refused for someone else’s delivery, an unfinished one, or from staff', async () => {
-  const { POST } = await import('@/app/api/feedback/route');
   expect((await POST(post({ kind: 'rating', attemptId, rating: 4 }))).status).toBe(422);
-
-  currentSession.mockResolvedValue({ id: riderId, role: 'rider', displayName: 'ไรเดอร์' });
-  findAttempt.mockResolvedValue({ riderId: 'another-rider', status: 'delivered' });
-  expect((await POST(post({ kind: 'rating', attemptId, rating: 4 }))).status).toBe(404);
-  findAttempt.mockResolvedValue({ riderId, status: 'in_transit' });
-  expect((await POST(post({ kind: 'rating', attemptId, rating: 4 }))).status).toBe(422);
-  expect(createFeedback).not.toHaveBeenCalled();
+  expect(createFeedback).toHaveBeenCalledTimes(1);
 });
 
 test('signed-out visitors cannot send feedback', async () => {

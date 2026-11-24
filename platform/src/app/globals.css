@@ -1184,3 +1184,23 @@ section.fb-detail { margin: 0; display: grid; gap: 12px; }
 .fb-saved { background: #e6f5ea; color: var(--success); }
 .fb-detail-empty { text-align: center; }
 .staff-content main .fb-list li:has(> button) { display: block; }
+
+/* Rider app: a round feedback button on the right above the tab bar, opening a sheet from the bottom of the screen. */
+.fb-fab.fb-fab-rider {
+  right: 12px; bottom: calc(var(--tabbar-height, 64px) + 32px + env(safe-area-inset-bottom));
+  width: 54px; height: 54px; padding: 0; justify-content: center;
+}
+.fb-fab-rider .fb-fab-label { display: none; }
+.fb-fab-rider[aria-expanded='true'] { display: none; }
+/* The to-top and to-bottom buttons sit above the feedback button. */
+body:has(.fb-fab-rider) .scroll-jump { bottom: calc(64px + 32px + 64px + env(safe-area-inset-bottom)); }
+.fb-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(13, 43, 62, 0.45); }
+.fb-popover.fb-sheet {
+  left: 0; right: 0; bottom: 0; z-index: 41; width: auto; max-width: 560px; margin: 0 auto;
+  max-height: 90dvh; padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 22px 22px 0 0; border-bottom: 0;
+}
+.fb-sheet .fb-grab { position: absolute; top: 6px; left: 50%; z-index: 2; width: 44px; height: 5px; margin-left: -22px; border-radius: 9px; background: rgba(255, 255, 255, 0.6); }
+.fb-sheet .fb-popover-head { padding-top: 18px; }
+.fb-topics { display: grid; gap: 6px; }
+.fb-topics-label { font-weight: 600; font-size: 0.9rem; }
