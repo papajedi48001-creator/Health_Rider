@@ -175,7 +175,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   // Edit and delete sit on every row of the two queues before a rider has the package; both open a confirmation pop-up.
   const jobOf = (row: Row): EditableJob => ({
     id: row.id, hn: row.hn, patientName: row.patientName, telephone: row.telephone ?? null, deliveryAddress: row.deliveryAddress,
-    deliveryVersion: row.deliveryVersion ?? 1, zoneName: row.zone.displayName,
+    deliveryVersion: row.deliveryVersion ?? 1, zoneId: row.zone.id, zoneName: row.zone.displayName,
     packageCode: row.latestAttempt?.status === 'prepared' ? shortCode(row.latestAttempt.id) : null,
     // On "รอไรเดอร์รับงาน", delete removes only the waiting package and the job returns to "เตรียมพัสดุ".
     packageId: view === 'awaiting' && row.latestAttempt?.status === 'prepared' ? row.latestAttempt.id : null,

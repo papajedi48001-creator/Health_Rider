@@ -6,10 +6,27 @@ import { callApi } from '@/lib/api-client';
 
 export type EditableJob = {
   id: string; hn: string; patientName: string; telephone: string | null; deliveryAddress: string; deliveryVersion: number;
-  zoneName: string; packageCode: string | null;
+  zoneId: string; zoneName: string; packageCode: string | null;
   // The package waiting for a rider, if any; deleting it sends the job back to "เตรียมพัสดุ" instead of deleting the job.
   packageId?: string | null;
 };
+
+type ZoneOption = { id: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; displayName: string };
+
+const byThai = (left: string, right: string) => left.localeCompare(right, 'th', { numeric: true });
+// "หมู่ 1 บ้านพังฮอ ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร" reads as "หมู่ 1 บ้านพังฮอ" once the subdistrict is chosen.
+const villageName = (zone: ZoneOption) => zone.displayName.split(/\s+ต\./)[0] || zone.displayName;
+
+// Zones in use, loaded once for the edit pop-up; while loading or when it fails, the zone stays as it is.
+function useZones() {
+  const [zones, setZones] = useState<ZoneOption[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    void callApi<{ zones: ZoneOption[] }>('/api/pharmacy/zones').then((result) => { if (live && result.ok) setZones(result.data.zones); });
+    return () => { live = false; };
+  }, []);
+  return zones;
+}
 
 function useCloseOnEscape(onClose: () => void) {
   useEffect(() => {
@@ -33,7 +50,17 @@ function JobSummary({ job }: { job: EditableJob }) {
 // Edit the delivery address or telephone, then confirm the old and new values side by side before saving.
 // The reason and both values go to the audit log.
 export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onClose: () => void; onSaved: (message: string) => void }) {
-  const [draft, setDraft] = useState({ deliveryAddress: job.deliveryAddress, telephone: job.telephone ?? '', reason: '' });
+  const [draft, setDraft] = useState({ deliveryAddress: job.deliveryAddress, telephone: job.telephone ?? '', zoneId: job.zoneId, reason: '' });
+  const zones = useZones();
+  const currentZone = zones?.find((zone) => zone.id === job.zoneId);
+  const chosenZone = zones?.find((zone) => zone.id === draft.zoneId);
+  const [subdistrict, setSubdistrict] = useState<string | null>(null);
+  const subdistrictCode = subdistrict ?? currentZone?.subdistrictCode ?? '';
+  const subdistricts = new Map<string, string>();
+  for (const zone of zones ?? []) subdistricts.set(zone.subdistrictCode, zone.subdistrictName ?? `ตำบล ${zone.subdistrictCode}`);
+  const villages = (zones ?? []).filter((zone) => zone.subdistrictCode === subdistrictCode)
+    .sort((left, right) => byThai(left.villageCode, right.villageCode));
+  const zoneChanged = draft.zoneId !== job.zoneId;
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState('');
@@ -42,10 +69,12 @@ export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onC
   const changes = [
     { label: 'ที่อยู่จัดส่ง', before: job.deliveryAddress, after: draft.deliveryAddress.trim() },
     { label: 'เบอร์โทร', before: job.telephone ?? '', after: draft.telephone.trim() },
+    { label: 'โซน', before: job.zoneName, after: zoneChanged ? chosenZone?.displayName ?? '' : job.zoneName },
   ].filter((change) => change.before !== change.after);
 
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!draft.zoneId) return setProblem('ต้องเลือกหมู่บ้านของโซนจัดส่ง');
     if (changes.length === 0) return setProblem('ไม่มีข้อมูลที่เปลี่ยนแปลง');
     setProblem('');
     setConfirming(true);
@@ -54,7 +83,10 @@ export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onC
   async function save() {
     setBusy(true);
     const result = await callApi(`/api/pharmacy/requests/${job.id}`, {
-      method: 'PATCH', json: { deliveryAddress: draft.deliveryAddress, telephone: draft.telephone, reason: draft.reason, expectedVersion: job.deliveryVersion },
+      method: 'PATCH', json: {
+        deliveryAddress: draft.deliveryAddress, telephone: draft.telephone, reason: draft.reason, expectedVersion: job.deliveryVersion,
+        ...(zoneChanged ? { deliveryZoneId: draft.zoneId } : {}),
+      },
     });
     setBusy(false);
     if (!result.ok) { setConfirming(false); return setProblem(result.message); }
@@ -84,6 +116,7 @@ export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onC
               </tbody>
             </table>
             <p>เหตุผล: {draft.reason.trim()}</p>
+            {zoneChanged && <p className="notice">ค่าบริการไรเดอร์ของงานนี้จะคิดตามอัตราของโซนใหม่</p>}
             <div className="dialog-actions">
               <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void save()}>{busy ? 'กำลังบันทึก' : 'ยืนยันแก้ไข'}</button>
               <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setConfirming(false)}>กลับไปแก้</button>
@@ -91,6 +124,31 @@ export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onC
           </>
         ) : (
           <form onSubmit={review} aria-label={`ข้อมูลจัดส่งของ ${job.patientName}`}>
+            <fieldset className="zone-picker">
+              <legend>โซนจัดส่ง</legend>
+              <label>ตำบล
+                <select name="subdistrict" value={subdistrictCode} disabled={!zones}
+                  onChange={(event) => {
+                    const code = event.target.value;
+                    setSubdistrict(code);
+                    // Back on the job's own subdistrict, its own village comes back; elsewhere the village must be chosen.
+                    setDraft({ ...draft, zoneId: code === currentZone?.subdistrictCode ? job.zoneId : '' });
+                  }}>
+                  {!subdistrictCode && <option value="">เลือกตำบล</option>}
+                  {[...subdistricts.entries()].sort(([, left], [, right]) => byThai(left, right)).map(([code, name]) => (
+                    <option key={code} value={code}>{name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>หมู่บ้าน
+                <select name="deliveryZoneId" value={draft.zoneId} disabled={!zones} onChange={(event) => setDraft({ ...draft, zoneId: event.target.value })}>
+                  {!draft.zoneId && <option value="">เลือกหมู่บ้าน</option>}
+                  {!zones && <option value={job.zoneId}>{job.zoneName}</option>}
+                  {villages.map((zone) => <option key={zone.id} value={zone.id}>{villageName(zone)}</option>)}
+                </select>
+              </label>
+              <small>{zoneChanged ? `เดิม: ${job.zoneName}` : zones ? 'เปลี่ยนตำบลหรือหมู่บ้านได้ หากผู้ป่วยย้ายไปอยู่โซนอื่น' : 'กำลังโหลดรายการโซน'}</small>
+            </fieldset>
             <label>ที่อยู่จัดส่ง
               <textarea name="deliveryAddress" required rows={3} value={draft.deliveryAddress} onChange={(event) => setDraft({ ...draft, deliveryAddress: event.target.value })} autoFocus />
             </label>
@@ -100,6 +158,9 @@ export function EditJobDialog({ job, onClose, onSaved }: { job: EditableJob; onC
             <label>เหตุผลการแก้ไข
               <input name="reason" required value={draft.reason} onChange={(event) => setDraft({ ...draft, reason: event.target.value })} placeholder="เช่น ญาติแจ้งย้ายบ้าน" />
             </label>
+            {zoneChanged && (
+              <p className="notice">เปลี่ยนโซนแล้ว ค่าบริการไรเดอร์จะคิดตามอัตราของโซนใหม่{job.packageCode ? ' และต้องพิมพ์ฉลากใหม่' : ''}</p>
+            )}
             <div className="dialog-actions">
               <button type="submit">ถัดไป</button>
               <button type="button" className="btn btn-secondary" onClick={onClose}>ยกเลิก</button>

@@ -1,8 +1,9 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { currentSession, findUnique, update, remove, deleteAttempts, deleteTokens, createAudit } = vi.hoisted(() => ({
+const { currentSession, findUnique, update, remove, deleteAttempts, deleteTokens, createAudit, findZone, findRates } = vi.hoisted(() => ({
   currentSession: vi.fn(), findUnique: vi.fn(), update: vi.fn(), remove: vi.fn(), deleteAttempts: vi.fn(), deleteTokens: vi.fn(), createAudit: vi.fn(),
+  findZone: vi.fn(), findRates: vi.fn(),
 }));
 const tx = {
   $queryRaw: vi.fn(),
@@ -10,6 +11,8 @@ const tx = {
   deliveryAttempt: { deleteMany: deleteAttempts },
   packageQrToken: { deleteMany: deleteTokens },
   auditEvent: { create: createAudit },
+  deliveryZone: { findFirst: findZone },
+  serviceRate: { findMany: findRates },
 };
 vi.mock('@/auth/current-session', () => ({ getSessionFromRequest: currentSession }));
 vi.mock('@/lib/db', () => ({ db: { $transaction: (work: (client: typeof tx) => Promise<unknown>) => work(tx) } }));
@@ -21,7 +24,7 @@ const call = (method: string, body: unknown) => new NextRequest('http://localhos
 });
 const job = (attempts: Array<Record<string, unknown>>) => ({
   id: 'req-1', deliveryVersion: 2, hosVisitNumber: 'VN-1', hn: 'HN-1', patientName: 'ผู้ป่วยทดสอบ', telephone: '0800000000',
-  deliveryAddress: 'บ้านเดิม', deliveryZoneId: 'zone-1', createdAt: new Date('2026-11-02T01:00:00Z'), attempts,
+  deliveryAddress: 'บ้านเดิม', deliveryZoneId: 'zone-1', rateSatang: 3000, rateEffectiveFrom: new Date('2026-10-01T00:00:00Z'), createdAt: new Date('2026-11-02T01:00:00Z'), attempts,
 });
 
 beforeEach(() => {
@@ -41,6 +44,43 @@ test('edits the address of a package waiting for a rider and logs old and new va
     action: 'delivery_request.amended_before_pickup', actorId: 'pharmacy-1', reason: 'ญาติแจ้งย้ายบ้าน',
     oldValues: { deliveryAddress: 'บ้านเดิม', deliveryVersion: 2 }, newValues: { deliveryAddress: 'บ้านใหม่', deliveryVersion: 3 },
   }) });
+});
+
+test('moves a job to another zone, prices it at the new zone rate, and logs both zones and rates', async () => {
+  const { PATCH } = await import('@/app/api/pharmacy/requests/[requestId]/route');
+  findUnique.mockResolvedValue(job([{ status: 'prepared' }]));
+  findZone.mockResolvedValue({ id: 'zone-2', subdistrictCode: '471401' });
+  findRates.mockResolvedValue([
+    { subdistrictCode: '471401', deliveryZoneId: null, rateSatang: 3000, effectiveFrom: new Date('2026-10-01T00:00:00Z'), createdAt: new Date('2026-10-01T00:00:00Z') },
+    { subdistrictCode: '471401', deliveryZoneId: 'zone-2', rateSatang: 3500, effectiveFrom: new Date('2026-10-15T00:00:00Z'), createdAt: new Date('2026-10-15T00:00:00Z') },
+    // Starts after the job was confirmed, so it does not apply.
+    { subdistrictCode: '471401', deliveryZoneId: 'zone-2', rateSatang: 9900, effectiveFrom: new Date('2026-12-01T00:00:00Z'), createdAt: new Date('2026-11-20T00:00:00Z') },
+  ]);
+
+  const response = await PATCH(call('PATCH', { deliveryAddress: 'บ้านเดิม', deliveryZoneId: 'zone-2', reason: 'ผู้ป่วยย้ายหมู่บ้าน', expectedVersion: 2 }), params);
+
+  expect(response.status).toBe(200);
+  expect(findZone).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'zone-2', active: true } }));
+  expect(update).toHaveBeenCalledWith({ where: { id: 'req-1' }, data: {
+    deliveryZoneId: 'zone-2', rateSatang: 3500, rateEffectiveFrom: new Date('2026-10-15T00:00:00Z'), deliveryVersion: 3,
+  } });
+  expect(createAudit).toHaveBeenCalledWith({ data: expect.objectContaining({
+    action: 'delivery_request.amended_before_pickup', reason: 'ผู้ป่วยย้ายหมู่บ้าน',
+    oldValues: { deliveryZoneId: 'zone-1', rateSatang: 3000, rateEffectiveFrom: '2026-10-01', deliveryVersion: 2 },
+    newValues: { deliveryZoneId: 'zone-2', rateSatang: 3500, rateEffectiveFrom: '2026-10-15', deliveryVersion: 3 },
+  }) });
+});
+
+test('refuses a zone that does not exist or is no longer in use, and ignores the same zone', async () => {
+  const { PATCH } = await import('@/app/api/pharmacy/requests/[requestId]/route');
+  findUnique.mockResolvedValue(job([]));
+  findZone.mockResolvedValue(null);
+  expect((await PATCH(call('PATCH', { deliveryAddress: 'บ้านเดิม', deliveryZoneId: 'zone-closed', reason: 'ย้าย', expectedVersion: 2 }), params)).status).toBe(422);
+
+  const same = await PATCH(call('PATCH', { deliveryAddress: 'บ้านเดิม', deliveryZoneId: 'zone-1', reason: 'ย้าย', expectedVersion: 2 }), params);
+  expect(same.status).toBe(422);
+  await expect(same.json()).resolves.toEqual({ message: 'ไม่มีข้อมูลที่เปลี่ยนแปลง' });
+  expect(update).not.toHaveBeenCalled();
 });
 
 test('needs a reason, refuses a job a rider has claimed, and refuses a stale version', async () => {

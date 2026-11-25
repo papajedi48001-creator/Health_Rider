@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { PharmacyPackageBoard } from '@/app/(staff)/pharmacy/packages/pharmacy-package-board';
 
@@ -103,14 +103,55 @@ test('edits a waiting package only after confirming the old and new values', asy
   expect(screen.getByText('ยืนยันการแก้ไข')).toBeInTheDocument();
   expect(screen.getByText('บ้านเดิม')).toBeInTheDocument();
   expect(screen.getByText('บ้านใหม่')).toBeInTheDocument();
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false);
 
   fireEvent.click(screen.getByRole('button', { name: 'ยืนยันแก้ไข' }));
   expect(await screen.findByText(/แก้ไขข้อมูล นางสมร ศาลารักษ์ แล้ว/)).toBeInTheDocument();
-  const [url, init] = fetchMock.mock.calls[1];
+  const [url, init] = fetchMock.mock.calls.find(([, call]) => call?.method === 'PATCH')!;
   expect(String(url)).toContain('/api/pharmacy/requests/r1');
   expect(init.method).toBe('PATCH');
   expect(JSON.parse(init.body)).toEqual({ deliveryAddress: 'บ้านใหม่', telephone: '0800000000', reason: 'ญาติแจ้งย้ายบ้าน', expectedVersion: 1 });
+});
+
+test('moves a job to another village by choosing the subdistrict, then the village', async () => {
+  const plaLo1 = zone('z-1', 'หมู่ 1 บ้านพังฮอ ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', '470603', 'ต.ปลาโหล');
+  const zones = [
+    { ...plaLo1, villageCode: '01' },
+    { ...zone('z-3', 'หมู่ 3 บ้านโพนสวาง ต.ปลาโหล อ.วาริชภูมิ จ.สกลนคร', '470603', 'ต.ปลาโหล'), villageCode: '03' },
+    { ...zone('z-9', 'หมู่ 2 บ้านโพนแพง ต.หนองลาด อ.วาริชภูมิ จ.สกลนคร', '470604', 'ต.หนองลาด'), villageCode: '02' },
+  ];
+  const board = { toPrepare: [], returnRequired: [], awaitingRider: [{
+    ...row('r1', 'นางไกลราช หลักทอง', plaLo1), deliveryAddress: 'บ้านเดิม', telephone: null, deliveryVersion: 4,
+    latestAttempt: { id: 'a-r1', status: 'prepared', failureReason: null, failedAt: null },
+  }] };
+  const fetchMock = vi.fn().mockImplementation(async (url: string) => new Response(
+    JSON.stringify(String(url).endsWith('/api/pharmacy/zones') ? { zones } : board), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<PharmacyPackageBoard view="awaiting" />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'แก้ไข นางไกลราช หลักทอง' }));
+  const dialog = within(screen.getByRole('dialog'));
+  const village = dialog.getByLabelText('หมู่บ้าน') as HTMLSelectElement;
+  expect(await screen.findByRole('option', { name: 'หมู่ 3 บ้านโพนสวาง' })).toBeInTheDocument();
+  expect(village.value).toBe('z-1');
+  expect(screen.queryByRole('option', { name: 'หมู่ 2 บ้านโพนแพง' })).not.toBeInTheDocument();
+
+  // Another subdistrict: its villages appear and one must be chosen.
+  fireEvent.change(dialog.getByLabelText('ตำบล'), { target: { value: '470604' } });
+  expect(village.value).toBe('');
+  fireEvent.change(screen.getByLabelText('เหตุผลการแก้ไข'), { target: { value: 'ผู้ป่วยย้ายบ้าน' } });
+  fireEvent.click(screen.getByRole('button', { name: 'ถัดไป' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('ต้องเลือกหมู่บ้านของโซนจัดส่ง');
+
+  fireEvent.change(village, { target: { value: 'z-9' } });
+  expect(screen.getByText(/ค่าบริการไรเดอร์จะคิดตามอัตราของโซนใหม่ และต้องพิมพ์ฉลากใหม่/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'ถัดไป' }));
+  expect(screen.getByText('หมู่ 2 บ้านโพนแพง ต.หนองลาด อ.วาริชภูมิ จ.สกลนคร')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'ยืนยันแก้ไข' }));
+  expect(await screen.findByText(/แก้ไขข้อมูล นางไกลราช หลักทอง แล้ว/)).toBeInTheDocument();
+  const [, init] = fetchMock.mock.calls.find(([, call]) => call?.method === 'PATCH')!;
+  expect(JSON.parse(init.body)).toEqual({ deliveryAddress: 'บ้านเดิม', telephone: '', reason: 'ผู้ป่วยย้ายบ้าน', expectedVersion: 4, deliveryZoneId: 'z-9' });
 });
 
 test('deleting asks for a reason and confirmation; jobs with delivery history offer no delete', async () => {
