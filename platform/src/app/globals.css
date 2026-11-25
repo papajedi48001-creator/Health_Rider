@@ -1204,3 +1204,8 @@ body:has(.fb-fab-rider) .scroll-jump { bottom: calc(64px + 32px + 64px + env(saf
 .fb-sheet .fb-popover-head { padding-top: 18px; }
 .fb-topics { display: grid; gap: 6px; }
 .fb-topics-label { font-weight: 600; font-size: 0.9rem; }
+
+/* Edit pop-up: the delivery zone, chosen as subdistrict then village, framed so a change of zone stands out. */
+.zone-picker { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 0; padding: 10px 14px 12px; border: 2px solid var(--primary); border-radius: var(--radius-control); background: var(--primary-soft); min-width: 0; }
+.zone-picker legend { padding: 0 6px; font-weight: 700; color: var(--primary-dark); }
+.zone-picker small { grid-column: 1 / -1; color: var(--muted); }
