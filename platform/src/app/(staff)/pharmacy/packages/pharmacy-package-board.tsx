@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
 import { DeleteJobDialog, EditJobDialog, type EditableJob } from '@/app/(staff)/pharmacy/packages/package-job-dialogs';
 import { PackageQrSheet, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
@@ -8,6 +9,7 @@ import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
 import { forgetIssuedToken, issuedToken, keepIssuedToken } from '@/lib/issued-qr-tokens';
 import { EmptyState } from '@/brand/empty-state';
+import { Icon } from '@/brand/icons';
 import { failureReasonLabels, formatThaiDateTime, shortCode } from '@/lib/labels';
 
 type Zone = { id: string; displayName: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; healthCenterName?: string | null };
@@ -17,10 +19,10 @@ type Row = {
   deletable?: boolean;
   latestAttempt: { id: string; status: DeliveryAttemptStatus; failureReason: string | null; failedAt: string | null } | null;
 };
-type Board = { toPrepare: Row[]; awaitingRider: Row[]; returnRequired: Row[] };
+type Board = { toPrepare: Row[]; awaitingRider: Row[]; returnRequired: Row[]; canManageZones?: boolean };
 export type BoardView = 'prepare' | 'awaiting' | 'returns';
 
-const viewKey: Record<BoardView, keyof Board> = { prepare: 'toPrepare', awaiting: 'awaitingRider', returns: 'returnRequired' };
+const viewKey: Record<BoardView, 'toPrepare' | 'awaitingRider' | 'returnRequired'> = { prepare: 'toPrepare', awaiting: 'awaitingRider', returns: 'returnRequired' };
 
 type Issued = { attemptId: string; token?: string };
 
@@ -142,8 +144,34 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const emptyText = (none: string) => (terms.length > 0 ? 'ไม่พบคนไข้ที่ตรงกับคำค้นหา' : none);
   const inZone = allRows.filter((row) => (!subdistrictFilter || row.zone.subdistrictCode === subdistrictFilter) && (!zoneFilter || row.zone.id === zoneFilter));
   const shown = inZone.filter((row) => terms.every((term) => `${row.hn} ${row.patientName}`.includes(term)));
-  const ticked = shown.filter((row) => selected.has(row.id));
-  const allTicked = shown.length > 0 && ticked.length === shown.length;
+  // No QR goes out for a village no รพ.สต. looks after; the server refuses it too. Reprinting a QR already issued is still fine.
+  const blocked = (row: Row) => view !== 'returns' && !row.zone.healthCenterName;
+  const blockedCount = allRows.filter(blocked).length;
+  const selectable = shown.filter((row) => !blocked(row));
+  const ticked = selectable.filter((row) => selected.has(row.id));
+  const allTicked = selectable.length > 0 && ticked.length === selectable.length;
+  const canManageZones = board?.canManageZones === true;
+  const zoneLink = (text: string, label?: string) => canManageZones
+    ? <Link href="/admin/zones" className="btn btn-warning btn-small" aria-label={label}>{text}</Link>
+    : null;
+  const noHealthCenterBanner = blockedCount > 0 && (
+    <div className="zone-alert" role="alert">
+      <p>
+        <span><Icon name="alert" /> มี {blockedCount} งานที่ออก QR ไม่ได้ เพราะโซนยังไม่มี รพ.สต. รับผิดชอบ</span>
+        <small>{canManageZones ? 'ตั้ง รพ.สต. ให้โซนที่เมนูโซนจัดส่ง หรือกด "แก้ไข" เพื่อเปลี่ยนโซนของงาน' : 'แจ้งผู้ดูแลระบบให้ตั้ง รพ.สต. ที่เมนูโซนจัดส่ง หรือกด "แก้ไข" เพื่อเปลี่ยนโซนของงาน'}</small>
+      </p>
+      {zoneLink('ไปจัดการโซน')}
+    </div>
+  );
+  const healthCenterTag = (row: Row) => (blocked(row)
+    ? <span className="hc-tag hc-missing">ยังไม่มี รพ.สต. รับผิดชอบ</span>
+    : row.zone.healthCenterName && <span className="hc-tag">{row.zone.healthCenterName}</span>);
+  const blockedActions = (row: Row) => (
+    <>
+      <button type="button" disabled>ออก QR ไม่ได้</button>
+      {zoneLink('จัดการโซน', `จัดการโซนของ ${row.patientName}`)}
+    </>
+  );
 
   // Shown on the queues that issue QR: tick people one by one, or every package in the filtered zone.
   const selectBar = (action: string, extra?: ReactNode) => (
@@ -152,9 +180,10 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
         <input
           type="checkbox"
           checked={allTicked}
-          onChange={() => setSelected(allTicked ? new Set() : new Set(shown.map((row) => row.id)))}
+          disabled={selectable.length === 0}
+          onChange={() => setSelected(allTicked ? new Set() : new Set(selectable.map((row) => row.id)))}
         />
-        เลือกทั้งหมด{terms.length > 0 ? 'ที่ค้นพบ' : zoneFilter ? 'ในโซนนี้' : subdistrictFilter ? 'ในตำบลนี้' : ''} ({shown.length})
+        เลือกทั้งหมด{terms.length > 0 ? 'ที่ค้นพบ' : zoneFilter ? 'ในโซนนี้' : subdistrictFilter ? 'ในตำบลนี้' : ''} ({selectable.length})
       </label>
       <button type="button" className="btn btn-primary btn-small" disabled={ticked.length === 0 || busy !== null} onClick={() => void printSelected(ticked)}>
         {busy === 'batch' ? 'กำลังออก QR' : `${action} (${ticked.length})`}
@@ -164,7 +193,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   );
   const pick = (row: Row) => (
     <label className="pick">
-      <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`เลือกพิมพ์ ${row.patientName}`} />
+      <input type="checkbox" checked={!blocked(row) && selected.has(row.id)} disabled={blocked(row)} onChange={() => toggle(row.id)} aria-label={`เลือกพิมพ์ ${row.patientName}`} />
       เลือกพิมพ์
     </label>
   );
@@ -235,6 +264,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
         {inZone.map((row) => <option key={row.id} value={`${row.patientName} ${row.hn}`} />)}
       </datalist>
       <p aria-live="polite">{message}</p>
+      {board && view !== 'returns' && noHealthCenterBanner}
       {labels && <PackageQrSheet labels={labels} reprint={reprinting} onClose={() => setLabels(null)} />}
       {board && view === 'prepare' && (
         <section>
@@ -244,14 +274,16 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
             {selectBar('เตรียมพัสดุและพิมพ์ QR ที่เลือก')}
             <ul className="pick-list">
               {shown.map((row) => (
-                <li key={row.id}>
+                <li key={row.id} className={blocked(row) ? 'row-blocked' : undefined}>
                   {pick(row)}
-                  <p><strong>{row.patientName}</strong> · HN {row.hn} · {row.zone.displayName}</p>
+                  <p><strong>{row.patientName}</strong> · HN {row.hn} · {row.zone.displayName} {healthCenterTag(row)}</p>
                   {row.latestAttempt?.status === 'returned' && <p>ส่งใหม่หลังรับยาคืนแล้ว {info(row)}</p>}
                   <div className="row-actions">
-                    <button type="button" disabled={busy === row.id} onClick={() => void run(row.id, '/api/pharmacy/attempts/prepare', { deliveryRequestId: row.id }, 'เตรียมพัสดุแล้ว พิมพ์ฉลาก QR ติดพัสดุ', row)}>
-                      {busy === row.id ? 'กำลังเตรียม' : 'เตรียมพัสดุและออก QR'}
-                    </button>
+                    {blocked(row) ? blockedActions(row) : (
+                      <button type="button" disabled={busy === row.id} onClick={() => void run(row.id, '/api/pharmacy/attempts/prepare', { deliveryRequestId: row.id }, 'เตรียมพัสดุแล้ว พิมพ์ฉลาก QR ติดพัสดุ', row)}>
+                        {busy === row.id ? 'กำลังเตรียม' : 'เตรียมพัสดุและออก QR'}
+                      </button>
+                    )}
                     {editButtons(row)}
                   </div>
                 </li>
@@ -273,16 +305,18 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
             ))}
             <ul className="pick-list">
               {shown.map((row) => row.latestAttempt && (
-                <li key={row.id}>
+                <li key={row.id} className={blocked(row) ? 'row-blocked' : undefined}>
                   {pick(row)}
-                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName}</p>
+                  <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} · {row.zone.displayName} {healthCenterTag(row)}</p>
                   <div className="row-actions">
                     <button type="button" className="btn-reprint" disabled={busy !== null} onClick={() => void reprint([row])} aria-label={`พิมพ์ซ้ำ ${row.patientName}`}>
                       พิมพ์ซ้ำ
                     </button>
-                    <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
-                      ออก QR ใหม่
-                    </button>
+                    {blocked(row) ? blockedActions(row) : (
+                      <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/qr`, {}, 'ออก QR ใหม่แล้ว QR เดิมใช้ไม่ได้อีก', row)}>
+                        ออก QR ใหม่
+                      </button>
+                    )}
                     {editButtons(row)}
                     {info(row)}
                   </div>

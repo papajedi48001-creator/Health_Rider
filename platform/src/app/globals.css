@@ -1209,3 +1209,15 @@ body:has(.fb-fab-rider) .scroll-jump { bottom: calc(64px + 32px + 64px + env(saf
 .zone-picker { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 0; padding: 10px 14px 12px; border: 2px solid var(--primary); border-radius: var(--radius-control); background: var(--primary-soft); min-width: 0; }
 .zone-picker legend { padding: 0 6px; font-weight: 700; color: var(--primary-dark); }
 .zone-picker small { grid-column: 1 / -1; color: var(--muted); }
+
+/* Packages whose village no รพ.สต. looks after: the row turns red and its QR button is replaced, with a summary on top. */
+.btn-warning { background: var(--warning); border-color: var(--warning); color: #fff; }
+.btn-warning:hover { background: #92400e; border-color: #92400e; }
+.zone-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid #fca5a5; border-radius: var(--radius-surface); background: #fef3f2; color: var(--danger); font-weight: 600; }
+.zone-alert p { margin: 0; flex: 1 1 320px; display: grid; gap: 2px; }
+.zone-alert p svg { display: inline; vertical-align: -3px; width: 18px; height: 18px; }
+.zone-alert small { color: var(--ink); font-weight: 400; }
+.pick-list li.row-blocked { border-color: #fca5a5; background: #fef3f2; }
+.hc-tag { display: inline-block; margin-left: 4px; padding: 0 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-dark); font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.hc-tag.hc-missing { background: #fee4e2; color: var(--danger); }
+.candidate-zoneless { border: 1px solid #fca5a5; background: #fef3f2; }
