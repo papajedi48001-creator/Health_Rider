@@ -7,7 +7,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const zone = (id: string, displayName: string, subdistrictCode: string, subdistrictName: string | null) => ({ id, displayName, subdistrictCode, subdistrictName });
+const zone = (id: string, displayName: string, subdistrictCode: string, subdistrictName: string | null, healthCenterName: string | null = 'รพ.สต.ทดสอบ') => ({
+  id, displayName, subdistrictCode, subdistrictName, healthCenterName,
+});
 const row = (id: string, patientName: string, rowZone: ReturnType<typeof zone>) => ({
   id, hn: `HN-${id}`, patientName, deliveryAddress: '-', zone: rowZone, latestAttempt: null,
 });
@@ -152,6 +154,39 @@ test('moves a job to another village by choosing the subdistrict, then the villa
   expect(await screen.findByText(/แก้ไขข้อมูล นางไกลราช หลักทอง แล้ว/)).toBeInTheDocument();
   const [, init] = fetchMock.mock.calls.find(([, call]) => call?.method === 'PATCH')!;
   expect(JSON.parse(init.body)).toEqual({ deliveryAddress: 'บ้านเดิม', telephone: '', reason: 'ผู้ป่วยย้ายบ้าน', expectedVersion: 4, deliveryZoneId: 'z-9' });
+});
+
+test('a job whose zone has no รพ.สต. cannot be ticked or given a QR, and the page says how many are stuck', async () => {
+  const covered = zone('z-1', 'หมู่ 1 บ้านพังฮอ', '470603', 'ต.ปลาโหล');
+  const uncovered = zone('z-12', 'หมู่ 12 บ้านโนนสวรรค์', '470603', 'ต.ปลาโหล', null);
+  const board = { awaitingRider: [], returnRequired: [], canManageZones: true, toPrepare: [
+    row('r1', 'นางไกลราช หลักทอง', covered), row('r2', 'นายสมพงษ์ ใจดี', uncovered),
+  ] };
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(board), { status: 200 }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<PharmacyPackageBoard view="prepare" />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('มี 1 งานที่ออก QR ไม่ได้ เพราะโซนยังไม่มี รพ.สต. รับผิดชอบ');
+  expect(screen.getByRole('link', { name: 'ไปจัดการโซน' })).toHaveAttribute('href', '/admin/zones');
+  expect(screen.getByLabelText('เลือกพิมพ์ นายสมพงษ์ ใจดี')).toBeDisabled();
+  expect(screen.getByText('ยังไม่มี รพ.สต. รับผิดชอบ')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'ออก QR ไม่ได้' })).toBeDisabled();
+  expect(screen.getAllByRole('button', { name: 'เตรียมพัสดุและออก QR' })).toHaveLength(1);
+
+  // Select-all takes only the job that can go out.
+  fireEvent.click(screen.getByLabelText(/เลือกทั้งหมด/));
+  expect(screen.getByRole('button', { name: 'เตรียมพัสดุและพิมพ์ QR ที่เลือก (1)' })).toBeEnabled();
+});
+
+test('a pharmacist who cannot manage zones is told to ask an admin instead of getting a link', async () => {
+  const uncovered = zone('z-12', 'หมู่ 12 บ้านโนนสวรรค์', '470603', 'ต.ปลาโหล', null);
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(JSON.stringify({
+    awaitingRider: [], returnRequired: [], canManageZones: false, toPrepare: [row('r2', 'นายสมพงษ์ ใจดี', uncovered)],
+  }), { status: 200 })));
+  render(<PharmacyPackageBoard view="prepare" />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('แจ้งผู้ดูแลระบบให้ตั้ง รพ.สต.');
+  expect(screen.queryByRole('link', { name: /จัดการโซน/ })).not.toBeInTheDocument();
 });
 
 test('deleting asks for a reason and confirmation; jobs with delivery history offer no delete', async () => {

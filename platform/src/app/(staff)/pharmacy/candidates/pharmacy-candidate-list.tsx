@@ -148,6 +148,19 @@ export function PharmacyCandidateList() {
           <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
         </label>
       </div>
+      {candidates.some((candidate) => !candidate.zone) && (
+        <div className="zone-alert" role="alert">
+          <p>
+            มี {candidates.filter((candidate) => !candidate.zone).length} รายที่ยังไม่มีโซนจัดส่ง จึงยืนยันส่งยาและออก QR ไม่ได้
+            <small>ที่อยู่ไม่ตรงกับโซนใด ให้ผู้ดูแลระบบเพิ่มโซนของหมู่บ้านนั้นที่เมนูโซนจัดส่ง แล้วตั้ง รพ.สต. รับผิดชอบ</small>
+          </p>
+          {zoneFilter !== NO_ZONE && (
+            <button type="button" className="btn btn-warning btn-small" onClick={() => { setSubdistrictFilter(ALL_SUBDISTRICTS); setZoneFilter(NO_ZONE); }}>
+              ดูรายการที่ยังไม่มีโซน
+            </button>
+          )}
+        </div>
+      )}
       {selectedZone && (
         <button type="button" disabled={confirming !== null} onClick={() => void confirmZone(selectedZone.zone, selectedZone.count)}>
           {confirming === selectedZone.zone.id ? 'กำลังยืนยันทั้งโซน' : `ยืนยันทั้งโซน ${selectedZone.zone.displayName} (${selectedZone.count} ราย)`}
@@ -164,7 +177,7 @@ export function PharmacyCandidateList() {
       {message && <p>{message}</p>}
       <ul>
         {shown.map((candidate) => (
-          <li key={candidate.visitNumber}>
+          <li key={candidate.visitNumber} className={candidate.zone ? undefined : 'candidate-zoneless'}>
             <h2>{candidate.patientName}</h2>
             <p>HN: {candidate.hn} · อายุ {candidate.patientAge ?? '-'} ปี</p>
             <p>{candidate.deliveryAddress}</p>

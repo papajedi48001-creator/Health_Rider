@@ -4,6 +4,7 @@ import { requireRole } from '@/auth/require-role';
 import { audit } from '@/domain/audit/write-audit-event';
 import { packageQrLifetimeMs } from '@/domain/delivery/package-qr-policy';
 import { reissuePackageQr } from '@/domain/delivery/reissue-package-qr';
+import { ensureZoneHasHealthCenter, zoneHealthCenterSelect } from '@/hos/village-health-centers';
 import { db } from '@/lib/db';
 import { handleRoute } from '@/lib/route';
 
@@ -11,6 +12,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ at
   return handleRoute(async () => {
     const pharmacist = requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');
     const { attemptId } = await context.params;
+    const attempt = await db.deliveryAttempt.findUnique({
+      where: { id: attemptId }, select: { deliveryRequest: { select: { deliveryZone: { select: zoneHealthCenterSelect } } } },
+    });
+    if (attempt) await ensureZoneHasHealthCenter(attempt.deliveryRequest.deliveryZone);
     const token = await db.$transaction(async (tx) => {
       const issued = await reissuePackageQr(attemptId, new Date(Date.now() + packageQrLifetimeMs), pharmacist, {
         findAttempt: (id) => tx.deliveryAttempt.findUnique({ where: { id }, select: { id: true, status: true } }),

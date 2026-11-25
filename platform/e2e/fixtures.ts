@@ -12,6 +12,11 @@ export async function createDeliveryRequest(patientName: string) {
     prisma.user.findUniqueOrThrow({ where: { username: 'pharmacy.uat' } }),
     prisma.deliveryZone.findFirstOrThrow({ where: { active: true } }),
   ]);
+  // No QR goes out for a zone without a รพ.สต., so the test zone gets one.
+  if (!zone.healthCenterId) {
+    const center = await prisma.healthCenter.upsert({ where: { name: 'รพ.สต.ทดสอบ E2E' }, update: {}, create: { id: ulid(), name: 'รพ.สต.ทดสอบ E2E' } });
+    await prisma.deliveryZone.update({ where: { id: zone.id }, data: { healthCenterId: center.id } });
+  }
   return prisma.deliveryRequest.create({
     data: {
       id: ulid(), hosVisitNumber: `E2E-${ulid()}`, hn: `E2E-${Date.now()}`, patientName, patientAge: 70,

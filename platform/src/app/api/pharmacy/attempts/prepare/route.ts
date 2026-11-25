@@ -5,6 +5,7 @@ import { audit } from '@/domain/audit/write-audit-event';
 import { issuePackageQr } from '@/domain/delivery/issue-package-qr';
 import { packageQrLifetimeMs } from '@/domain/delivery/package-qr-policy';
 import { prepareAttempt } from '@/domain/delivery/prepare-attempt';
+import { ensureZoneHasHealthCenter, zoneHealthCenterSelect } from '@/hos/village-health-centers';
 import { db } from '@/lib/db';
 import { readJsonBody } from '@/lib/http';
 import { handleRoute, invalidInput } from '@/lib/route';
@@ -15,6 +16,8 @@ export async function POST(request: NextRequest) {
     const body = await readJsonBody(request) as { deliveryRequestId?: unknown } | undefined;
     if (!body || typeof body.deliveryRequestId !== 'string') return invalidInput('ไม่พบงานจัดส่งที่ต้องเตรียม');
     const deliveryRequestId = body.deliveryRequestId;
+    const job = await db.deliveryRequest.findUnique({ where: { id: deliveryRequestId }, select: { deliveryZone: { select: zoneHealthCenterSelect } } });
+    if (job) await ensureZoneHasHealthCenter(job.deliveryZone);
 
     const prepared = await db.$transaction(async (tx) => {
       // Locks the request so two pharmacists cannot prepare it at the same time.
