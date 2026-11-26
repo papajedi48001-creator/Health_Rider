@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   return handleRoute(async () => {
     const user = requireRole(await getSessionFromRequest(request), 'pharmacy', 'admin');
     const requests = await db.deliveryRequest.findMany({
-      where: { createdAt: { gte: new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000) } },
+      where: { cancelledAt: null, createdAt: { gte: new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000) } },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true, hosVisitNumber: true, hn: true, patientName: true, telephone: true, deliveryAddress: true, deliveryVersion: true, createdAt: true,

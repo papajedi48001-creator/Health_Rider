@@ -32,7 +32,7 @@ async function pendingCandidates(): Promise<number | null> {
 
 async function packageQueues() {
   const requests = await db.deliveryRequest.findMany({
-    where: { createdAt: { gte: new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000) } },
+    where: { cancelledAt: null, createdAt: { gte: new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000) } },
     select: { attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } } },
   });
   const latest = requests.map((request) => request.attempts[0]?.status ?? null);

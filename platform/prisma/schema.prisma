@@ -200,6 +200,8 @@ model DeliveryRequest {
   rateSatang        Int?
   rateEffectiveFrom DateTime?         @db.Date
   createdById       String            @db.Char(26)
+  // Set when pharmacy cancels a job that already has delivery history (it cannot be deleted); the reason and who did it are in the audit log.
+  cancelledAt       DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   deliveryZone      DeliveryZone      @relation(fields: [deliveryZoneId], references: [id])

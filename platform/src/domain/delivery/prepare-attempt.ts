@@ -9,7 +9,7 @@ export type PreparedAttempt = {
 };
 
 type PreparationStore = {
-  findRequest(deliveryRequestId: string): Promise<{ id: string; latestAttemptStatus: DeliveryAttemptStatus | null } | null>;
+  findRequest(deliveryRequestId: string): Promise<{ id: string; latestAttemptStatus: DeliveryAttemptStatus | null; cancelled?: boolean } | null>;
   createAttempt(record: PreparedAttempt): Promise<PreparedAttempt>;
 };
 
@@ -22,6 +22,7 @@ export async function prepareAttempt(
   requireRole(pharmacist, 'pharmacy', 'admin');
   const request = await store.findRequest(deliveryRequestId);
   if (!request) throw new DomainError('ไม่พบงานจัดส่งที่ต้องเตรียม');
+  if (request.cancelled) throw new DomainError('งานนี้ถูกยกเลิกแล้ว', 409);
   if (request.latestAttemptStatus !== null && request.latestAttemptStatus !== 'returned') {
     throw new DomainError('งานนี้มีพัสดุที่ยังดำเนินการอยู่ ต้องรับยาคืนก่อนเตรียมพัสดุใหม่');
   }
