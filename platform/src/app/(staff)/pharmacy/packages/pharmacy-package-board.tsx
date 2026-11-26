@@ -11,6 +11,7 @@ import { forgetIssuedToken, issuedToken, keepIssuedToken } from '@/lib/issued-qr
 import { EmptyState } from '@/brand/empty-state';
 import { Icon } from '@/brand/icons';
 import { failureReasonLabels, formatThaiDateTime, shortCode } from '@/lib/labels';
+import { isLateReturn } from '@/lib/time';
 
 type Zone = { id: string; displayName: string; subdistrictCode: string; subdistrictName: string | null; villageCode: string; healthCenterName?: string | null };
 type Row = {
@@ -335,7 +336,8 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
               {shown.map((row) => row.latestAttempt && (
                 <li key={row.id}>
                   <p><strong>{row.patientName}</strong> · พัสดุ {shortCode(row.latestAttempt.id)} {info(row)}</p>
-                  <p>เหตุผล: {failureReasonLabels[row.latestAttempt.failureReason as keyof typeof failureReasonLabels] ?? '-'} · {formatThaiDateTime(row.latestAttempt.failedAt)}</p>
+                  <p>เหตุผล: {failureReasonLabels[row.latestAttempt.failureReason as keyof typeof failureReasonLabels] ?? '-'} · {formatThaiDateTime(row.latestAttempt.failedAt)}
+                    {isLateReturn(row.latestAttempt.failedAt) && <> <span className="chip chip-warning">คืนช้ากว่ากำหนด</span></>}</p>
                   <button type="button" disabled={busy === row.latestAttempt.id} onClick={() => void run(row.latestAttempt!.id, `/api/pharmacy/attempts/${row.latestAttempt!.id}/return`, {}, 'รับยาคืนแล้ว เตรียมพัสดุใหม่ได้เมื่อพร้อมส่งอีกครั้ง')}>
                     ยืนยันรับยาคืน
                   </button>

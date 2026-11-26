@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ at
     const { attemptId } = await context.params;
     await requireAttemptInScope(db, pharmacist, { id: attemptId });
     const returned = await db.$transaction(async (tx) => {
-      await receiveMedicationReturn(attemptId, pharmacist, {
+      const result = await receiveMedicationReturn(attemptId, pharmacist, {
         findReturnRequiredAttempt: (id) => tx.deliveryAttempt.findUnique({ where: { id }, select: { id: true, status: true, failedAt: true } }),
         update: async (record) => {
           const updated = await tx.deliveryAttempt.updateMany({ where: { id: record.id, status: 'return_required' }, data: { status: record.status, returnedAt: record.returnedAt } });
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ at
       });
       await audit(tx, {
         actorId: pharmacist.id, action: 'delivery_attempt.medication_returned', auditableType: 'DeliveryAttempt', auditableId: attemptId,
-        oldValues: { status: 'return_required' }, newValues: { status: 'returned' },
+        oldValues: { status: 'return_required' }, newValues: { status: 'returned', ...(result.late ? { late: true } : {}) },
       });
-      return { attemptId, status: 'returned' };
+      return { attemptId, status: 'returned', late: result.late };
     });
     return NextResponse.json(returned);
   });

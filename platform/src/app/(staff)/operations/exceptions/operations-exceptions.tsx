@@ -8,6 +8,7 @@ import { EmptyState } from '@/brand/empty-state';
 import { Icon } from '@/brand/icons';
 import { conflictReasonLabels, failureReasonLabels, formatThaiDateTime, recipientRelationLabels, shortCode, statusLabels } from '@/lib/labels';
 import { withBasePath } from '@/lib/base-path';
+import { isLateReturn } from '@/lib/time';
 import { PersonName } from '@/account/person-name';
 
 type Exceptions = {
@@ -94,7 +95,7 @@ export function OperationsExceptions({ canResolve, canReceiveReturn }: { canReso
                   <td>{item.deliveryRequest.patientName}<br /><code>{item.deliveryRequest.hn}</code></td>
                   <td>{item.rider ? <PersonName person={item.rider} /> : '-'}</td>
                   <td><span className="chip chip-danger">{failureReasonLabels[item.failureReason as keyof typeof failureReasonLabels] ?? '-'}</span></td>
-                  <td>{formatThaiDateTime(item.failedAt)}</td>
+                  <td>{formatThaiDateTime(item.failedAt)}{isLateReturn(item.failedAt) && <><br /><span className="chip chip-warning">คืนช้ากว่ากำหนด</span></>}</td>
                   <td className="row-actions">
                     <DeliveryInfoButton attemptId={item.id} patientName={item.deliveryRequest.patientName} />
                     {canReceiveReturn && (

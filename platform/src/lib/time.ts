@@ -14,3 +14,8 @@ export function startOfBangkokDay(dateString: string): Date | null {
   const date = new Date(`${dateString}T00:00:00.000+07:00`);
   return Number.isNaN(date.getTime()) || bangkokDateString(date) !== dateString ? null : date;
 }
+
+// A failed delivery's medication is due back on the same Thai calendar day.
+export function isLateReturn(failedAt: Date | string | null, now: Date = new Date()): boolean {
+  return failedAt !== null && !isSameBangkokDay(new Date(failedAt), now);
+}
