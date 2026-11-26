@@ -47,10 +47,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ r
         where: { id: requestId },
         select: {
           id: true, deliveryVersion: true, deliveryAddress: true, telephone: true, deliveryZoneId: true, rateSatang: true, rateEffectiveFrom: true, createdAt: true,
-          attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } },
+          cancelledAt: true, attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } },
         },
       });
       if (!found) throw new DomainError('ไม่พบงานจัดส่งนี้', 404);
+      if (found.cancelledAt) throw new DomainError('งานนี้ถูกยกเลิกแล้ว', 409);
       if (!editableLatest.has(found.attempts[0]?.status)) throw new DomainError('ไรเดอร์รับงานนี้แล้ว แก้ไขได้จากหน้าภาพรวมการจัดส่ง', 409);
       if (found.deliveryVersion !== body.expectedVersion) throw new DomainError('ข้อมูลงานถูกแก้ไขโดยผู้อื่นแล้ว โปรดโหลดข้อมูลล่าสุดก่อนแก้ไข', 409);
 

@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
         findRequest: async (id) => {
           const found = await tx.deliveryRequest.findUnique({
             where: { id },
-            select: { id: true, attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } } },
+            select: { id: true, cancelledAt: true, attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { status: true } } },
           });
-          return found && { id: found.id, latestAttemptStatus: found.attempts[0]?.status ?? null };
+          return found && { id: found.id, latestAttemptStatus: found.attempts[0]?.status ?? null, cancelled: found.cancelledAt !== null };
         },
         createAttempt: (record) => tx.deliveryAttempt.create({ data: record, select: { id: true, deliveryRequestId: true, status: true } }),
       });

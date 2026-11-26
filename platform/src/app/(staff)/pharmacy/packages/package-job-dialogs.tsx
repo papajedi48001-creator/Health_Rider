@@ -218,3 +218,45 @@ export function DeleteJobDialog({ job, onClose, onDeleted }: { job: EditableJob;
     </div>
   );
 }
+
+// A job that already went out with a rider cannot be deleted; cancelling takes it off "เตรียมพัสดุ" and keeps its history.
+export function CancelJobDialog({ job, onClose, onCancelled }: { job: EditableJob; onClose: () => void; onCancelled: (message: string) => void }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState('');
+  useCloseOnEscape(onClose);
+
+  async function cancelJob(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    const result = await callApi(`/api/pharmacy/requests/${job.id}/cancel`, { json: { reason } });
+    setBusy(false);
+    if (!result.ok) return setProblem(result.message);
+    onCancelled(`ยกเลิกรายการของ ${job.patientName} แล้ว ประวัติการจัดส่งยังดูได้ตามเดิม`);
+  }
+
+  return (
+    <div className="photo-viewer" role="dialog" aria-modal="true" aria-label={`ยกเลิกรายการของ ${job.patientName}`}>
+      <div className="photo-viewer-body detail-dialog">
+        <div className="photo-viewer-head">
+          <strong>ยืนยันการยกเลิกรายการ</strong>
+          <button type="button" className="icon-button" aria-label="ปิด" onClick={onClose}><Icon name="close" /></button>
+        </div>
+        {problem && <p className="notice notice-danger" role="alert">{problem}</p>}
+        <JobSummary job={job} />
+        <p className="notice notice-danger">
+          ต้องการยกเลิกรายการนี้ใช่หรือไม่ งานจะออกจากเมนูเตรียมพัสดุและไม่ถูกส่งอีก ประวัติการจัดส่งเดิมยังอยู่ครบ ระบบจะเก็บผู้ยกเลิกและเหตุผลไว้ในบันทึกการใช้งาน
+        </p>
+        <form onSubmit={(event) => void cancelJob(event)} aria-label="ฟอร์มยืนยันการยกเลิกรายการ">
+          <label>เหตุผลการยกเลิก
+            <input name="reason" required value={reason} onChange={(event) => setReason(event.target.value)} placeholder="เช่น ผู้ป่วยมารับยาเองที่โรงพยาบาล" autoFocus />
+          </label>
+          <div className="dialog-actions">
+            <button type="submit" className="btn btn-danger" disabled={busy}>{busy ? 'กำลังบันทึก' : 'ยืนยันยกเลิกรายการ'}</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>ปิด</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

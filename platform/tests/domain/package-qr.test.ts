@@ -72,3 +72,11 @@ test('reprints a label only with the live QR of a package no rider has claimed',
   await expect(checkReprintToken('attempt-1', 'kept-token', now, pharmacist, store({ ...live, attemptStatus: 'claimed' }))).rejects.toThrow('ยังไม่มีไรเดอร์รับงาน');
   await expect(checkReprintToken('attempt-1', 'kept-token', now, { id: 'r', role: 'rider', displayName: 'ไรเดอร์' }, store(live))).rejects.toThrow();
 });
+
+test('refuses to prepare a package for a cancelled job', async () => {
+  const pharmacist = { id: 'pharmacy-1', role: 'pharmacy' as const, displayName: 'Pharmacy' };
+  await expect(prepareAttempt('request-1', pharmacist, {
+    findRequest: async (id) => ({ id, latestAttemptStatus: 'returned', cancelled: true }),
+    createAttempt: async (record) => record,
+  })).rejects.toThrow('งานนี้ถูกยกเลิกแล้ว');
+});

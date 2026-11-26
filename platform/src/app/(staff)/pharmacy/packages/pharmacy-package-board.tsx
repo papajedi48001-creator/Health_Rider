@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { DeliveryInfoButton } from '@/app/(staff)/operations/delivery-details';
-import { DeleteJobDialog, EditJobDialog, type EditableJob } from '@/app/(staff)/pharmacy/packages/package-job-dialogs';
+import { CancelJobDialog, DeleteJobDialog, EditJobDialog, type EditableJob } from '@/app/(staff)/pharmacy/packages/package-job-dialogs';
 import { PackageQrSheet, type PackageLabel } from '@/app/(staff)/pharmacy/packages/package-qr-label';
 import type { DeliveryAttemptStatus } from '@/domain/delivery/status';
 import { callApi } from '@/lib/api-client';
@@ -54,7 +54,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   const [subdistrictFilter, setSubdistrictFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
   const [query, setQuery] = useState('');
-  const [editing, setEditing] = useState<{ job: EditableJob; mode: 'edit' | 'delete' } | null>(null);
+  const [editing, setEditing] = useState<{ job: EditableJob; mode: 'edit' | 'delete' | 'cancel' } | null>(null);
 
   const load = useCallback(async () => {
     const result = await callApi<Board>('/api/pharmacy/requests');
@@ -220,6 +220,11 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
           ลบ
         </button>
       )}
+      {view === 'prepare' && row.deletable === false && row.latestAttempt?.status === 'returned' && (
+        <button type="button" className="btn btn-danger btn-small" disabled={busy !== null} onClick={() => setEditing({ job: jobOf(row), mode: 'cancel' })} aria-label={`ยกเลิกรายการ ${row.patientName}`}>
+          ยกเลิกรายการ
+        </button>
+      )}
     </>
   );
   async function afterChange(done: string) {
@@ -233,6 +238,7 @@ export function PharmacyPackageBoard({ view }: { view: BoardView }) {
   return (
     <div>
       {editing?.mode === 'edit' && <EditJobDialog job={editing.job} onClose={() => setEditing(null)} onSaved={(done) => void afterChange(done)} />}
+      {editing?.mode === 'cancel' && <CancelJobDialog job={editing.job} onClose={() => setEditing(null)} onCancelled={(done) => void afterChange(done)} />}
       {editing?.mode === 'delete' && <DeleteJobDialog job={editing.job} onClose={() => setEditing(null)} onDeleted={(done) => void afterChange(done)} />}
       {board && (
         <div className="filter-bar">
